@@ -1,0 +1,71 @@
+.wrap {
+  position: relative;
+  display: flex;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
+
+  &:active {
+    background: var(--panel2);
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--skill);
+    outline-offset: 2px;
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+}
+
+.email {
+  padding: 7px 10px 9px;
+  font-size: 12px;
+  color: var(--faint);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  padding: 11px 10px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--mute);
+
+  &:active {
+    background: var(--panel2);
+    color: var(--ink);
+  }
+}

@@ -225,7 +225,19 @@ export function AddSessionSheet({
           />
         </div>
         <div className={styles.field}>
-          <label htmlFor="session-time">Zeit</label>
+          <div className={styles.labelRow}>
+            <label htmlFor="session-time">Zeit (optional)</label>
+            {time && (
+              <button
+                type="button"
+                className={styles.clearButton}
+                aria-label="Zeit löschen"
+                onClick={() => setTime('')}
+              >
+                ×
+              </button>
+            )}
+          </div>
           <input
             id="session-time"
             type="time"
@@ -474,7 +486,19 @@ export function AddSessionSheet({
 
       {repeat !== 'once' && (
         <div className={styles.field}>
-          <label htmlFor="session-end">Ende (optional)</label>
+          <div className={styles.labelRow}>
+            <label htmlFor="session-end">Ende (optional)</label>
+            {endDate && (
+              <button
+                type="button"
+                className={styles.clearButton}
+                aria-label="Enddatum löschen"
+                onClick={() => setEndDate('')}
+              >
+                ×
+              </button>
+            )}
+          </div>
           <input
             id="session-end"
             type="date"

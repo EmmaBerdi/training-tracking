@@ -215,7 +215,19 @@ export function Onboarding({ types, startDate, onAddType, onFinish, onSkip }: On
                       </div>
                     )}
                     <div className={styles.inlineField}>
-                      <label>Zeit (optional)</label>
+                      <div className={styles.labelRow}>
+                        <label>Zeit (optional)</label>
+                        {draft.time && (
+                          <button
+                            type="button"
+                            className={styles.clearButton}
+                            aria-label="Zeit löschen"
+                            onClick={() => patchDraft(draft.typeId, { time: '' })}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="time"
                         value={draft.time}

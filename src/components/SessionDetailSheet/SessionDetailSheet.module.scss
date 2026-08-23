@@ -68,3 +68,11 @@
   composes: ghost from '../../styles/shared.module.scss';
   color: var(--kraft);
 }
+
+.labelRow {
+  composes: labelRow from '../../styles/shared.module.scss';
+}
+
+.clearButton {
+  composes: clearButton from '../../styles/shared.module.scss';
+}

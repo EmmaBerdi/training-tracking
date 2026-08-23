@@ -11,6 +11,23 @@ interface ExerciseCardProps {
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
 }
 
+const SIDE_PREFIX: Record<Side, string> = { B: '', L: 'L ', R: 'R ' };
+
+/**
+ * The most recent number logged at each set position — per position, not per workout, so a set
+ * skipped last time falls back to the one before it. The chips show these too, but only while a
+ * set is still empty, so without this line the comparison vanishes as soon as a value is entered.
+ */
+function lastSummary(x: Exercise, lastVal: ExerciseCardProps['lastVal']): string | null {
+  const parts: string[] = [];
+  for (const { side, count } of tracks(x)) {
+    const values = Array.from({ length: count }, (_, i) => lastVal(x.id, side, i));
+    if (values.some(Boolean))
+      parts.push(SIDE_PREFIX[side] + values.map((v) => v || '–').join(' / '));
+  }
+  return parts.length ? parts.join('  ·  ') : null;
+}
+
 /** Which side gets its own row of set chips, and how many sets each has. */
 function tracks(x: Exercise): { side: Side; count: number }[] {
   if (!x.uni) return [{ side: 'B', count: x.sets }];
@@ -28,6 +45,7 @@ export function ExerciseCard({
   onOpenEntry,
 }: ExerciseCardProps) {
   const sets = x.uni ? `${x.setsL || 0}/${x.setsR || 0}` : `${x.sets}`;
+  const last = lastSummary(x, lastVal);
 
   return (
     <div className={styles.exercise}>
@@ -35,6 +53,7 @@ export function ExerciseCard({
         <div className={styles.heading}>
           <div className={styles.name}>{x.name}</div>
           <div className={styles.spec}>{`${sets} × ${x.reps}  ·  ${UNIT[x.type]}`}</div>
+          {last && <div className={styles.last}>{`zuletzt  ${last}`}</div>}
         </div>
         {x.desc && (
           <button

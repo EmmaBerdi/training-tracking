@@ -73,17 +73,6 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     [persist],
   );
 
-  const importState = useCallback(
-    (data: AppState) => {
-      const next = { plan: data.plan, logs: data.logs };
-      setState(next);
-      void persist(next);
-    },
-    [persist],
-  );
-
-  const resetPlan = useCallback(() => updatePlan(emptyPlan), [updatePlan]);
-
   /** Returns the new plan so the caller can select it. */
   const addDay = useCallback(
     (input: DayInput) => {
@@ -237,7 +226,5 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     deleteWarmupItem,
     moveWarmupItem,
     setWarmupText,
-    resetPlan,
-    importState,
   };
 }

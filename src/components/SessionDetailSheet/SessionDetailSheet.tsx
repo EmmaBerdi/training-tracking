@@ -180,7 +180,19 @@ export function SessionDetailSheet({
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className={styles.field}>
-          <label>Zeit</label>
+          <div className={styles.labelRow}>
+            <label>Zeit</label>
+            {time && (
+              <button
+                type="button"
+                className={styles.clearButton}
+                aria-label="Zeit löschen"
+                onClick={() => setTime('')}
+              >
+                ×
+              </button>
+            )}
+          </div>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
       </div>

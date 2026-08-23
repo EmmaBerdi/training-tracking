@@ -10,7 +10,7 @@
 
 .hrow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -31,12 +31,4 @@
 .month {
   color: var(--mute);
   font-size: 13px;
-}
-
-.viewToggle {
-  padding: 5px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  color: var(--mute);
-  font-size: 12px;
 }

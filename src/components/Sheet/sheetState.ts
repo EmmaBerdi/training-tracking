@@ -4,8 +4,6 @@ import type { Day, ExerciseType, PlannedSession, RecurringRule, Side } from '../
 export type SheetState =
   | { type: 'info'; exId: string }
   | { type: 'entry'; exId: string; side: Side; index: number; name: string; exType: ExerciseType }
-  | { type: 'history' }
-  | { type: 'data' }
   | { type: 'newPlan' }
   | { type: 'editPlan'; day: Day }
   | { type: 'addSession'; date: string }

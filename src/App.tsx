@@ -6,8 +6,6 @@ import { CalendarView } from './components/CalendarView/CalendarView';
 import { Sheet } from './components/Sheet/Sheet';
 import { InfoSheet } from './components/InfoSheet/InfoSheet';
 import { EntrySheet } from './components/EntrySheet/EntrySheet';
-import { HistorySheet } from './components/HistorySheet/HistorySheet';
-import { DataSheet } from './components/DataSheet/DataSheet';
 import { AddSessionSheet } from './components/AddSessionSheet/AddSessionSheet';
 import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetailSheet';
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
@@ -123,6 +121,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
     // Entering edit mode: start on the plan the selected day uses, if it has one.
     if (next === 'edit' && !editDayId) setEditDayId(t.dayId || t.plan.days[0]?.id || '');
     setMode(next);
+    setView('training');
     t.setOpen(null);
   };
 
@@ -167,7 +166,6 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
       <Header
         monthLabel={formatMonthLabel(month)}
         view={view}
-        onViewChange={setView}
         tabItems={tabItems}
         activeTabId={
           mode === 'edit' ? t.dayId || null : activeSession ? String(activeSession.id) : null
@@ -176,6 +174,9 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
         onPrevMonth={() => setMonth(addMonths(month, -1))}
         onNextMonth={() => setMonth(addMonths(month, 1))}
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
+        userEmail={userEmail}
+        onReopenIntro={() => setIntroForced(true)}
+        onLogout={onLogout}
       />
 
       <main>
@@ -230,10 +231,10 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
       </main>
 
       <Footer
+        view={view}
         mode={mode}
         onModeChange={handleModeChange}
-        onOpenHistory={() => setSheet({ type: 'history' })}
-        onOpenData={() => setSheet({ type: 'data' })}
+        onOpenCalendar={() => setView('calendar')}
       />
 
       {sheet && (
@@ -260,29 +261,6 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
               onClear={() => {
                 t.setVal(sheet.exId, sheet.side, sheet.index, '');
                 closeSheet();
-              }}
-            />
-          )}
-
-          {sheet.type === 'history' && <HistorySheet plan={t.plan} logs={t.logs} />}
-
-          {sheet.type === 'data' && (
-            <DataSheet
-              state={{ plan: t.plan, logs: t.logs }}
-              onImport={(data) => {
-                t.importState(data);
-                closeSheet();
-              }}
-              onReset={() => {
-                t.resetPlan();
-                closeSheet();
-              }}
-              notify={toast.show}
-              userEmail={userEmail}
-              onLogout={onLogout}
-              onReopenIntro={() => {
-                closeSheet();
-                setIntroForced(true);
               }}
             />
           )}

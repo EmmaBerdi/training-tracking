@@ -114,6 +114,38 @@
   }
 }
 
+/**
+ * A field label with a control opposite it. Pairs with `.clearButton` on optional date/time
+ * inputs, whose native pickers offer no way back to an empty value once one is chosen.
+ */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clearButton {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: -4px -4px -4px 0;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--mute);
+
+  &:active {
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--skill);
+    outline-offset: 2px;
+  }
+}
+
 /* --- Weekday picker, shared by the onboarding and the add-session sheet --- */
 
 .weekdayGrid {
