@@ -51,11 +51,12 @@ startup (`spring.liquibase` in `application.yml`):
 |---|---|
 | `db/changelog/db.changelog-master.xml` | Root changelog — no changesets of its own, just the ordered `<include>` list |
 | `db/changelog/changes/001-init-schema.sql` | The whole schema in one changeset |
+| `db/changelog/changes/002-exercise-image.sql` | Setup photos: the `exercise_image` table and `exercise.image_id` |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
 came before it, verified by diffing a database built from it against one built by replaying
-V1–V8 — same tables, columns, constraints, indexes and seeded `session_types` ids. It's a
+V1–V8 — same tables, columns, constraints, indexes and seeded `session_type` ids. It's a
 [formatted SQL changelog](https://docs.liquibase.com/concepts/changelogs/sql-format.html): plain
 SQL apart from the `--changeset` marker comments, so it also runs on its own against an empty
 database, without Liquibase in the picture at all:
@@ -66,10 +67,15 @@ psql -d training_tracking -f backend/src/main/resources/db/changelog/changes/001
 
 What it creates:
 
-- `users`, `refresh_tokens` — accounts; refresh tokens are stored hashed so they stay revocable.
-- `days`, `blocks`, `exercises`, `warmup_items` — the training plan; every block belongs to exactly one day.
-- `sessions`, `session_warmup`, `session_values` — logged workouts: one `sessions` row per date+day, with checked-off warmup items and per-set logged values hanging off it.
-- `session_types`, `recurring_rules`, `recurring_rule_plans`, `recurring_rule_exceptions`, `planned_sessions` — the calendar: activity kinds, repeating series and the sessions they generate.
+Table and column names are singular throughout — one row is one user, one day, one exercise — so a
+table is named after the thing a row holds. `"user"` is a reserved word in PostgreSQL and is always
+double-quoted; `day` is reserved in H2, so both entities carry a backtick-quoted `@Table` name that
+Hibernate rewrites into whichever quote character the dialect wants.
+
+- `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable.
+- `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day.
+- `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items and per-set logged values hanging off it.
+- `session_type`, `recurring_rule`, `recurring_rule_plan`, `recurring_rule_exception`, `planned_session` — the calendar: activity kinds, repeating series and the sessions they generate.
 
 ### Adding a change
 
@@ -90,7 +96,7 @@ cd backend
 
 The baseline changeset carries a
 [precondition](https://docs.liquibase.com/concepts/changelogs/preconditions.html) — "run only if
-there is no `users` table" — with `onFail:MARK_RAN`. A database that was already migrated by Flyway
+there is no `"user"` table" — with `onFail:MARK_RAN`. A database that was already migrated by Flyway
 therefore records the changeset as run without re-executing it, and starting the backend is all it
 takes. The leftover `flyway_schema_history` table is unused after that and can be dropped.
 
@@ -98,6 +104,33 @@ If you'd rather be explicit, `./mvnw liquibase:changelogSync` does the same mark
 starting the application.
 
 Every `PUT /api/state` call replaces the entire contents of these tables in one transaction (the app always saves the whole state at once, so there's no partial-update path to reconcile). Deleting an exercise from the plan also deletes its historical logged values, since they no longer have anything valid to reference.
+
+## Exercise setup photos
+
+One picture per exercise, on its own endpoints because JSON is the wrong envelope for image bytes:
+
+| Call | Answer |
+|---|---|
+| `POST /api/exercise-images` (multipart, field `file`) | `201 {"id","width","height"}` |
+| `GET /api/exercise-images/{id}` | the bytes, `Cache-Control: private, immutable` |
+
+Both require the bearer token, and every query is scoped by owner — another user's id answers `404`,
+not `403`, so the endpoint doesn't confirm that the id exists. A plan naming an id its owner doesn't
+hold is rejected by `PUT /api/state` with `400`; without that check, pasting a stranger's id into
+your own plan would read their picture back out of your own `GET /api/state`.
+
+The bytes are a `bytea` column rather than a file on disk: no volume to provision, and the picture
+is inside the same backup as everything else. Uploads are capped at 2 MB, and the stored content
+type comes from what an `ImageIO` reader recognises in the bytes rather than from the client's
+header, so a renamed non-image is rejected outright.
+
+**Why images live in their own table.** `PUT /api/state` deletes and recreates every exercise row of
+a user on each save, and the frontend saves on every plan edit. Anything held on that row has to be
+re-sent by the client every time — cheap for a UUID, absurd for a few hundred KB of JPEG. So the
+plan carries `exercise.image_id` and the picture keeps its own identity across the wipe. The other
+side of that is orphans: a save also deletes this user's images that no exercise points at any more,
+skipping any uploaded within the last hour, since the upload necessarily answers before the plan
+that will reference it has been saved.
 
 ## Deploying for real use
 

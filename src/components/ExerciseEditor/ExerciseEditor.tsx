@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { BlockRef, Exercise, ExerciseType } from '../../types';
 import { EXERCISE_TYPES, UNIT } from '../../data/constants';
+import { useExerciseImage } from '../../hooks/useExerciseImage';
 import type { ExerciseActions } from '../actions';
 import styles from './ExerciseEditor.module.scss';
 
@@ -10,6 +12,19 @@ interface ExerciseEditorProps {
 }
 
 export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
+  const preview = useExerciseImage(x.imageId);
+  const [uploading, setUploading] = useState(false);
+
+  const pickImage = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    await actions.setImage(blockRef, x.id, file);
+    setUploading(false);
+    // Cleared so picking the same file again still counts as a change.
+    input.value = '';
+  };
+
   return (
     <div className={styles.editor}>
       <div className={`${styles.field} ${styles.wide}`}>
@@ -102,6 +117,30 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
             value={x.desc ?? ''}
             onChange={(e) => actions.setText(blockRef, x.id, 'desc', e.target.value)}
           />
+        </div>
+        <div className={`${styles.field} ${styles.wide}`}>
+          <label htmlFor={`image-${x.id}`}>Bild — Aufbau, zum Beispiel Kastenhöhe</label>
+          <div className={styles.imageRow}>
+            {preview && <img className={styles.preview} src={preview} alt="" />}
+            <input
+              id={`image-${x.id}`}
+              className={styles.file}
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              onChange={(e) => void pickImage(e.currentTarget)}
+            />
+            {uploading && <span className={styles.hint}>lädt …</span>}
+            {x.imageId && !uploading && (
+              <button
+                type="button"
+                className={styles.smallButton}
+                onClick={() => void actions.setImage(blockRef, x.id, null)}
+              >
+                Entfernen
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className={styles.buttonRow}>

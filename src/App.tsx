@@ -142,6 +142,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
     setType: t.setExerciseType,
     setText: t.setExerciseText,
     setSets: t.setExerciseSets,
+    setImage: t.setExerciseImage,
   };
 
   const blockActions = {

@@ -38,8 +38,11 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
-/** Shared low-level fetch: attaches the bearer token and retries once after a 401 refresh. */
-async function authorizedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+/**
+ * Shared low-level fetch: attaches the bearer token and retries once after a 401 refresh. Exported
+ * for the two calls JSON can't carry — uploading a picture and reading its bytes back.
+ */
+export async function authorizedFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);

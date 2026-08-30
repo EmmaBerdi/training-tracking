@@ -122,8 +122,8 @@ Built (`removeSession`, optimistic with rollback). Scope prompt needed once recu
 
 > Emma wants: every Monday and Thursday, gym; every third day, mobility. She sets it up once.
 
-Built as `recurring_rules` + `recurring_rule_exceptions` (V4), with occurrences materialized into
-`planned_sessions` the first time a date range is requested — so status, notes and logging work on an
+Built as `recurring_rule` + `recurring_rule_exception` (V4), with occurrences materialized into
+`planned_session` the first time a date range is requested — so status, notes and logging work on an
 occurrence exactly as on a one-off, and no read path needs to know about rules. Intervals.icu and
 TrainingPeaks both treat the calendar as the primary surface with repeatable plans applied to it;
 Hevy and Strong instead keep *routines* reusable and let you schedule them.
@@ -269,6 +269,24 @@ There is no `deleteBlock` either.
 
 Built (`InfoSheet` + `descriptions.ts`, `attachDesc` reattaching descriptions on load).
 
+### US-4.6 Show me what the setup looks like ✅
+
+> The plyo session starts with a box jump. Emma set the box to a specific height and photographed
+> it once; on the next session she wants to see that photo rather than remember a number.
+
+Built: one picture per exercise. Attached in edit mode (`ExerciseEditor`), shown as a thumbnail on
+the exercise card during the workout, and full size in the info sheet behind it.
+
+**How it works**
+- The picker's photo is downscaled to 1600px and re-encoded as JPEG in the browser
+  (`utils/image.ts`) before upload — this converts the iPhone's HEIC, keeps a photo at a couple of
+  hundred KB, and drops the EXIF block including the GPS coordinates of where it was taken.
+- The bytes go to `POST /api/exercise-images` and live in their own table; the plan stores only the
+  id that came back. That is what lets a picture survive the delete-and-recreate of every exercise
+  row that each plan save performs.
+- Removing a picture clears the reference. The backend collects images nothing points at any more
+  on the next save, once they are over an hour old.
+
 ---
 
 ## E5 — Doing the training
@@ -333,7 +351,7 @@ Built (`HistorySheet`).
 > End of month: Emma wants to know whether "3× Kraft pro Woche" happened.
 
 Nothing aggregates planned vs. done, though the data is all there
-(`planned_sessions.status` per type and date). Weekly totals are the one feature every planning
+(`planned_session.status` per type and date). Weekly totals are the one feature every planning
 app in this space converges on (Intervals.icu shows them per week on the calendar itself).
 
 **Acceptance criteria**
@@ -408,8 +426,8 @@ What the neighbours do, and what this app should take from them.
 
 1. **No seeded plan** (US-1.1, 7.2) — `defaultPlan()` gone, `emptyPlan()` in its place, `Plan.hip`
    optional, reset clears to empty.
-2. **Recurring rules** (US-2.6, 2.7, 2.8) — V4: `recurring_rules`, `recurring_rule_exceptions`,
-   `rule_id`/`occurrence_date` on `planned_sessions`; weekly-mask and every-N-days patterns;
+2. **Recurring rules** (US-2.6, 2.7, 2.8) — V4: `recurring_rule`, `recurring_rule_exception`,
+   `rule_id`/`occurrence_date` on `planned_session`; weekly-mask and every-N-days patterns;
    materialization on range read; scope-aware move/edit/delete with rule splitting;
    `POST /api/recurring-rules`; `scope` on the planned-session write endpoints, which answer 204 when
    a change hit the rest of a series.
@@ -417,22 +435,22 @@ What the neighbours do, and what this app should take from them.
 4. **Schedule-driven Plan tab** (US-5.1) — log mode shows only scheduled days of the month with
    month steppers; edit mode still lists plans.
 5. **Time on create** (US-2.2) and **German seed labels** (US-3.1, V5).
-6. **Plan links survive a plan save** — `planned_sessions.day_id` was a FK to `days(id)`, which
+6. **Plan links survive a plan save** — `planned_session.day_id` was a FK to `day(id)`, which
    `PUT /api/state` deletes and recreates on every save, silently nulling the link. Now stored as
    `day_key`.
 7. **Plan modes on a series** (US-2.6, 2.7) — V7: `plan_mode` + `rotation_offset` on
-   `recurring_rules`, `recurring_rule_plans` for the per-weekday and per-cycle-step plans. The plan
+   `recurring_rule`, `recurring_rule_plan` for the per-weekday and per-cycle-step plans. The plan
    for a date is a pure function of the rule and the date, so re-materializing or skipping an
    occurrence never reshuffles the cycle; `rotation_offset` is what lets a split half carry on
    mid-cycle. `rotation=hold|shift` on skip and single-occurrence delete, and
    `GET`/`PUT /api/recurring-rules/{id}` for editing the series itself.
-8. **Series are chains** (US-2.7) — V8: `series_id` on `recurring_rules`, and one invariant enforced
+8. **Series are chains** (US-2.7) — V8: `series_id` on `recurring_rule`, and one invariant enforced
    in `splitAt`/`endSeriesAt`: at most one half of a series generates any given date. Halves that
    were already split apart before V8 stay separate series; nothing recorded what they belonged to.
 
 ## Still open
 
-1. **Plan ↔ type binding** (US-4.1, 4.2) — column on `days`, type-first pickers, drop `slot`.
+1. **Plan ↔ type binding** (US-4.1, 4.2) — column on `day`, type-first pickers, drop `slot`.
 2. **Auto-done on logging** (US-2.4) — logging a workout should tick its planned session off.
 3. **Delete/rename plans and blocks** (US-4.4), **delete custom type UI** (US-3.3).
 4. **Weekly planned-vs-done strip** (US-6.2).

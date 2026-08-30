@@ -10,7 +10,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "users")
+// Backtick-quoted because `user` is a reserved word in PostgreSQL and in H2 (the test
+// profile); Hibernate rewrites the backticks into whichever quote character the dialect uses.
+@Table(name = "`user`")
 public class User {
 
     @Id

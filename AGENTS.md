@@ -30,7 +30,7 @@ anything project-specific below. This includes, but is not limited to:
   editing (naming, error handling, folder structure) rather than inventing a new pattern. In
   particular: a style rule wanted by a second component moves to `src/styles/shared.module.scss`;
   a closed set of string values gets a DB `CHECK` plus named constants, never bare literals; and
-  the client's own ids (`day_key`, `exercises.client_id`) are what cross-table references store,
+  the client's own ids (`day_key`, `exercise.client_id`) are what cross-table references store,
   because `PUT /api/state` recreates every plan row on each save.
 - **No dead code.** Don't leave commented-out code, unused imports, or placeholder
   TODO-without-context behind.

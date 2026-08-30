@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "session_types")
+@Table(name = "session_type")
 public class SessionType {
 
     @Id

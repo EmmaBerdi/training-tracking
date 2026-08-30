@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 /** A date a rule must not generate: the occurrence was deleted on its own, or moved elsewhere. */
 @Entity
-@Table(name = "recurring_rule_exceptions")
+@Table(name = "recurring_rule_exception")
 public class RecurringRuleException {
 
     @EmbeddedId

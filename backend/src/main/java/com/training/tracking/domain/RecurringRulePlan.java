@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
  * {@code rotation}; a {@code fixed} rule has no rows here and uses its own day_key.
  */
 @Entity
-@Table(name = "recurring_rule_plans")
+@Table(name = "recurring_rule_plan")
 public class RecurringRulePlan {
 
     @EmbeddedId

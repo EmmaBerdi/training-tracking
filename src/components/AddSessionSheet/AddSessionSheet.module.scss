@@ -141,6 +141,23 @@
   line-height: 1.45;
 }
 
+/* Opt-in to a clock time; without it a planned session is just a day entry. */
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+
+  input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    accent-color: var(--ink);
+  }
+}
+
 .labelRow {
   composes: labelRow from '../../styles/shared.module.scss';
 }

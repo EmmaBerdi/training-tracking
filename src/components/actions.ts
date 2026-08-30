@@ -18,6 +18,11 @@ export interface ExerciseActions {
   setType: (ref: BlockRef, exId: string, type: ExerciseType) => void;
   setText: (ref: BlockRef, exId: string, field: ExerciseTextField, value: string) => void;
   setSets: (ref: BlockRef, exId: string, field: ExerciseSetsField, value: number) => void;
+  /**
+   * Attaches a setup photo, or removes it when passed null. Resolves once the upload has been
+   * stored, so the editor can show that it is busy — a photo takes a moment over mobile data.
+   */
+  setImage: (ref: BlockRef, exId: string, file: File | null) => Promise<void>;
 }
 
 export interface WarmupActions {

@@ -20,6 +20,7 @@ public record ExerciseDto(
         @Min(0) @Max(99) Integer setsR,
         @NotNull @Size(max = 64) String reps,
         @Size(max = 2000) String note,
-        @Size(max = 20000) String desc
+        @Size(max = 20000) String desc,
+        @Size(max = 36) String imageId
 ) {
 }

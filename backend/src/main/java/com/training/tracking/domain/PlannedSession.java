@@ -16,7 +16,7 @@ import java.time.LocalTime;
 import java.util.Set;
 
 @Entity
-@Table(name = "planned_sessions")
+@Table(name = "planned_session")
 public class PlannedSession {
 
     public static final String STATUS_PLANNED = "planned";
@@ -46,7 +46,7 @@ public class PlannedSession {
 
     /**
      * Client-facing id of the linked workout plan, or null. Stored as the key rather than a FK to
-     * days(id) because PUT /api/state deletes and recreates every day row on each plan save.
+     * day(id) because PUT /api/state deletes and recreates every day row on each plan save.
      */
     @Column(name = "day_key", length = 16)
     private String dayKey;

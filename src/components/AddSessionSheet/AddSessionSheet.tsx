@@ -73,6 +73,8 @@ export function AddSessionSheet({
   const editing = rule != null;
   const [selectedDate, setSelectedDate] = useState(date);
   const [time, setTime] = useState(rule?.time ?? '');
+  // A time is the exception, not the rule: a planned session is a day entry unless asked otherwise.
+  const [timed, setTimed] = useState(Boolean(rule?.time));
   const [sessionTypeId, setSessionTypeId] = useState<number | null>(
     rule?.sessionTypeId ?? types[0]?.id ?? null,
   );
@@ -184,7 +186,7 @@ export function AddSessionSheet({
     if (sessionTypeId == null || incomplete) return;
     const shared = {
       sessionTypeId,
-      time: time || undefined,
+      time: timed ? time || undefined : undefined,
       notes: notes.trim() || undefined,
     };
     if (repeat === 'once') {
@@ -224,28 +226,30 @@ export function AddSessionSheet({
             }}
           />
         </div>
-        <div className={styles.field}>
-          <div className={styles.labelRow}>
-            <label htmlFor="session-time">Zeit (optional)</label>
-            {time && (
-              <button
-                type="button"
-                className={styles.clearButton}
-                aria-label="Zeit löschen"
-                onClick={() => setTime('')}
-              >
-                ×
-              </button>
-            )}
+        {timed && (
+          <div className={styles.field}>
+            <label htmlFor="session-time">Zeit</label>
+            <input
+              id="session-time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
           </div>
-          <input
-            id="session-time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
-        </div>
+        )}
       </div>
+
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={timed}
+          onChange={(e) => {
+            setTimed(e.target.checked);
+            if (!e.target.checked) setTime('');
+          }}
+        />
+        <span>Feste Uhrzeit</span>
+      </label>
 
       <div className={styles.field}>
         <label>Art</label>

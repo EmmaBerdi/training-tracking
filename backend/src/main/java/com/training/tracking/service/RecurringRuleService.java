@@ -33,7 +33,7 @@ import java.util.Set;
 /**
  * Recurring rules and the occurrences they generate.
  *
- * <p>Occurrences are materialized into {@code planned_sessions} the first time a date range is
+ * <p>Occurrences are materialized into {@code planned_session} the first time a date range is
  * requested, rather than expanded on every read: that way status, notes and logging work on a
  * series occurrence exactly as on a one-off session, and no read path needs to know about rules.
  *
@@ -47,7 +47,7 @@ public class RecurringRuleService {
     private static final short ALL_WEEKDAYS = 127;
     private static final int MAX_INTERVAL_DAYS = 365;
     private static final int WEEKDAYS_IN_WEEK = 7;
-    /** Matches the position CHECK on recurring_rule_plans; only there to bound a stray request. */
+    /** Matches the position CHECK on recurring_rule_plan; only there to bound a stray request. */
     private static final int MAX_ROTATION_PLANS = 12;
     /** Upper bound for "every remaining date"; LocalDate.MAX overflows a Postgres DATE. */
     private static final LocalDate FAR_FUTURE = LocalDate.of(9999, 12, 31);

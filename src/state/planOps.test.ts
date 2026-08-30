@@ -153,6 +153,26 @@ describe('exercises', () => {
     const p = plan(day('mo'));
     expect(planOps.setExerciseUni(p, FIRST_BLOCK, 'a', false)).toEqual(p);
   });
+
+  it('attaches and removes a picture without touching its siblings', () => {
+    let p = plan(day('mo'));
+
+    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', 'img-1');
+    expect(p.days[0].blocks[0].ex[0].imageId).toBe('img-1');
+    expect(p.days[0].blocks[0].ex[1].imageId).toBeUndefined();
+
+    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', undefined);
+    expect(p.days[0].blocks[0].ex[0].imageId).toBeUndefined();
+  });
+
+  it('keeps the picture when the exercise switches sides', () => {
+    let p = plan(day('mo'));
+    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', 'img-1');
+
+    const uni = planOps.setExerciseUni(p, FIRST_BLOCK, 'a', true);
+
+    expect(uni.days[0].blocks[0].ex[0]).toMatchObject({ uni: true, imageId: 'img-1' });
+  });
 });
 
 describe('warmup', () => {

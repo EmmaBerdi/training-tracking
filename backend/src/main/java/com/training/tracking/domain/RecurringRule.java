@@ -16,7 +16,7 @@ import java.time.LocalTime;
 
 /** A repeating training slot; occurrences are materialized into {@link PlannedSession} rows on read. */
 @Entity
-@Table(name = "recurring_rules")
+@Table(name = "recurring_rule")
 public class RecurringRule {
 
     public static final String PATTERN_WEEKLY = "weekly";

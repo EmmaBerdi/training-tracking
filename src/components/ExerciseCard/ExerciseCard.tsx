@@ -1,5 +1,6 @@
 import type { Exercise, ExerciseType, Side } from '../../types';
 import { UNIT } from '../../data/constants';
+import { useExerciseImage } from '../../hooks/useExerciseImage';
 import { ExerciseTrack } from '../ExerciseTrack/ExerciseTrack';
 import styles from './ExerciseCard.module.scss';
 
@@ -46,6 +47,7 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   const sets = x.uni ? `${x.setsL || 0}/${x.setsR || 0}` : `${x.sets}`;
   const last = lastSummary(x, lastVal);
+  const thumb = useExerciseImage(x.imageId);
 
   return (
     <div className={styles.exercise}>
@@ -55,15 +57,30 @@ export function ExerciseCard({
           <div className={styles.spec}>{`${sets} × ${x.reps}  ·  ${UNIT[x.type]}`}</div>
           {last && <div className={styles.last}>{`zuletzt  ${last}`}</div>}
         </div>
-        {x.desc && (
+        {x.imageId ? (
           <button
             type="button"
-            className={styles.info}
+            className={styles.thumbButton}
             aria-label={`Anleitung zu ${x.name}`}
             onClick={() => onOpenInfo(x.id)}
           >
-            i
+            {thumb ? (
+              <img className={styles.thumb} src={thumb} alt="" />
+            ) : (
+              <span className={styles.thumb} />
+            )}
           </button>
+        ) : (
+          x.desc && (
+            <button
+              type="button"
+              className={styles.info}
+              aria-label={`Anleitung zu ${x.name}`}
+              onClick={() => onOpenInfo(x.id)}
+            >
+              i
+            </button>
+          )
         )}
       </div>
 

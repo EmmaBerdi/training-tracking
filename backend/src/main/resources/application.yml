@@ -12,6 +12,12 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
+  servlet:
+    multipart:
+      # Exercise setup photos, the only upload the API takes. The service enforces 2 MB on the file
+      # itself; this is the container-level backstop that stops a larger body being buffered at all.
+      max-file-size: 3MB
+      max-request-size: 3MB
 
 server:
   port: ${SERVER_PORT:8080}

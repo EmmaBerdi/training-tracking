@@ -10,6 +10,17 @@
   composes: solid from '../../styles/shared.module.scss';
 }
 
+/** Capped rather than free-standing: a portrait photo would otherwise fill the sheet on its own. */
+.photo {
+  display: block;
+  width: 100%;
+  max-height: 45vh;
+  object-fit: contain;
+  border-radius: 10px;
+  background: var(--panel);
+  margin-bottom: 14px;
+}
+
 .guide {
   font-size: 15.5px;
   line-height: 1.62;

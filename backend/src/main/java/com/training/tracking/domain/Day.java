@@ -9,7 +9,9 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "days", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "day_key"}))
+// Backtick-quoted because `day` is a reserved word in H2 (the test profile), where it names an
+// interval field. PostgreSQL accepts it bare, which is why the changelog writes it unquoted.
+@Table(name = "`day`", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "day_key"}))
 public class Day {
 
     @Id

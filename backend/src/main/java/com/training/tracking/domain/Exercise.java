@@ -10,8 +10,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.util.UUID;
+
 @Entity
-@Table(name = "exercises")
+@Table(name = "exercise")
 public class Exercise {
 
     @Id
@@ -52,6 +54,14 @@ public class Exercise {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * The setup photo, or null. A plain id rather than an association: the image outlives the
+     * delete-and-recreate of {@code PUT /api/state} that this row does not, so the reference only
+     * ever travels in one direction.
+     */
+    @Column(name = "image_id")
+    private UUID imageId;
+
     @Column(nullable = false)
     private int position;
 
@@ -90,6 +100,9 @@ public class Exercise {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public UUID getImageId() { return imageId; }
+    public void setImageId(UUID imageId) { this.imageId = imageId; }
 
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }

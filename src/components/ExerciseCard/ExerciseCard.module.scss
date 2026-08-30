@@ -43,6 +43,27 @@
   }
 }
 
+/** Sits where the i button would be, opening the same sheet. */
+.thumbButton {
+  flex: none;
+  display: block;
+  border-radius: 9px;
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--skill);
+    outline-offset: 2px;
+  }
+}
+
+.thumb {
+  composes: photoThumb from '../../styles/shared.module.scss';
+  display: block;
+}
+
 .name {
   font-size: 16px;
   font-weight: 600;

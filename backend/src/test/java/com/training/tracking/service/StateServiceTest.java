@@ -1,5 +1,6 @@
 package com.training.tracking.service;
 
+import com.training.tracking.domain.ExerciseImage;
 import com.training.tracking.domain.User;
 import com.training.tracking.dto.BlockDto;
 import com.training.tracking.dto.DayDto;
@@ -7,6 +8,7 @@ import com.training.tracking.dto.ExerciseDto;
 import com.training.tracking.dto.PlanDto;
 import com.training.tracking.dto.SessionDto;
 import com.training.tracking.dto.StateDto;
+import com.training.tracking.repository.ExerciseImageRepository;
 import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,9 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,6 +34,9 @@ class StateServiceTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ExerciseImageRepository exerciseImageRepository;
 
     private Long userId;
 
@@ -44,7 +51,11 @@ class StateServiceTest {
     }
 
     private static ExerciseDto exercise(String id, String name) {
-        return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung");
+        return exercise(id, name, null);
+    }
+
+    private static ExerciseDto exercise(String id, String name, String imageId) {
+        return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung", imageId);
     }
 
     private static DayDto day(String id, ExerciseDto... exercises) {
@@ -196,5 +207,94 @@ class StateServiceTest {
         assertThat(stateService.getState(userId).plan().days()).extracting(DayDto::id).containsExactly("mo");
         assertThat(stateService.getState(other.getId()).plan().days())
                 .extracting(DayDto::id).containsExactly("di");
+    }
+
+    /**
+     * The point of storing images in their own table: the exercise row this reference sat on was
+     * deleted and rebuilt by the second save, and the picture is still there.
+     */
+    @Test
+    void keepsThePictureReferenceThroughAPlanEdit() {
+        ExerciseImage image = storeImage(userId, Instant.now());
+
+        stateService.saveState(userId, state(
+                List.of(day("mo", exercise("ex1", "Sprungkasten", image.getId().toString()))), List.of()));
+        stateService.saveState(userId, state(
+                List.of(day("mo", exercise("ex1", "Sprungkasten 60cm", image.getId().toString()))), List.of()));
+
+        StateDto loaded = stateService.getState(userId);
+        ExerciseDto reloaded = loaded.plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(reloaded.name()).isEqualTo("Sprungkasten 60cm");
+        assertThat(reloaded.imageId()).isEqualTo(image.getId().toString());
+        assertThat(exerciseImageRepository.findById(image.getId())).isPresent();
+    }
+
+    /** Otherwise naming a stranger's id in your own plan would read their photo back out of it. */
+    @Test
+    void rejectsAPlanPointingAtSomeoneElsesPicture() {
+        Long other = createOtherUser();
+        ExerciseImage theirs = storeImage(other, Instant.now());
+        StateDto stolen = state(
+                List.of(day("mo", exercise("ex1", "Sprungkasten", theirs.getId().toString()))), List.of());
+
+        assertThatThrownBy(() -> stateService.saveState(userId, stolen))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+        assertThat(exerciseImageRepository.findById(theirs.getId())).isPresent();
+    }
+
+    @Test
+    void sweepsAwayAPictureNoExerciseUsesAnyMore() {
+        Instant old = Instant.now().minus(Duration.ofDays(1));
+        ExerciseImage kept = storeImage(userId, old);
+        ExerciseImage dropped = storeImage(userId, old);
+        stateService.saveState(userId, state(List.of(day("mo",
+                exercise("ex1", "Sprungkasten", kept.getId().toString()),
+                exercise("ex2", "Hürdensprung", dropped.getId().toString()))), List.of()));
+
+        // The picture is taken off ex2 — the shape of pressing "Bild entfernen" and saving.
+        stateService.saveState(userId, state(List.of(day("mo",
+                exercise("ex1", "Sprungkasten", kept.getId().toString()),
+                exercise("ex2", "Hürdensprung"))), List.of()));
+
+        assertThat(exerciseImageRepository.findById(kept.getId())).isPresent();
+        assertThat(exerciseImageRepository.findById(dropped.getId())).isEmpty();
+    }
+
+    /**
+     * The upload answers before the plan carrying its id is saved. A save landing in that window
+     * would otherwise collect the picture the user is in the middle of attaching.
+     */
+    @Test
+    void sparesAPictureUploadedMomentsAgoThatNothingReferencesYet() {
+        ExerciseImage justUploaded = storeImage(userId, Instant.now());
+
+        stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of()));
+
+        assertThat(exerciseImageRepository.findById(justUploaded.getId())).isPresent();
+    }
+
+    private Long createOtherUser() {
+        User other = new User();
+        other.setEmail("other-" + UUID.randomUUID() + "@example.com");
+        other.setPasswordHash("hash");
+        other.setCreatedAt(Instant.now());
+        userRepository.save(other);
+        return other.getId();
+    }
+
+    /** Straight into the repository: what the bytes are does not matter to the plan save. */
+    private ExerciseImage storeImage(Long owner, Instant createdAt) {
+        ExerciseImage image = new ExerciseImage();
+        image.setId(UUID.randomUUID());
+        image.setUserId(owner);
+        image.setContentType("image/jpeg");
+        image.setByteSize(3);
+        image.setWidth(40);
+        image.setHeight(60);
+        image.setData(new byte[] {1, 2, 3});
+        image.setCreatedAt(createdAt);
+        return exerciseImageRepository.save(image);
     }
 }

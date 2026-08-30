@@ -11,7 +11,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "sessions",
+@Table(name = "session",
         uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "session_date", "day_key"}))
 public class Session {
 

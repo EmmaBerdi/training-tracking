@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppState, BlockKind, BlockRef, Day, Exercise, Side, Slot } from '../types';
 import { emptyPlan, uid } from '../data/plan';
 import { loadState, saveState } from '../api/client';
+import { uploadImage } from '../api/images';
+import { prepareImage } from '../utils/image';
 import type { ExerciseSetsField, ExerciseTextField } from '../state/planOps';
 import * as planOps from '../state/planOps';
 import * as logOps from '../state/logOps';
@@ -147,6 +149,33 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     [updatePlan],
   );
 
+  /**
+   * The picture is uploaded first and the plan only ever stores the id that came back, so a failed
+   * upload leaves the plan exactly as it was.
+   */
+  const setExerciseImage = useCallback(
+    async (ref: BlockRef, exId: string, file: File | null) => {
+      if (!file) {
+        updatePlan((p) => planOps.setExerciseImage(p, ref, exId, undefined));
+        return;
+      }
+      let uploaded;
+      try {
+        uploaded = await uploadImage(await prepareImage(file));
+      } catch (err) {
+        console.error(err);
+        notify('Bild konnte nicht gelesen werden');
+        return;
+      }
+      if (!uploaded) {
+        notify('Bild hochladen fehlgeschlagen');
+        return;
+      }
+      updatePlan((p) => planOps.setExerciseImage(p, ref, exId, uploaded.id));
+    },
+    [notify, updatePlan],
+  );
+
   const addWarmupItem = useCallback(
     () => updatePlan((p) => planOps.addWarmupItem(p)),
     [updatePlan],
@@ -222,6 +251,7 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     setExerciseType,
     setExerciseText,
     setExerciseSets,
+    setExerciseImage,
     addWarmupItem,
     deleteWarmupItem,
     moveWarmupItem,

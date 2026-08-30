@@ -119,8 +119,8 @@ export type ExerciseSetsField = 'sets' | 'setsL' | 'setsR';
 
 function convertUni(x: Exercise, uni: boolean): Exercise {
   if (x.uni === uni) return x;
-  const { id, name, type, reps, note, desc } = x;
-  const base = { id, name, type, reps, note, desc };
+  const { id, name, type, reps, note, desc, imageId } = x;
+  const base = { id, name, type, reps, note, desc, imageId };
   if (uni) {
     const fallback = (x as BilateralExercise).sets || 3;
     return { ...base, uni: true, setsL: fallback, setsR: fallback };
@@ -163,6 +163,16 @@ export function setExerciseText(
   value: string,
 ): Plan {
   return withExercise(plan, ref, exId, (x) => ({ ...x, [field]: value }));
+}
+
+/** `imageId` undefined removes the picture; the backend collects it once nothing points at it. */
+export function setExerciseImage(
+  plan: Plan,
+  ref: BlockRef,
+  exId: string,
+  imageId: string | undefined,
+): Plan {
+  return withExercise(plan, ref, exId, (x) => ({ ...x, imageId }));
 }
 
 export function setExerciseSets(

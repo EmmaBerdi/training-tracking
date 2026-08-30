@@ -170,6 +170,21 @@
   font-weight: 650;
 }
 
+/* --- Pictures --- */
+
+/**
+ * A cropped square preview of an uploaded picture, at tap-target size. Also stands in for one that
+ * is still loading, so the row it sits in doesn't jump once the bytes arrive.
+ */
+.photoThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
 /* --- Accent marks, driven by the --k custom property --- */
 
 /** The thin vertical rule that opens a block heading. */

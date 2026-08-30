@@ -30,9 +30,11 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * The whole state (plan + logs) for one user is saved as one blob, mirroring the frontend's
@@ -55,6 +57,7 @@ public class StateService {
     private final SessionRepository sessionRepository;
     private final SessionWarmupRepository sessionWarmupRepository;
     private final SessionValueRepository sessionValueRepository;
+    private final ExerciseImageService exerciseImageService;
 
     public StateService(DayRepository dayRepository,
                          BlockRepository blockRepository,
@@ -62,7 +65,8 @@ public class StateService {
                          WarmupItemRepository warmupItemRepository,
                          SessionRepository sessionRepository,
                          SessionWarmupRepository sessionWarmupRepository,
-                         SessionValueRepository sessionValueRepository) {
+                         SessionValueRepository sessionValueRepository,
+                         ExerciseImageService exerciseImageService) {
         this.dayRepository = dayRepository;
         this.blockRepository = blockRepository;
         this.exerciseRepository = exerciseRepository;
@@ -70,6 +74,7 @@ public class StateService {
         this.sessionRepository = sessionRepository;
         this.sessionWarmupRepository = sessionWarmupRepository;
         this.sessionValueRepository = sessionValueRepository;
+        this.exerciseImageService = exerciseImageService;
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +169,8 @@ public class StateService {
 
     private static ExerciseDto toDto(Exercise e) {
         return new ExerciseDto(e.getClientId(), e.getName(), e.getType(), e.isUni(),
-                e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription());
+                e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription(),
+                e.getImageId() == null ? null : e.getImageId().toString());
     }
 
     @Transactional
@@ -173,6 +179,7 @@ public class StateService {
         List<DayDto> dayDtos = plan.days() == null ? List.of() : plan.days();
         List<SessionDto> logDtos = state.logs() == null ? List.of() : state.logs();
         rejectAmbiguousKeys(dayDtos, logDtos);
+        exerciseImageService.requireOwnership(userId, referencedImageIds(dayDtos));
 
         wipe(userId);
 
@@ -186,6 +193,24 @@ public class StateService {
 
         Map<String, Exercise> exerciseByClientId = saveBlocksAndExercises(userId, dayDtos, days);
         saveLogs(userId, logDtos, exerciseByClientId);
+
+        // After the exercises are back in place, so the surviving references are visible to the sweep.
+        exerciseImageService.collectOrphans(userId);
+    }
+
+    /** Every image the submitted plan points at, in one pass, so ownership costs a single query. */
+    private static Set<UUID> referencedImageIds(List<DayDto> dayDtos) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        for (DayDto day : dayDtos) {
+            for (BlockDto block : nullToEmpty(day.blocks())) {
+                for (ExerciseDto ex : nullToEmpty(block.ex())) {
+                    if (ex.imageId() != null) {
+                        ids.add(ExerciseImageService.parseId(ex.imageId()));
+                    }
+                }
+            }
+        }
+        return ids;
     }
 
     /**
@@ -324,6 +349,7 @@ public class StateService {
         entity.setReps(ex.reps());
         entity.setNote(ex.note());
         entity.setDescription(ex.desc());
+        entity.setImageId(ex.imageId() == null ? null : ExerciseImageService.parseId(ex.imageId()));
         entity.setPosition(position);
         return entity;
     }
