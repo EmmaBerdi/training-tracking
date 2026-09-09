@@ -20,9 +20,11 @@ The frontend is a React + TypeScript + SCSS single-page app, built with Vite.
 | `vite.config.ts` | Build config, incl. `vite-plugin-pwa` (generates the manifest + service worker) |
 | `backend/` | Java (Spring Boot) REST API + Liquibase-managed Postgres schema — see [`docs/BACKEND.md`](docs/BACKEND.md) |
 | `docker-compose.yml` | Local dev stack: Postgres + backend |
+| `deploy/` | Raspberry Pi deployment: compose stack, nginx reverse proxy, Cloudflare tunnel, backup script |
 | `.github/workflows/deploy.yml` | Builds the frontend and deploys it to GitHub Pages on push to `main` |
 | `docs/SETUP.md` | Step-by-step guide: GitHub repo → GitHub Pages → install on iPhone |
 | `docs/BACKEND.md` | Running and configuring the backend + database |
+| `docs/DEPLOY-PI.md` | Self-hosting the whole stack on a Raspberry Pi behind a Cloudflare tunnel |
 | `docs/Trainingsplan_v6.md` | The underlying training plan and rationale (German) |
 
 ## Setup

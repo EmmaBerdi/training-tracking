@@ -134,7 +134,8 @@ that will reference it has been saved.
 
 ## Deploying for real use
 
-This only covers local development. For anything beyond that you'll need to:
+This only covers local development. To self-host the whole stack on a Raspberry Pi, see
+[`docs/DEPLOY-PI.md`](DEPLOY-PI.md) — it covers all three points below. Otherwise:
 - Run Postgres somewhere durable (a managed instance is simplest) and set the `DB_*` variables accordingly.
 - Build and run the backend as a normal Spring Boot jar (`./mvnw package` → `java -jar backend/target/tracking-backend-*.jar`) or the provided `backend/Dockerfile`, on a host reachable from wherever the frontend is served.
 - Serve it over HTTPS if the frontend is served over HTTPS — browsers block mixed-content `fetch` calls from an HTTPS page to a plain `http://` API.
