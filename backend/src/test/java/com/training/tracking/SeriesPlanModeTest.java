@@ -62,10 +62,10 @@ class SeriesPlanModeTest {
         headers = new HttpHeaders();
         headers.setBearerAuth(registered.getBody().accessToken());
 
-        put("/api/state", new StateDto(new PlanDto(List.of(),
-                List.of(day("beine", "Beine"), day("arme", "Arme"), day("push", "Push"))), List.of()));
         gymTypeId = post("/api/session-types", new CreateSessionTypeRequest("Gym", null, null),
                 SessionTypeDto.class).getBody().id();
+        put("/api/state", new StateDto(new PlanDto(List.of(),
+                List.of(day("beine", "Beine"), day("arme", "Arme"), day("push", "Push"))), List.of()));
     }
 
     @Test
@@ -189,8 +189,8 @@ class SeriesPlanModeTest {
         return sessions().stream().filter(s -> s.date().equals(date)).findFirst().orElseThrow();
     }
 
-    private static DayDto day(String id, String title) {
-        return new DayDto(id, title.substring(0, 3).toUpperCase(), "nachmittags", title, List.of());
+    private DayDto day(String id, String title) {
+        return new DayDto(id, title.substring(0, 3).toUpperCase(), gymTypeId, title, List.of());
     }
 
     private <T> ResponseEntity<T> post(String path, Object body, Class<T> type) {

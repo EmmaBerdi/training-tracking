@@ -121,3 +121,20 @@ describe('previous values', () => {
     expect(previous.get(logOps.positionKey('row', 'R', 0))).toBe('24');
   });
 });
+
+describe('the first entry of a workout', () => {
+  it('is the first non-empty value, ignoring warm-up ticks and cleared sets', () => {
+    expect(logOps.startsWorkout(undefined, '60')).toBe(true);
+    expect(logOps.startsWorkout({ ...log('2026-08-20', 'mo'), warm: [true] }, '60')).toBe(true);
+    expect(logOps.startsWorkout(log('2026-08-20', 'mo', { squat: { B: ['', ''] } }), '60')).toBe(
+      true,
+    );
+  });
+
+  it('is not an empty value, nor anything after a set is already logged', () => {
+    expect(logOps.startsWorkout(undefined, '')).toBe(false);
+    expect(logOps.startsWorkout(log('2026-08-20', 'mo', { squat: { L: ['8'] } }), '60')).toBe(
+      false,
+    );
+  });
+});

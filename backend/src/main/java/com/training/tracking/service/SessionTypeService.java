@@ -3,6 +3,7 @@ package com.training.tracking.service;
 import com.training.tracking.domain.SessionType;
 import com.training.tracking.dto.CreateSessionTypeRequest;
 import com.training.tracking.dto.SessionTypeDto;
+import com.training.tracking.repository.DayRepository;
 import com.training.tracking.repository.PlannedSessionRepository;
 import com.training.tracking.repository.RecurringRuleRepository;
 import com.training.tracking.repository.SessionTypeRepository;
@@ -20,13 +21,16 @@ public class SessionTypeService {
     private final SessionTypeRepository sessionTypeRepository;
     private final PlannedSessionRepository plannedSessionRepository;
     private final RecurringRuleRepository recurringRuleRepository;
+    private final DayRepository dayRepository;
 
     public SessionTypeService(SessionTypeRepository sessionTypeRepository,
                                PlannedSessionRepository plannedSessionRepository,
-                               RecurringRuleRepository recurringRuleRepository) {
+                               RecurringRuleRepository recurringRuleRepository,
+                               DayRepository dayRepository) {
         this.sessionTypeRepository = sessionTypeRepository;
         this.plannedSessionRepository = plannedSessionRepository;
         this.recurringRuleRepository = recurringRuleRepository;
+        this.dayRepository = dayRepository;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +67,9 @@ public class SessionTypeService {
         }
         if (recurringRuleRepository.countBySessionTypeId(typeId) > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "session type is still referenced by a recurring rule");
+        }
+        if (dayRepository.countBySessionTypeId(typeId) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "session type is still referenced by a workout plan");
         }
         sessionTypeRepository.delete(type);
     }

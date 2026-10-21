@@ -4,6 +4,22 @@ export function findLog(logs: WorkoutLog[], date: string, dayId: string): Workou
   return logs.find((s) => s.date === date && s.dayId === dayId);
 }
 
+/** True once anything has been entered; a log holding only checked warm-up items does not count. */
+export function hasValues(log: WorkoutLog | undefined): boolean {
+  return Object.values(log?.vals ?? {}).some((sides) =>
+    Object.values(sides).some((values) => values?.some((v) => v !== '')),
+  );
+}
+
+/**
+ * Whether entering `value` into `log` is the first real entry of that workout: the moment its
+ * planned session counts as done. Later entries never re-trigger it, so a session the user set back
+ * to "geplant" by hand stays that way.
+ */
+export function startsWorkout(log: WorkoutLog | undefined, value: string): boolean {
+  return value !== '' && !hasValues(log);
+}
+
 export function getVal(log: WorkoutLog | undefined, exId: string, side: Side, i: number): string {
   return log?.vals[exId]?.[side]?.[i] ?? '';
 }

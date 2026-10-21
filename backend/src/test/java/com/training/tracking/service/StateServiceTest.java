@@ -1,6 +1,7 @@
 package com.training.tracking.service;
 
 import com.training.tracking.domain.ExerciseImage;
+import com.training.tracking.domain.SessionType;
 import com.training.tracking.domain.User;
 import com.training.tracking.dto.BlockDto;
 import com.training.tracking.dto.DayDto;
@@ -9,6 +10,7 @@ import com.training.tracking.dto.PlanDto;
 import com.training.tracking.dto.SessionDto;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.repository.ExerciseImageRepository;
+import com.training.tracking.repository.SessionTypeRepository;
 import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +40,16 @@ class StateServiceTest {
     @Autowired
     private ExerciseImageRepository exerciseImageRepository;
 
+    @Autowired
+    private SessionTypeRepository sessionTypeRepository;
+
+    @Autowired
+    private SessionTypeService sessionTypeService;
+
     private Long userId;
+
+    /** A type of this user's own, since the test schema carries none of the seeded defaults. */
+    private Long typeId;
 
     @BeforeEach
     void createUser() {
@@ -48,6 +59,15 @@ class StateServiceTest {
         user.setCreatedAt(Instant.now());
         userRepository.save(user);
         userId = user.getId();
+        typeId = customType(userId, "Kraft");
+    }
+
+    private Long customType(Long owner, String label) {
+        SessionType type = new SessionType();
+        type.setUserId(owner);
+        type.setLabel(label);
+        type.setCreatedAt(Instant.now());
+        return sessionTypeRepository.save(type).getId();
     }
 
     private static ExerciseDto exercise(String id, String name) {
@@ -58,8 +78,8 @@ class StateServiceTest {
         return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung", imageId);
     }
 
-    private static DayDto day(String id, ExerciseDto... exercises) {
-        return new DayDto(id, id.toUpperCase(), "morgens", "Plan " + id,
+    private DayDto day(String id, ExerciseDto... exercises) {
+        return new DayDto(id, id.toUpperCase(), typeId, "Plan " + id,
                 List.of(new BlockDto("kraft", "Hauptblock", List.of(exercises))));
     }
 
@@ -79,7 +99,7 @@ class StateServiceTest {
         assertThat(loaded.plan().days()).hasSize(1);
         DayDto loadedDay = loaded.plan().days().get(0);
         assertThat(loadedDay.id()).isEqualTo("mo");
-        assertThat(loadedDay.slot()).isEqualTo("morgens");
+        assertThat(loadedDay.sessionTypeId()).isEqualTo(typeId);
         assertThat(loadedDay.blocks().get(0).kind()).isEqualTo("kraft");
         assertThat(loadedDay.blocks().get(0).ex().get(0).name()).isEqualTo("Kniebeuge");
 
@@ -202,7 +222,9 @@ class StateServiceTest {
         userRepository.save(other);
 
         stateService.saveState(userId, state(List.of(day("mo", exercise("mine", "Kniebeuge"))), List.of()));
-        stateService.saveState(other.getId(), state(List.of(day("di", exercise("theirs", "Rudern"))), List.of()));
+        DayDto theirs = new DayDto("di", "DI", customType(other.getId(), "Kraft"), "Plan di",
+                List.of(new BlockDto("kraft", "Hauptblock", List.of(exercise("theirs", "Rudern")))));
+        stateService.saveState(other.getId(), state(List.of(theirs), List.of()));
 
         assertThat(stateService.getState(userId).plan().days()).extracting(DayDto::id).containsExactly("mo");
         assertThat(stateService.getState(other.getId()).plan().days())
@@ -296,5 +318,29 @@ class StateServiceTest {
         image.setData(new byte[] {1, 2, 3});
         image.setCreatedAt(createdAt);
         return exerciseImageRepository.save(image);
+    }
+
+    @Test
+    void rejectsAPlanFiledUnderSomeoneElsesType() {
+        Long foreignType = customType(createOtherUser(), "Fremd");
+
+        DayDto foreign = new DayDto("mo", "MO", foreignType, "Plan mo", List.of());
+
+        assertThatThrownBy(() -> stateService.saveState(userId, state(List.of(foreign), List.of())))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void keepsATypeAPlanStillBelongsTo() {
+        stateService.saveState(userId, state(List.of(day("mo")), List.of()));
+
+        assertThatThrownBy(() -> sessionTypeService.deleteCustomType(userId, typeId))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+
+        stateService.saveState(userId, state(List.of(), List.of()));
+        sessionTypeService.deleteCustomType(userId, typeId);
+        assertThat(sessionTypeRepository.findById(typeId)).isEmpty();
     }
 }

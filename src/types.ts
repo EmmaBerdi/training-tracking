@@ -2,8 +2,6 @@ export type ExerciseType = 'kg' | 'band' | 'sek' | 'bw' | 'cm' | 'm' | 'min';
 
 export type BlockKind = 'huefte' | 'skill' | 'kraft' | 'explosiv' | 'core' | 'ausdauer';
 
-export type Slot = 'morgens' | 'nachmittags';
-
 export type Side = 'B' | 'L' | 'R';
 
 interface ExerciseBase {
@@ -42,7 +40,8 @@ export interface Block {
 export interface Day {
   id: string;
   short: string;
-  slot: Slot;
+  /** The activity this plan is a workout for; scheduling offers a type's plans under that type. */
+  sessionTypeId: number;
   title: string;
   blocks: Block[];
 }

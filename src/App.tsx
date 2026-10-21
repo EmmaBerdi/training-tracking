@@ -30,6 +30,8 @@ import {
   today,
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
+import { plansForType, sortByType } from './state/planOps';
+import { startsWorkout } from './state/logOps';
 
 export function App() {
   const { status, user, logout } = useAuth();
@@ -98,7 +100,12 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
 
   const tabItems: TabItem[] =
     mode === 'edit'
-      ? t.plan.days.map((d) => ({ id: d.id, top: d.short, bottom: d.title }))
+      ? sortByType(t.plan.days, sessions.types).map((d) => ({
+          id: d.id,
+          top: d.short,
+          bottom: d.title,
+          accent: typeById.get(d.sessionTypeId)?.color,
+        }))
       : monthSessions.map((s) => {
           const type = typeById.get(s.sessionTypeId);
           const day = t.plan.days.find((d) => d.id === s.dayId);
@@ -129,6 +136,18 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
     setSelectedSessionId(session.id);
     setMode('log');
     setView('training');
+  };
+
+  /**
+   * Logging a value also ticks the session off — on the workout's first entry only, and only while
+   * it is still "geplant", so a manual "übersprungen" or a deliberate reset is never overridden.
+   */
+  const logValue = (exId: string, side: Side, index: number, value: string) => {
+    const session = mode === 'log' ? activeSession : undefined;
+    if (session?.status === 'planned' && startsWorkout(t.log, value)) {
+      void sessions.markStatus(session.id, 'done');
+    }
+    t.setVal(exId, side, index, value);
   };
 
   const openEntry = (exId: string, side: Side, index: number, name: string, exType: ExerciseType) =>
@@ -187,12 +206,14 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
             onMonthChange={setMonth}
             sessions={sessions.sessions}
             types={sessions.types}
+            days={t.plan.days}
             onSelectDay={(date) => setSheet({ type: 'addSession', date })}
             onSelectSession={(session) => setSheet({ type: 'sessionDetail', session })}
           />
         ) : t.day ? (
           <DayView
             day={t.day}
+            type={typeById.get(t.day.sessionTypeId)}
             mode={mode}
             warmup={t.plan.warmup}
             log={t.log}
@@ -217,7 +238,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
           <PlainSession
             session={activeSession}
             type={typeById.get(activeSession.sessionTypeId)}
-            canAttachPlan={t.plan.days.length > 0}
+            canAttachPlan={plansForType(t.plan.days, activeSession.sessionTypeId).length > 0}
             onMarkStatus={(status) => void sessions.markStatus(activeSession.id, status)}
             onAttachPlan={() => setSheet({ type: 'sessionDetail', session: activeSession })}
           />
@@ -256,7 +277,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
               current={t.getVal(sheet.exId, sheet.side, sheet.index)}
               last={t.lastVal(sheet.exId, sheet.side, sheet.index)}
               onSubmit={(value) => {
-                t.setVal(sheet.exId, sheet.side, sheet.index, value);
+                logValue(sheet.exId, sheet.side, sheet.index, value);
                 closeSheet();
               }}
               onClear={() => {
@@ -268,6 +289,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
 
           {sheet.type === 'newPlan' && (
             <PlanSheet
+              types={sessions.types}
               onSubmit={(input) => {
                 const day = t.addDay(input);
                 setEditDayId(day.id);
@@ -281,6 +303,7 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
             <PlanSheet
               key={sheet.day.id}
               day={sheet.day}
+              types={sessions.types}
               onSubmit={(input) => {
                 t.updateDay(sheet.day.id, input);
                 closeSheet();

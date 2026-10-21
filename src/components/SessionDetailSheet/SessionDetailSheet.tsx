@@ -8,6 +8,7 @@ import type {
   SessionType,
 } from '../../types';
 import { sessionTypeAccent } from '../../utils/cssVar';
+import { plansForType } from '../../state/planOps';
 import styles from './SessionDetailSheet.module.scss';
 
 interface SessionDetailSheetProps {
@@ -63,6 +64,8 @@ export function SessionDetailSheet({
   const [dayId, setDayId] = useState(session.dayId ?? '');
   const [pending, setPending] = useState<Pending | null>(null);
 
+  // The session's own type decides which plans fit; the one it carries now stays pickable.
+  const planOptions = plansForType(days, session.sessionTypeId, [session.dayId ?? '']);
   const recurring = session.ruleId != null;
   const rotating = recurring && session.rotating === true;
 
@@ -205,13 +208,13 @@ export function SessionDetailSheet({
         Verschieben
       </button>
 
-      {days.length > 0 && (
+      {planOptions.length > 0 && (
         <>
           <div className={styles.field}>
             <label>Workout-Plan</label>
             <select value={dayId} onChange={(e) => setDayId(e.target.value)}>
               <option value="">— kein Workout —</option>
-              {days.map((d) => (
+              {planOptions.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.title}
                 </option>

@@ -1,4 +1,13 @@
-import type { Block, BlockRef, Day, ExerciseType, Mode, Side, WorkoutLog } from '../../types';
+import type {
+  Block,
+  BlockRef,
+  Day,
+  ExerciseType,
+  Mode,
+  SessionType,
+  Side,
+  WorkoutLog,
+} from '../../types';
 import { DayHeader } from '../DayHeader/DayHeader';
 import { WarmupSection } from '../WarmupSection/WarmupSection';
 import { BlockSection } from '../BlockSection/BlockSection';
@@ -7,6 +16,8 @@ import styles from './DayView.module.scss';
 
 interface DayViewProps {
   day: Day;
+  /** The activity the plan belongs to, named under its title. */
+  type: SessionType | undefined;
   mode: Mode;
   warmup: string[];
   log: WorkoutLog | undefined;
@@ -32,6 +43,7 @@ function refFor(day: Day, index: number): BlockRef {
 
 export function DayView({
   day,
+  type,
   mode,
   warmup,
   log,
@@ -52,7 +64,7 @@ export function DayView({
 
   return (
     <>
-      <DayHeader day={day} />
+      <DayHeader day={day} type={type} />
 
       {editing && (
         <div className={styles.planRow}>

@@ -58,6 +58,7 @@ public class StateService {
     private final SessionWarmupRepository sessionWarmupRepository;
     private final SessionValueRepository sessionValueRepository;
     private final ExerciseImageService exerciseImageService;
+    private final ScheduleRefs scheduleRefs;
 
     public StateService(DayRepository dayRepository,
                          BlockRepository blockRepository,
@@ -66,7 +67,8 @@ public class StateService {
                          SessionRepository sessionRepository,
                          SessionWarmupRepository sessionWarmupRepository,
                          SessionValueRepository sessionValueRepository,
-                         ExerciseImageService exerciseImageService) {
+                         ExerciseImageService exerciseImageService,
+                         ScheduleRefs scheduleRefs) {
         this.dayRepository = dayRepository;
         this.blockRepository = blockRepository;
         this.exerciseRepository = exerciseRepository;
@@ -75,6 +77,7 @@ public class StateService {
         this.sessionWarmupRepository = sessionWarmupRepository;
         this.sessionValueRepository = sessionValueRepository;
         this.exerciseImageService = exerciseImageService;
+        this.scheduleRefs = scheduleRefs;
     }
 
     @Transactional(readOnly = true)
@@ -101,7 +104,7 @@ public class StateService {
         }
 
         List<DayDto> dayDtos = days.stream()
-                .map(d -> new DayDto(d.getDayKey(), d.getShortLabel(), d.getSlot(), d.getTitle(),
+                .map(d -> new DayDto(d.getDayKey(), d.getShortLabel(), d.getSessionTypeId(), d.getTitle(),
                         blocksByDay.getOrDefault(d.getId(), List.of())))
                 .toList();
 
@@ -179,6 +182,9 @@ public class StateService {
         List<DayDto> dayDtos = plan.days() == null ? List.of() : plan.days();
         List<SessionDto> logDtos = state.logs() == null ? List.of() : state.logs();
         rejectAmbiguousKeys(dayDtos, logDtos);
+        // A plan may only hang under a global type or one of this user's own.
+        dayDtos.stream().map(DayDto::sessionTypeId).distinct()
+                .forEach(typeId -> scheduleRefs.sessionType(userId, typeId));
         exerciseImageService.requireOwnership(userId, referencedImageIds(dayDtos));
 
         wipe(userId);
@@ -330,7 +336,7 @@ public class StateService {
         day.setUserId(userId);
         day.setDayKey(d.id());
         day.setShortLabel(d.shortLabel());
-        day.setSlot(d.slot());
+        day.setSessionTypeId(d.sessionTypeId());
         day.setTitle(d.title());
         day.setPosition(position);
         return day;

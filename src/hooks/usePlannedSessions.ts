@@ -250,7 +250,7 @@ export function usePlannedSessions(notify: (message: string) => void) {
       const ok = await deleteSessionType(id);
       if (!ok) {
         if (removed) setTypes((prev) => [...prev, removed as SessionType]);
-        notify('Kategorie wird noch von einem Termin verwendet');
+        notify('Kategorie wird noch von einem Termin oder Plan verwendet');
         return false;
       }
       return true;

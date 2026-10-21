@@ -18,3 +18,15 @@
 .field {
   composes: field from '../../styles/shared.module.scss';
 }
+
+.chips {
+  composes: chips from '../../styles/shared.module.scss';
+}
+
+.chip {
+  composes: chip from '../../styles/shared.module.scss';
+}
+
+.chipOn {
+  composes: chipOn from '../../styles/shared.module.scss';
+}

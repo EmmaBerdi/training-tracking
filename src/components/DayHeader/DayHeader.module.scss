@@ -8,10 +8,10 @@
   letter-spacing: -0.02em;
 }
 
-.daySlot {
+.dayType {
   margin-top: 4px;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--k, var(--faint));
 }

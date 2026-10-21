@@ -10,7 +10,7 @@ function day(id: string, over: Partial<Day> = {}): Day {
   return {
     id,
     short: id.toUpperCase(),
-    slot: 'morgens',
+    sessionTypeId: 2,
     title: `Plan ${id}`,
     blocks: [{ kind: 'core', name: 'Block', ex: [exercise('a'), exercise('b')] }],
     ...over,
@@ -27,12 +27,35 @@ describe('plans', () => {
   it('adds, renames and removes a plan without touching its siblings', () => {
     let p = plan(day('mo'), day('di'));
 
-    p = planOps.updateDay(p, 'mo', { title: 'Oberkörper', short: 'OK', slot: 'nachmittags' });
-    expect(p.days[0]).toMatchObject({ title: 'Oberkörper', short: 'OK', slot: 'nachmittags' });
+    p = planOps.updateDay(p, 'mo', { title: 'Oberkörper', short: 'OK', sessionTypeId: 3 });
+    expect(p.days[0]).toMatchObject({ title: 'Oberkörper', short: 'OK', sessionTypeId: 3 });
     expect(p.days[1].title).toBe('Plan di');
 
     p = planOps.deleteDay(p, 'mo');
     expect(p.days.map((d) => d.id)).toEqual(['di']);
+  });
+
+  it('offers only the plans of the chosen type, plus any plan already attached', () => {
+    const days = [day('ok', { sessionTypeId: 2 }), day('lauf', { sessionTypeId: 1 })];
+
+    expect(planOps.plansForType(days, 2).map((d) => d.id)).toEqual(['ok']);
+    expect(planOps.plansForType(days, 5)).toEqual([]);
+    expect(planOps.plansForType(days, 2, ['lauf']).map((d) => d.id)).toEqual(['ok', 'lauf']);
+  });
+
+  it('groups plans by type in the order the types are listed', () => {
+    const types = [
+      { id: 1, label: 'Laufen', custom: false },
+      { id: 2, label: 'Kraft', custom: false },
+    ];
+    const days = [
+      day('a', { sessionTypeId: 2 }),
+      day('b', { sessionTypeId: 9 }),
+      day('c', { sessionTypeId: 1 }),
+      day('d', { sessionTypeId: 2 }),
+    ];
+
+    expect(planOps.sortByType(days, types).map((d) => d.id)).toEqual(['c', 'a', 'd', 'b']);
   });
 
   it('leaves the plan untouched when the target day does not exist', () => {

@@ -28,25 +28,15 @@
 }
 
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  composes: chips from '../../styles/shared.module.scss';
+}
+
+.chipOn {
+  composes: chipOn from '../../styles/shared.module.scss';
 }
 
 .chip {
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  font-size: 13.5px;
-  color: var(--ink);
-  background: var(--panel);
-
-  &.chipOn {
-    background: var(--k, var(--panel2));
-    border-color: var(--k, var(--line));
-    color: var(--bg);
-    font-weight: 650;
-  }
+  composes: chip from '../../styles/shared.module.scss';
 
   &.chipAdd {
     color: var(--mute);

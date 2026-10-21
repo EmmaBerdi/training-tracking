@@ -4,6 +4,7 @@ import {
   addMonths,
   formatTabDate,
   isoDate,
+  isoWeek,
   isSameMonth,
   monthGrid,
   monthRange,
@@ -81,5 +82,21 @@ describe('isSameMonth', () => {
 describe('formatTabDate', () => {
   it('shows the weekday and day number, since the month sits in the header', () => {
     expect(formatTabDate('2026-08-24')).toBe('Mo 24.');
+  });
+});
+
+describe('isoWeek', () => {
+  it('counts the week holding 4 January as week 1', () => {
+    expect(isoWeek('2026-01-01')).toBe(1); // a Thursday
+    expect(isoWeek('2026-10-21')).toBe(43);
+  });
+
+  it('gives the first days of a year to the last week of the previous one when they fall short', () => {
+    expect(isoWeek('2027-01-01')).toBe(53); // a Friday, still in 2026's 53rd week
+    expect(isoWeek('2027-01-04')).toBe(1);
+  });
+
+  it('is not thrown off by the clock change', () => {
+    expect(isoWeek('2026-03-30')).toBe(14); // the Monday after summer time starts
   });
 });

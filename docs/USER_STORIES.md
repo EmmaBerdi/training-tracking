@@ -35,7 +35,7 @@ repeated on every day.
 
 **Acceptance criteria**
 - A new account has **no** workout plans and **no** planned sessions.
-- "Zurücksetzen" in the data sheet clears back to empty, not to the pistol program.
+- Nothing in the app restores the pistol program; a reset, if one returns (US-7.2), clears to empty.
 - Nothing in `src/data/defaultPlan.ts` describes one specific person's training.
 - Emma's existing plan is untouched — it lives in Postgres, not in the seed.
 
@@ -59,13 +59,13 @@ calendar is a dead end.
 - The wizard explains, in one line each, the two things Jonas cannot guess: that tapping a
   calendar day plans a session, and that an activity can carry a detailed workout plan if he wants
   one.
-- Re-runnable on demand from the data sheet ("Einführung nochmal ansehen").
+- Re-runnable on demand from the user menu ("Einführung nochmal ansehen").
 
 ### US-1.3 Log out on a shared device ✅
 
 > Emma hands her tablet to a friend and logs out first.
 
-Built (`DataSheet` → `onLogout`). Tokens cleared, back to `AuthScreen`.
+Built (`UserMenu` → `onLogout`). Tokens cleared, back to `AuthScreen`.
 
 ---
 
@@ -97,16 +97,18 @@ on creation; it has a time field now, and pills show it.
 Built (`SessionDetailSheet` → `onReschedule`, optimistic update, rollback on failure).
 Interacts with recurrence — see US-2.6.
 
-### US-2.4 Tick a session off, or admit I skipped it ✅ / 🟡
+### US-2.4 Tick a session off, or admit I skipped it ✅
 
 > Emma got back from her run and marks it "gemacht".
 
 Built (`markStatus`, `planned | done | skipped`).
 
-The gap: **nothing connects logging to the plan.** A logged `Session` is keyed by
-`(date, dayId)` and knows nothing about the `PlannedSession` on that date, so filling in every set
-of Monday's gym workout leaves the calendar entry stubbornly "planned", and Emma has to mark it
-done by hand.
+Logging is connected to the plan: the first value entered for a workout (`logOps.startsWorkout`)
+flips the session being logged from "geplant" to "erledigt" (`App.logValue`). Only the first entry
+does it and only from "geplant", so neither a manual "übersprungen" nor a session deliberately set
+back to "geplant" is overridden by the next set. Checking off warm-up items does not count. This
+happens client-side: the log and the planned session are saved through separate APIs, and the
+session being logged is known only to the view.
 
 **Acceptance criteria**
 - Logging any value for a workout on a date flips that date's matching planned session to "done"
@@ -202,12 +204,13 @@ renames the global rows in place, so ids and every reference to them survive.
 
 Built (`AddSessionSheet` → "+ Neu", label + color + optional icon, per-user, unique per user).
 
-### US-3.3 Clean up an activity I no longer use 🟡
+### US-3.3 Clean up an activity I no longer use ✅
 
 > Emma stopped swimming and wants "Schwimmen" out of her chip row.
 
-Backend and hook exist (`deleteCustomType`, `removeSessionType`, refuses while sessions reference
-it) but **no UI calls it** — `removeSessionType` is dead code. Global types are correctly
+Built: selecting a custom type in `AddSessionSheet` offers „… löschen“ with a confirmation. The
+backend refuses while a planned session, a series or a workout plan still uses the type (`409`),
+which surfaces as "Kategorie wird noch von einem Termin oder Plan verwendet". Global types are
 undeletable (`custom: false`).
 
 **Acceptance criteria**
@@ -218,13 +221,16 @@ undeletable (`custom: false`).
 
 ## E4 — Workout plans
 
-### US-4.1 Create a workout plan for an activity 🟡
+### US-4.1 Create a workout plan for an activity ✅
 
 > Emma creates "Oberkörper" and attaches it to "Kraft". Jonas never opens this screen.
 
-`NewPlanSheet` creates a plan with title, short label and a `slot` (morgens/nachmittags).
-Two problems: a plan has **no link to an activity type**, and `slot` is a leftover from the
-personal program — with real times on the calendar, a morning/afternoon flag is redundant.
+Built: `PlanSheet` asks for title, short label and the activity (required, no preselection), and
+the same sheet changes it later. `day.session_type_id` (changeset `003`) stores it; `slot` is gone.
+Existing plans were given the type they were scheduled under most often, and unscheduled ones
+"Kraft". Every scheduling picker (`AddSessionSheet`, `SessionDetailSheet`) lists only the chosen
+type's plans, and hides the plan field entirely for a type that has none. A plan already attached
+from another type stays listed, so opening an older entry never silently drops its plan.
 
 **Acceptance criteria**
 - A plan belongs to exactly one session type, chosen on creation and changeable later from inside
@@ -233,12 +239,16 @@ personal program — with real times on the calendar, a morning/afternoon flag i
   (Laufen) never ask.
 - `slot` is dropped in favour of the session time.
 
-### US-4.2 Several plans under one activity 🔴
+### US-4.2 Several plans under one activity ✅
 
 > "Gym" is not one workout. Emma has Oberkörper, Unterkörper and Ganzkörper, all Gym.
 
 Directly from the interview, and the reason type and plan must stay separate concepts rather than
 collapsing into one.
+
+Built: any number of plans per type. The scheduling pickers show only that type's plans; the
+edit-mode tab strip groups plans by type and underlines them in the type's color; calendar pills
+show the pinned plan's short label (full title on hover) and the type name otherwise.
 
 **Acceptance criteria**
 - Any number of plans per type; the plan picker groups them under their type.
@@ -252,12 +262,14 @@ Built and genuinely good: blocks by kind, bilateral/unilateral exercises with se
 set counts, seven measurement types (kg, band, sek, bw, cm, m, min), reps as free text, notes,
 reordering, edit mode (`ExerciseEditor`, `planOps`).
 
-### US-4.4 Rename or delete a plan I no longer use 🔴
+### US-4.4 Rename or delete a plan I no longer use ✅
 
 > The "Testphase" plan was a dead end. Emma wants it gone.
 
-`planOps` has `addDay` but no delete and no rename; a plan created by accident is permanent.
-There is no `deleteBlock` either.
+Built: in edit mode, „Plan bearbeiten“ (`PlanSheet`) renames a plan and „Plan löschen“ deletes it
+after a confirmation; blocks are deleted from their header (`BlockSection`), also confirmed.
+Sessions pointing at a deleted plan keep their `day_key`, which then reads as "no plan linked";
+logged workouts keep theirs too.
 
 **Acceptance criteria**
 - Plans can be renamed and deleted from edit mode, with a confirmation.
@@ -267,7 +279,7 @@ There is no `deleteBlock` either.
 
 ### US-4.5 Remind me what an exercise is ✅
 
-Built (`InfoSheet` + `descriptions.ts`, `attachDesc` reattaching descriptions on load).
+Built (`InfoSheet` shows the exercise's own description, written in `ExerciseEditor`).
 
 ### US-4.6 Show me what the setup looks like ✅
 
@@ -335,24 +347,29 @@ to have a plan linked.
 
 ### US-5.6 Log something I did yesterday ✅
 
-Built via the date picker in the header. Must keep working once the tab strip is schedule-driven —
-picking an earlier date has to show that date's scheduled training.
+Built through the schedule-driven tab strip: yesterday's session is a tab like any other (earlier
+months via the steppers), and selecting it logs under its date.
 
 ---
 
 ## E6 — Looking back
 
-### US-6.1 Review a past session ✅
+### US-6.1 Review a past session 🟡
 
-Built (`HistorySheet`).
+`HistorySheet` was removed together with the data sheet (commit `c8505f3`). A past session can
+still be opened from the tab strip or the calendar, and shows the values logged for it; there is
+no list of all logged workouts any more.
 
-### US-6.2 See whether I actually did what I planned 🔴
+### US-6.2 See whether I actually did what I planned ✅
 
 > End of month: Emma wants to know whether "3× Kraft pro Woche" happened.
 
-Nothing aggregates planned vs. done, though the data is all there
-(`planned_session.status` per type and date). Weekly totals are the one feature every planning
-app in this space converges on (Intervals.icu shows them per week on the calendar itself).
+Weekly totals are the one feature every planning app in this space converges on (Intervals.icu
+shows them per week on the calendar itself).
+
+Built: a strip under the month grid (`CalendarView`, `state/weekTotals.ts`), one row per
+calendar week (KW) that has anything scheduled — "Kraft 2/3" is two of three done, with skipped
+sessions counted separately. A week straddling the month boundary is counted whole.
 
 **Acceptance criteria**
 - Per week, per type: planned / done / skipped counts, on or next to the calendar.
@@ -369,16 +386,17 @@ Deliberately parked; noted so it is not mistaken for an oversight.
 
 ## E7 — Data and account
 
-### US-7.1 Export and import my data ✅
+### US-7.1 Export and import my data 🔴
 
-Built (`DataSheet`, JSON round-trip through `importState`).
+Removed together with `DataSheet` (commit `c8505f3`); the user menu has no export. Backups are a
+server concern for now: `deploy/backup.sh` runs a nightly `pg_dump` on the Pi.
 
-### US-7.2 Start over ✅
+### US-7.2 Start over 🔴
 
 > Emma wants a clean slate.
 
-Built. "Zurücksetzen" used to restore the personal pistol program; the button now reads "Alle Pläne
-löschen" and clears to empty, and the sheet offers "Einführung nochmal ansehen".
+"Alle Pläne löschen" went away with the data sheet (commit `c8505f3`). Plans can still be deleted
+one at a time (US-4.4), and "Einführung nochmal ansehen" moved to the user menu.
 
 ---
 
@@ -447,13 +465,18 @@ What the neighbours do, and what this app should take from them.
 8. **Series are chains** (US-2.7) — V8: `series_id` on `recurring_rule`, and one invariant enforced
    in `splitAt`/`endSeriesAt`: at most one half of a series generates any given date. Halves that
    were already split apart before V8 stay separate series; nothing recorded what they belonged to.
+9. **Plan ↔ type binding** (US-4.1, 4.2) — changeset `003`: `day.session_type_id` replaces
+   `slot`, backfilled from how each plan was scheduled; type-first pickers; plans grouped by type.
+10. **Auto-done on logging** (US-2.4) — the first logged value ticks the session off.
+11. **Weekly planned-vs-done strip** (US-6.2) — per KW and type, under the month grid.
+12. **Cleanup UI confirmed** (US-3.3, 4.4) — deleting custom types, plans and blocks was already
+    wired; the backend now also refuses to delete a type a plan still belongs to.
 
 ## Still open
 
-1. **Plan ↔ type binding** (US-4.1, 4.2) — column on `day`, type-first pickers, drop `slot`.
-2. **Auto-done on logging** (US-2.4) — logging a workout should tick its planned session off.
-3. **Delete/rename plans and blocks** (US-4.4), **delete custom type UI** (US-3.3).
-4. **Weekly planned-vs-done strip** (US-6.2).
+1. **History list, export/import, start over** (US-6.1, 7.1, 7.2) — removed with the data sheet
+   in `c8505f3`; decide whether they come back, in the user menu.
+2. **Progress per exercise** (US-6.3) — deliberately parked.
 
 ## Resolved
 

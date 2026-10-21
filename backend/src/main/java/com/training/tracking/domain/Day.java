@@ -28,9 +28,9 @@ public class Day {
     @Column(name = "short_label", nullable = false, length = 32)
     private String shortLabel;
 
-    /** One of 'morgens' | 'nachmittags'; DB CHECK enforces valid values. */
-    @Column(nullable = false, length = 32)
-    private String slot;
+    /** The activity this plan is a workout for; scheduling offers a type's plans under that type. */
+    @Column(name = "session_type_id", nullable = false)
+    private Long sessionTypeId;
 
     @Column(nullable = false)
     private String title;
@@ -50,8 +50,8 @@ public class Day {
     public String getShortLabel() { return shortLabel; }
     public void setShortLabel(String shortLabel) { this.shortLabel = shortLabel; }
 
-    public String getSlot() { return slot; }
-    public void setSlot(String slot) { this.slot = slot; }
+    public Long getSessionTypeId() { return sessionTypeId; }
+    public void setSessionTypeId(Long sessionTypeId) { this.sessionTypeId = sessionTypeId; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

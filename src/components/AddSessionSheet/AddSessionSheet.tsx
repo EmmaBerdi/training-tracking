@@ -9,6 +9,7 @@ import type {
 } from '../../types';
 import { defaultSessionTypeColor, sessionTypeAccent } from '../../utils/cssVar';
 import { WEEKDAY_SHORT, weekdayBit } from '../../utils/date';
+import { plansForType } from '../../state/planOps';
 import styles from './AddSessionSheet.module.scss';
 
 /** "Einmalig" is not a rule at all — it creates a single planned session. */
@@ -110,6 +111,21 @@ export function AddSessionSheet({
   const selectedType = types.find((t) => t.id === sessionTypeId);
   const weekdayList = selectedWeekdays(weekdays);
   const assignedWeekdays = weekdayList.filter((index) => weekdayPlans[index]);
+  const typePlans = plansForType(days, sessionTypeId);
+  /** One picker's options: the type's plans, plus whatever that picker already holds. */
+  const optionsFor = (selected: string) => plansForType(days, sessionTypeId, [selected]);
+  const attached = [dayId, ...Object.values(weekdayPlans), ...rotation].filter(Boolean);
+  // Types without plans (Laufen) never ask; a series keeps showing plans it already carries.
+  const offersPlans = plansForType(days, sessionTypeId, attached).length > 0;
+
+  /** Plans belong to a type, so switching the type drops the plans picked for the old one. */
+  const selectType = (id: number | null) => {
+    if (id === sessionTypeId) return;
+    setSessionTypeId(id);
+    setDayId('');
+    setWeekdayPlans({});
+    setRotation([]);
+  };
 
   const toggleWeekday = (index: number) => setWeekdays((mask) => mask ^ (1 << index));
 
@@ -137,7 +153,7 @@ export function AddSessionSheet({
     const created = await onAddType({ label, color: newColor, icon: newIcon.trim() || undefined });
     setSaving(false);
     if (created) {
-      setSessionTypeId(created.id);
+      selectType(created.id);
       setNewTypeOpen(false);
       setNewLabel('');
       setNewIcon('');
@@ -150,7 +166,7 @@ export function AddSessionSheet({
     setSaving(true);
     const ok = await onDeleteType(selectedType.id);
     setSaving(false);
-    if (ok) setSessionTypeId(types.find((t) => t.id !== selectedType.id)?.id ?? null);
+    if (ok) selectType(types.find((t) => t.id !== selectedType.id)?.id ?? null);
   };
 
   const planIncomplete =
@@ -260,7 +276,7 @@ export function AddSessionSheet({
               type="button"
               className={`${styles.chip} ${t.id === sessionTypeId ? styles.chipOn : ''}`}
               style={sessionTypeAccent(t)}
-              onClick={() => setSessionTypeId(t.id)}
+              onClick={() => selectType(t.id)}
             >
               {t.label}
             </button>
@@ -373,9 +389,9 @@ export function AddSessionSheet({
         </div>
       )}
 
-      {days.length > 0 && (
+      {offersPlans && (
         <div className={styles.field}>
-          <label>Workout-Plan (optional)</label>
+          <label>{selectedType?.label ?? 'Workout'}-Plan (optional)</label>
           {/* A one-off has a single date, so there is nothing to vary the plan across. */}
           {repeat !== 'once' && (
             <div className={styles.chips}>
@@ -395,7 +411,7 @@ export function AddSessionSheet({
           {(repeat === 'once' || planMode === 'fixed') && (
             <select id="session-plan" value={dayId} onChange={(e) => setDayId(e.target.value)}>
               <option value="">— kein Workout —</option>
-              {days.map((d) => (
+              {optionsFor(dayId).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.title}
                 </option>
@@ -415,7 +431,7 @@ export function AddSessionSheet({
                     }
                   >
                     <option value="">— kein Workout —</option>
-                    {days.map((d) => (
+                    {optionsFor(weekdayPlans[index] ?? '').map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.title}
                       </option>
@@ -437,7 +453,7 @@ export function AddSessionSheet({
                 <div key={index} className={styles.planRow}>
                   <span className={styles.planKey}>{index + 1}.</span>
                   <select value={id} onChange={(e) => setRotationAt(index, e.target.value)}>
-                    {days.map((d) => (
+                    {optionsFor(id).map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.title}
                       </option>
@@ -471,13 +487,15 @@ export function AddSessionSheet({
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                className={styles.addPlan}
-                onClick={() => setRotation((prev) => [...prev, days[0].id])}
-              >
-                + Plan anhängen
-              </button>
+              {typePlans.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.addPlan}
+                  onClick={() => setRotation((prev) => [...prev, typePlans[0].id])}
+                >
+                  + Plan anhängen
+                </button>
+              )}
               <div className={styles.hint}>
                 {rotation.length < 2
                   ? 'Mindestens zwei Pläne — jeder Termin nimmt den nächsten aus der Liste.'

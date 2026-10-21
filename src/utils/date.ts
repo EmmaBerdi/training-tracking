@@ -44,6 +44,16 @@ export function monthRange(d: Date): { from: string; to: string } {
   return { from: isoDate(grid[0]), to: isoDate(grid[grid.length - 1]) };
 }
 
+/** ISO-Kalenderwoche (KW) von `iso`: die Woche mit dem 4. Januar ist KW 1, Wochen beginnen montags. */
+export function isoWeek(iso: string): number {
+  const d = parseIso(iso);
+  const thursday = addDays(d, 3 - mondayIndex(d));
+  const jan4 = new Date(thursday.getFullYear(), 0, 4);
+  const firstThursday = addDays(jan4, 3 - mondayIndex(jan4));
+  // Gerundet, weil eine Zeitumstellung dazwischen den Abstand um eine Stunde verschiebt.
+  return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86400000));
+}
+
 /** Neues Datum, `delta` Monate nach `d` versetzt (negativ = davor); Tag wird auf den 1. gesetzt. */
 export function addMonths(d: Date, delta: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1);

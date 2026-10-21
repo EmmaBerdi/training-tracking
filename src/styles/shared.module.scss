@@ -61,6 +61,31 @@
   border-color: var(--kraft-line);
 }
 
+/* --- Session-type chips --- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/** A pickable session type; fills with the type's `--k` accent once selected. */
+.chip {
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--panel);
+
+  &.chipOn {
+    background: var(--k, var(--panel2));
+    border-color: var(--k, var(--line));
+    color: var(--bg);
+    font-weight: 650;
+  }
+}
+
 /* --- Sheet typography --- */
 
 .sheetTitle {

@@ -10,4 +10,6 @@ public interface DayRepository extends JpaRepository<Day, Long> {
     List<Day> findAllByUserIdOrderByPosition(Long userId);
 
     Optional<Day> findByUserIdAndDayKey(Long userId, String dayKey);
+
+    long countBySessionTypeId(Long sessionTypeId);
 }

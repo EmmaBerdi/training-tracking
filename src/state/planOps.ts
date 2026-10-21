@@ -6,7 +6,7 @@ import type {
   Day,
   Exercise,
   Plan,
-  Slot,
+  SessionType,
   UnilateralExercise,
 } from '../types';
 import { uid } from '../data/plan';
@@ -30,6 +30,25 @@ export function findExercise(plan: Plan, id: string): Exercise | null {
   return null;
 }
 
+/**
+ * The plans offered when scheduling a session of one type. A plan in `keep` stays listed even if it
+ * belongs to another type, so opening an entry that predates the binding never silently drops it.
+ */
+export function plansForType(
+  days: Day[],
+  sessionTypeId: number | null,
+  keep: string[] = [],
+): Day[] {
+  return days.filter((d) => d.sessionTypeId === sessionTypeId || keep.includes(d.id));
+}
+
+/** Plans grouped by their type, in the order the types are listed; plan order holds within a type. */
+export function sortByType(days: Day[], types: SessionType[]): Day[] {
+  const rank = new Map(types.map((t, i) => [t.id, i]));
+  const of = (d: Day) => rank.get(d.sessionTypeId) ?? types.length;
+  return [...days].sort((a, b) => of(a) - of(b));
+}
+
 export function addDay(plan: Plan, day: Day): Plan {
   return { ...plan, days: [...plan.days, day] };
 }
@@ -37,7 +56,7 @@ export function addDay(plan: Plan, day: Day): Plan {
 export function updateDay(
   plan: Plan,
   dayId: string,
-  patch: { title: string; short: string; slot: Slot },
+  patch: { title: string; short: string; sessionTypeId: number },
 ): Plan {
   return {
     ...plan,

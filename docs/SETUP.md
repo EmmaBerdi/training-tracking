@@ -84,9 +84,9 @@ Ein manueller Cache-Versionsschritt wie früher entfällt — der Service Worker
 
 Die App speichert nichts mehr auf dem iPhone selbst — alles liegt in der Postgres-Datenbank hinter deinem Backend. Das Gerät wechseln ist damit kein Problem mehr, ein Ausfall oder versehentliches Löschen der Datenbank aber schon.
 
-Deshalb trotzdem: alle paar Wochen unter **Daten** → **Als JSON exportieren** und die Datei in der Dateien-App oder iCloud ablegen. Über **JSON importieren** holst du den Stand zurück. Für die Datenbank selbst lohnt sich zusätzlich ein reguläres `pg_dump`, falls du sie nicht ohnehin über einen gehosteten Anbieter mit Backups laufen lässt.
+Die App selbst hat keinen Export. Gesichert wird deshalb die Datenbank: auf dem Raspberry Pi übernimmt das `deploy/backup.sh` jede Nacht per `pg_dump` (siehe `docs/DEPLOY-PI.md`), anderswo richtest du ein regelmässiges `pg_dump` selbst ein — es sei denn, ein gehosteter Anbieter macht ohnehin Backups.
 
-Es lohnt sich, den JSON-Export/Import gleich beim ersten Öffnen einmal durchzuspielen, damit du den Weg kennst. Der Moment, in dem du ihn brauchst, ist der ungünstigste zum Ausprobieren.
+Spiel das Zurückspielen eines Dumps einmal durch, solange nichts kaputt ist. Der Moment, in dem du es brauchst, ist der ungünstigste zum Ausprobieren.
 
 ---
 
@@ -101,8 +101,5 @@ Die Icons müssen in `public/` liegen (siehe README-Layout). Prüfen kannst du d
 **Änderungen erscheinen nicht**
 Ist der Actions-Lauf für deinen Commit durch und grün? App vollständig geschlossen und neu geöffnet?
 
-**Nach einem Update stehen noch die alten Trainingstage in der App**
-Der Plan wird beim ersten Start gespeichert und danach nicht mehr überschrieben — sonst würden deine eigenen Änderungen verloren gehen. Nach einem Struktur-Update einmal **Daten** → **Plan auf Ausgangsversion zurücksetzen**. Protokollierte Einheiten bleiben dabei erhalten.
-
 **Daten weg oder Seite zeigt nichts an**
-Läuft das Backend noch, und ist es unter der in `index.html` gesetzten `API_BASE`-Adresse erreichbar? Das ist inzwischen die häufigste Ursache — nicht mehr ein lokaler Speicher, der abgelaufen ist. Prüfe `docs/BACKEND.md`. Als letzter Ausweg hilft der JSON-Import eines früheren Exports.
+Läuft das Backend noch, und ist es unter der in `index.html` gesetzten `API_BASE`-Adresse erreichbar? Das ist inzwischen die häufigste Ursache — nicht mehr ein lokaler Speicher, der abgelaufen ist. Prüfe `docs/BACKEND.md`. Als letzter Ausweg hilft das Zurückspielen des letzten `pg_dump`.

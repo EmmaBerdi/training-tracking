@@ -1,4 +1,4 @@
-import type { PlannedSession, SessionType } from '../../types';
+import type { Day, PlannedSession, SessionType } from '../../types';
 import {
   addMonths,
   formatMonthLabel,
@@ -8,6 +8,7 @@ import {
   WEEKDAY_SHORT,
 } from '../../utils/date';
 import { sessionTypeAccent } from '../../utils/cssVar';
+import { weekTotals } from '../../state/weekTotals';
 import styles from './CalendarView.module.scss';
 
 interface CalendarViewProps {
@@ -15,6 +16,8 @@ interface CalendarViewProps {
   onMonthChange: (month: Date) => void;
   sessions: PlannedSession[];
   types: SessionType[];
+  /** The plans, so a pill pinned to one can show the plan instead of just its type. */
+  days: Day[];
   onSelectDay: (date: string) => void;
   onSelectSession: (session: PlannedSession) => void;
 }
@@ -34,13 +37,16 @@ export function CalendarView({
   onMonthChange,
   sessions,
   types,
+  days,
   onSelectDay,
   onSelectSession,
 }: CalendarViewProps) {
   const grid = monthGrid(month);
   const currentDate = today();
   const typeById = new Map(types.map((t) => [t.id, t]));
+  const dayById = new Map(days.map((d) => [d.id, d]));
   const sessionsByDate = groupByDate(sessions);
+  const totals = weekTotals(sessions, month);
 
   return (
     <div className={styles.calendar}>
@@ -102,20 +108,23 @@ export function CalendarView({
               <span className={styles.pills}>
                 {daySessions.map((s) => {
                   const type = typeById.get(s.sessionTypeId);
+                  const plan = s.dayId ? dayById.get(s.dayId) : undefined;
+                  // A cell is narrow: the plan's short label, its full title on hover.
+                  const label = plan?.short ?? type?.label ?? '?';
                   return (
                     <button
                       key={s.id}
                       type="button"
                       className={`${styles.pill} ${s.status !== 'planned' ? styles.pillDone : ''}`}
                       style={sessionTypeAccent(type)}
-                      title={type?.label ?? ''}
+                      title={plan ? `${type?.label ?? ''} · ${plan.title}` : (type?.label ?? '')}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectSession(s);
                       }}
                     >
                       {s.time && <span className={styles.pillTime}>{s.time.slice(0, 5)} </span>}
-                      {type?.label ?? '?'}
+                      {label}
                       {s.ruleId != null && <span className={styles.repeat}> ↻</span>}
                     </button>
                   );
@@ -125,6 +134,37 @@ export function CalendarView({
           );
         })}
       </div>
+
+      {totals.length > 0 && (
+        <section className={styles.weeks} aria-label="Wochenbilanz">
+          {totals.map((w) => (
+            <div key={w.start} className={styles.week}>
+              <span className={styles.weekLabel}>KW {w.week}</span>
+              <span className={styles.weekTypes}>
+                {w.types.map((t) => {
+                  const type = typeById.get(t.sessionTypeId);
+                  return (
+                    <span
+                      key={t.sessionTypeId}
+                      className={styles.weekType}
+                      style={sessionTypeAccent(type)}
+                    >
+                      <span className={styles.weekDot} />
+                      {type?.label ?? '?'}
+                      <b className={styles.weekCount}>
+                        {t.done}/{t.total}
+                      </b>
+                      {t.skipped > 0 && (
+                        <span className={styles.weekSkipped}>{t.skipped} übersprungen</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

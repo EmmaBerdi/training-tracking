@@ -52,6 +52,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/db.changelog-master.xml` | Root changelog — no changesets of its own, just the ordered `<include>` list |
 | `db/changelog/changes/001-init-schema.sql` | The whole schema in one changeset |
 | `db/changelog/changes/002-exercise-image.sql` | Setup photos: the `exercise_image` table and `exercise.image_id` |
+| `db/changelog/changes/003-day-session-type.sql` | Plans belong to a session type: `day.session_type_id` (backfilled), `day.slot` dropped |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
@@ -73,7 +74,7 @@ double-quoted; `day` is reserved in H2, so both entities carry a backtick-quoted
 Hibernate rewrites into whichever quote character the dialect wants.
 
 - `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable.
-- `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day.
+- `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day, and every day (a plan) to one `session_type`.
 - `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items and per-set logged values hanging off it.
 - `session_type`, `recurring_rule`, `recurring_rule_plan`, `recurring_rule_exception`, `planned_session` — the calendar: activity kinds, repeating series and the sessions they generate.
 
@@ -104,6 +105,8 @@ If you'd rather be explicit, `./mvnw liquibase:changelogSync` does the same mark
 starting the application.
 
 Every `PUT /api/state` call replaces the entire contents of these tables in one transaction (the app always saves the whole state at once, so there's no partial-update path to reconcile). Deleting an exercise from the plan also deletes its historical logged values, since they no longer have anything valid to reference.
+
+Each plan in the payload names its `sessionTypeId`. A type that is neither a seeded global nor one of the caller's own is rejected with `404`, the same answer the planned-session endpoints give, and `DELETE /api/session-types/{id}` answers `409` while a plan still belongs to the type.
 
 ## Exercise setup photos
 

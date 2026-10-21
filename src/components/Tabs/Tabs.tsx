@@ -6,7 +6,7 @@ export interface TabItem {
   id: string;
   /** Big line: the weekday and date in log mode, the plan's short label in edit mode. */
   top: string;
-  /** Small line underneath: what is planned that day, or the plan's slot. */
+  /** Small line underneath: what is planned that day, or the plan's title. */
   bottom: string;
   /** Session-type color, applied as the underline of the active tab. */
   accent?: string;

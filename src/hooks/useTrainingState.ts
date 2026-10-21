@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AppState, BlockKind, BlockRef, Day, Exercise, Side, Slot } from '../types';
+import type { AppState, BlockKind, BlockRef, Day, Exercise, Side } from '../types';
 import { emptyPlan, uid } from '../data/plan';
 import { loadState, saveState } from '../api/client';
 import { uploadImage } from '../api/images';
@@ -17,7 +17,7 @@ export interface Selection {
 export interface DayInput {
   title: string;
   short: string;
-  slot: Slot;
+  sessionTypeId: number;
 }
 
 /**

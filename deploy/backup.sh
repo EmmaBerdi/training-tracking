@@ -1,6 +1,6 @@
 #!/bin/sh
-# Nightly pg_dump into BACKUP_DIR, keeping the last 14. The exported JSON in the app covers the
-# training data; this covers accounts, refresh tokens and the exercise photos as well.
+# Nightly pg_dump into BACKUP_DIR, keeping the last 14. The app has no export of its own, so this
+# is the backup: accounts, plans, logged workouts, the calendar and the exercise photos.
 #
 #   crontab -e
 #   30 3 * * * /home/pi/Training_tracking/deploy/backup.sh >> /home/pi/backup.log 2>&1

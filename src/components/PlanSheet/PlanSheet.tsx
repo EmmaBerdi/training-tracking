@@ -1,30 +1,28 @@
 import { useState } from 'react';
-import type { Day, Slot } from '../../types';
+import type { Day, SessionType } from '../../types';
 import type { DayInput } from '../../hooks/useTrainingState';
+import { sessionTypeAccent } from '../../utils/cssVar';
 import styles from './PlanSheet.module.scss';
 
 interface PlanSheetProps {
   /** The plan being edited, or undefined when creating a new one. */
   day?: Day;
+  types: SessionType[];
   onSubmit: (input: DayInput) => void;
   onDelete?: () => void;
 }
 
-const SLOTS: { value: Slot; label: string }[] = [
-  { value: 'morgens', label: 'Morgens' },
-  { value: 'nachmittags', label: 'Nachmittags' },
-];
-
-export function PlanSheet({ day, onSubmit, onDelete }: PlanSheetProps) {
+export function PlanSheet({ day, types, onSubmit, onDelete }: PlanSheetProps) {
   const [title, setTitle] = useState(day?.title ?? '');
   const [short, setShort] = useState(day?.short ?? '');
-  const [slot, setSlot] = useState<Slot>(day?.slot ?? 'morgens');
+  // No preselection for a new plan: which activity it belongs to is the one thing worth deciding.
+  const [sessionTypeId, setSessionTypeId] = useState<number | null>(day?.sessionTypeId ?? null);
 
-  const complete = Boolean(title.trim() && short.trim());
+  const complete = Boolean(title.trim() && short.trim() && sessionTypeId != null);
 
   const handleSubmit = () => {
-    if (!complete) return;
-    onSubmit({ title: title.trim(), short: short.trim(), slot });
+    if (!complete || sessionTypeId == null) return;
+    onSubmit({ title: title.trim(), short: short.trim(), sessionTypeId });
   };
 
   return (
@@ -32,8 +30,8 @@ export function PlanSheet({ day, onSubmit, onDelete }: PlanSheetProps) {
       <h2 className={styles.title}>{day ? 'Plan bearbeiten' : 'Neuer Plan'}</h2>
       <div className={styles.sub}>
         {day
-          ? 'Titel, Kürzel und Zeitpunkt dieses Workout-Plans ändern.'
-          : 'Einen neuen Workout-Plan anlegen, z. B. für ein neues Training.'}
+          ? 'Titel, Kürzel und Aktivität dieses Workout-Plans ändern.'
+          : 'Einen neuen Workout-Plan anlegen — er gehört zu einer Aktivität, z. B. Kraft.'}
       </div>
 
       <div className={styles.field}>
@@ -57,14 +55,21 @@ export function PlanSheet({ day, onSubmit, onDelete }: PlanSheetProps) {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="plan-slot">Zeitpunkt</label>
-        <select id="plan-slot" value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
-          {SLOTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
+        <label>Aktivität</label>
+        <div className={styles.chips}>
+          {types.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`${styles.chip} ${t.id === sessionTypeId ? styles.chipOn : ''}`}
+              style={sessionTypeAccent(t)}
+              aria-pressed={t.id === sessionTypeId}
+              onClick={() => setSessionTypeId(t.id)}
+            >
+              {t.label}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       <button type="button" className={styles.solid} onClick={handleSubmit} disabled={!complete}>
