@@ -107,7 +107,7 @@ docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env logs -f ba
 
 ## Step 5 — Check it
 
-- From the Pi's LAN: `http://raspberrypi.local:8090`
+- On the Pi itself: `curl -I http://127.0.0.1:8090`
 - From anywhere: `https://training.example.com`
 
 Then install it on the iPhone from the new address exactly as `docs/SETUP.md` describes — open it
@@ -137,8 +137,10 @@ gunzip -c ~/training-backups/training-2026-09-09.sql.gz | \
 
 Nothing binds 8080 or 8081. The backend listens on 8080 *inside its own container*, which is a
 separate network namespace and does not collide with anything on the Pi; nginx reaches it over the
-compose network. The only host port in use is `HOST_PORT` (8090 by default, and only for LAN
-access — the tunnel doesn't need it). Change it in `deploy/.env` if 8090 is taken too.
+compose network. The only host port in use is `HOST_PORT` (8090 by default), bound to 127.0.0.1
+so it's reachable from the Pi itself only — the tunnel doesn't need it, and on all interfaces it
+would serve the app over plain HTTP to the LAN and, through Docker's own firewall rules, to the
+Pi's public IPv6 address. Change it in `deploy/.env` if 8090 is taken too.
 
 ## Updating
 
