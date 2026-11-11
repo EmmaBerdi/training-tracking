@@ -13,4 +13,5 @@ export type SheetState =
    * date the edit applies from — the occurrence it was opened on, matching "alle künftigen Termine".
    */
   | { type: 'editSeries'; rule: RecurringRule; from: string }
+  | { type: 'changePassword' }
   | null;

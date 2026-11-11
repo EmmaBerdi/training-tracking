@@ -139,6 +139,13 @@
   }
 }
 
+/** A form's rejection, shown under its fields. */
+.formError {
+  color: var(--kraft);
+  font-size: 13.5px;
+  margin-top: 12px;
+}
+
 /**
  * A field label with a control opposite it. Pairs with `.clearButton` on optional date/time
  * inputs, whose native pickers offer no way back to an empty value once one is chosen.

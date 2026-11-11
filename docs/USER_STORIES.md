@@ -67,6 +67,22 @@ calendar is a dead end.
 
 Built (`UserMenu` → `onLogout`). Tokens cleared, back to `AuthScreen`.
 
+### US-1.4 Get back in after forgetting my password 🟡
+
+> Jonas forgot his password, taps "Passwort vergessen?", gets a code by mail and sets a new one.
+
+Built: `AuthScreen` modes `forgot` and `reset`, `PasswordService`, `password_reset_token`. After
+the reset he is sent back to the login screen and logs in with the new password; every other
+device is logged out. Open: no SMTP provider is configured on the Pi yet, so no code is delivered
+there until `MAIL_*` is set (see `docs/DEPLOY-PI.md`).
+
+### US-1.5 Change my password ✅
+
+> Emma wants a new password without going through her mail.
+
+"Passwort ändern" in the user menu asks for the current and the new password, then logs out every
+device, this one included.
+
 ---
 
 ## E2 — Planning: the calendar

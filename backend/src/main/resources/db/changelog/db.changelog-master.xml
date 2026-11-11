@@ -16,5 +16,6 @@
     <include file="changes/001-init-schema.sql" relativeToChangelogFile="true"/>
     <include file="changes/002-exercise-image.sql" relativeToChangelogFile="true"/>
     <include file="changes/003-day-session-type.sql" relativeToChangelogFile="true"/>
+    <include file="changes/004-password-reset-token.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

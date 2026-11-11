@@ -18,6 +18,16 @@ spring:
       # itself; this is the container-level backstop that stops a larger body being buffered at all.
       max-file-size: 3MB
       max-request-size: 3MB
+  # Outgoing mail, used only for password reset codes. Left without a host, no mail is sent — see
+  # PasswordResetMailer and docs/BACKEND.md.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -29,3 +39,9 @@ app:
     secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
     access-token-ttl: ${JWT_ACCESS_TTL:PT15M}
     refresh-token-ttl: ${JWT_REFRESH_TTL:P30D}
+  mail:
+    from: ${MAIL_FROM:}
+  password-reset:
+    # Logs the reset code when no mail host is set. Local development only: a logged code is a
+    # password to anyone who can read the logs.
+    log-code: ${PASSWORD_RESET_LOG_CODE:false}

@@ -40,10 +40,15 @@
   }
 }
 
-.error {
-  color: var(--kraft);
+.sub {
+  color: var(--mute);
   font-size: 13.5px;
-  margin-top: 12px;
+  line-height: 1.5;
+  margin: -12px 0 18px;
+}
+
+.error {
+  composes: formError from '../../styles/shared.module.scss';
 }
 
 .solid {
@@ -52,6 +57,14 @@
   &:disabled {
     opacity: 0.6;
   }
+}
+
+.link {
+  width: 100%;
+  padding: 10px 14px 4px;
+  color: var(--mute);
+  font-size: 13.5px;
+  text-align: center;
 }
 
 .toggle {

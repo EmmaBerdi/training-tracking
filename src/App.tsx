@@ -9,6 +9,7 @@ import { EntrySheet } from './components/EntrySheet/EntrySheet';
 import { AddSessionSheet } from './components/AddSessionSheet/AddSessionSheet';
 import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetailSheet';
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
+import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
 import { Toast } from './components/Toast/Toast';
@@ -42,7 +43,13 @@ export function App() {
   return <TrainingApp userEmail={user?.email ?? ''} onLogout={logout} />;
 }
 
-function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () => void }) {
+function TrainingApp({
+  userEmail,
+  onLogout,
+}: {
+  userEmail: string;
+  onLogout: (notice?: string) => void;
+}) {
   const toast = useToast();
   const sessions = usePlannedSessions(toast.show);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -196,7 +203,8 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
         userEmail={userEmail}
         onReopenIntro={() => setIntroForced(true)}
-        onLogout={onLogout}
+        onChangePassword={() => setSheet({ type: 'changePassword' })}
+        onLogout={() => onLogout()}
       />
 
       <main>
@@ -387,6 +395,15 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
                   closeSheet();
                 }
               }}
+            />
+          )}
+
+          {sheet.type === 'changePassword' && (
+            <ChangePasswordSheet
+              onChanged={() =>
+                onLogout('Passwort geändert — bitte mit dem neuen Passwort anmelden.')
+              }
+              onClose={closeSheet}
             />
           )}
         </Sheet>

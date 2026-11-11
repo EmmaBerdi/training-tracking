@@ -8,6 +8,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getRefreshToken() ? 'loading' : 'anonymous',
   );
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const signOut = useCallback(() => {
     setUser(null);
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const start = useCallback((result: authClient.AuthResult) => {
     setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     setUser({ email: result.email, displayName: result.displayName });
+    setNotice(null);
     setStatus('authenticated');
   }, []);
 
@@ -49,15 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [start],
   );
 
-  const logout = useCallback(() => {
-    const rt = getRefreshToken();
-    clearTokens();
-    signOut();
-    if (rt) void authClient.logout(rt);
-  }, [signOut]);
+  const logout = useCallback(
+    (nextNotice?: string) => {
+      const rt = getRefreshToken();
+      clearTokens();
+      signOut();
+      setNotice(nextNotice ?? null);
+      if (rt) void authClient.logout(rt);
+    },
+    [signOut],
+  );
 
   return (
-    <AuthContext.Provider value={{ status, user, login, register, logout }}>
+    <AuthContext.Provider value={{ status, user, notice, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

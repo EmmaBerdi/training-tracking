@@ -90,6 +90,9 @@ nano deploy/.env               # fill in APP_HOSTNAME, TUNNEL_TOKEN, JWT_SECRET,
 dev-only string; leaving it in place on a host reachable from the internet would let anyone forge
 a token for any account.
 
+`MAIL_*` is optional: it is the SMTP account that sends password reset codes. Without it the app
+runs normally, but "Passwort vergessen?" never delivers a code.
+
 ```bash
 docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
 ```
