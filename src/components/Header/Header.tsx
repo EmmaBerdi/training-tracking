@@ -15,6 +15,7 @@ interface HeaderProps {
   onAddPlan?: () => void;
   userEmail: string;
   onReopenIntro: () => void;
+  onChangePassword: () => void;
   onLogout: () => void;
 }
 
@@ -29,6 +30,7 @@ export function Header({
   onAddPlan,
   userEmail,
   onReopenIntro,
+  onChangePassword,
   onLogout,
 }: HeaderProps) {
   return (
@@ -37,7 +39,12 @@ export function Header({
         <div className={styles.eyebrow}>Training</div>
         <div className={styles.datewrap}>
           {view === 'training' && <span className={styles.month}>{monthLabel}</span>}
-          <UserMenu email={userEmail} onReopenIntro={onReopenIntro} onLogout={onLogout} />
+          <UserMenu
+            email={userEmail}
+            onReopenIntro={onReopenIntro}
+            onChangePassword={onChangePassword}
+            onLogout={onLogout}
+          />
         </div>
       </div>
       {view === 'training' && (

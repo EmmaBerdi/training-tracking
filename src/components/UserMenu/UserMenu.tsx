@@ -4,10 +4,11 @@ import styles from './UserMenu.module.scss';
 interface UserMenuProps {
   email: string;
   onReopenIntro: () => void;
+  onChangePassword: () => void;
   onLogout: () => void;
 }
 
-export function UserMenu({ email, onReopenIntro, onLogout }: UserMenuProps) {
+export function UserMenu({ email, onReopenIntro, onChangePassword, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +59,14 @@ export function UserMenu({ email, onReopenIntro, onLogout }: UserMenuProps) {
             onClick={run(onReopenIntro)}
           >
             Einführung nochmal ansehen
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.item}
+            onClick={run(onChangePassword)}
+          >
+            Passwort ändern
           </button>
           <button type="button" role="menuitem" className={styles.item} onClick={run(onLogout)}>
             Abmelden

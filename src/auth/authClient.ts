@@ -54,3 +54,22 @@ export async function refresh(refreshToken: string): Promise<AuthResult> {
 export async function logout(refreshToken: string): Promise<void> {
   await post('/auth/logout', { refreshToken }).catch(() => undefined);
 }
+
+/** Answers the same whether or not the address has an account; the server only mails real ones. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const res = await post('/auth/password-reset/request', { email });
+  if (res.ok) return;
+  if (res.status === 400) throw new AuthError('Bitte eine gültige E-Mail eingeben.');
+  throw new AuthError('Anfrage fehlgeschlagen — Backend erreichbar?');
+}
+
+export async function confirmPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  const res = await post('/auth/password-reset/confirm', { email, code, newPassword });
+  if (res.ok) return;
+  if (res.status === 400) throw new AuthError('Code ungültig oder abgelaufen.');
+  throw new AuthError('Zurücksetzen fehlgeschlagen — Backend erreichbar?');
+}

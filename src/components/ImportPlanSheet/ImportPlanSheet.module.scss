@@ -1,0 +1,72 @@
+.title {
+  composes: sheetTitle from '../../styles/shared.module.scss';
+}
+
+.sub {
+  composes: sheetSub from '../../styles/shared.module.scss';
+}
+
+.field {
+  composes: field from '../../styles/shared.module.scss';
+}
+
+.json {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+
+  &.dragging {
+    border: 1px dashed var(--ink);
+  }
+}
+
+.error {
+  composes: formError from '../../styles/shared.module.scss';
+  margin: 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.days {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  font-size: 14px;
+
+  li {
+    display: flex;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+.count {
+  margin-left: auto;
+  color: var(--mute);
+  font-size: 13px;
+}
+
+.chips {
+  composes: chips from '../../styles/shared.module.scss';
+}
+
+.chip {
+  composes: chip from '../../styles/shared.module.scss';
+}
+
+.chipOn {
+  composes: chipOn from '../../styles/shared.module.scss';
+}
+
+.solid {
+  composes: solid from '../../styles/shared.module.scss';
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.ghost {
+  composes: ghost from '../../styles/shared.module.scss';
+}

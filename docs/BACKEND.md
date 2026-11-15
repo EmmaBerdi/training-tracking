@@ -31,6 +31,11 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 | `DB_PASSWORD` | `training` | Database password |
 | `SERVER_PORT` | `8080` | Port the API listens on |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5500,http://127.0.0.1:5500` | Comma-separated origins allowed to call the API from a browser |
+| `MAIL_HOST` | *(empty)* | SMTP host for password reset codes; empty means no mail is sent |
+| `MAIL_PORT` | `587` | SMTP port (STARTTLS) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | *(empty)* | SMTP login |
+| `MAIL_FROM` | *(empty)* | Sender address of the reset mail |
+| `PASSWORD_RESET_LOG_CODE` | `false` | Logs the reset code when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
 
 ## Pointing the frontend at the backend
 
@@ -53,6 +58,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/001-init-schema.sql` | The whole schema in one changeset |
 | `db/changelog/changes/002-exercise-image.sql` | Setup photos: the `exercise_image` table and `exercise.image_id` |
 | `db/changelog/changes/003-day-session-type.sql` | Plans belong to a session type: `day.session_type_id` (backfilled), `day.slot` dropped |
+| `db/changelog/changes/004-password-reset-token.sql` | Hashed one-time codes for "Passwort vergessen?" — see [Passwords](#passwords) |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
@@ -107,6 +113,24 @@ starting the application.
 Every `PUT /api/state` call replaces the entire contents of these tables in one transaction (the app always saves the whole state at once, so there's no partial-update path to reconcile). Deleting an exercise from the plan also deletes its historical logged values, since they no longer have anything valid to reference.
 
 Each plan in the payload names its `sessionTypeId`. A type that is neither a seeded global nor one of the caller's own is rejected with `404`, the same answer the planned-session endpoints give, and `DELETE /api/session-types/{id}` answers `409` while a plan still belongs to the type.
+
+## Passwords
+
+| Call | Answer |
+|---|---|
+| `POST /api/auth/password-reset/request {email}` | `202`, always |
+| `POST /api/auth/password-reset/confirm {email, code, newPassword}` | `204`, or `400` for any bad, used, expired or locked code |
+| `POST /api/account/password {currentPassword, newPassword}` (bearer token) | `204`, or `400` for a wrong current password |
+
+A reset request for a known address stores a 6-digit code — BCrypt-hashed, valid 15 minutes —
+in `password_reset_token` and mails it; an unknown address gets the same `202` and nothing else,
+so the endpoint can't be used to probe which addresses are registered. Only a user's newest code
+counts, it locks after 5 wrong guesses, and at most 3 codes are issued per account and hour.
+
+Both a reset and a change revoke every refresh token of the account, so each device has to log in
+again with the new password; an access token already issued stays valid until it expires (15
+minutes by default). `/api/account` sits outside `/api/auth/**` on purpose: the latter is open to
+anonymous callers.
 
 ## Exercise setup photos
 

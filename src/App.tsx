@@ -9,6 +9,8 @@ import { EntrySheet } from './components/EntrySheet/EntrySheet';
 import { AddSessionSheet } from './components/AddSessionSheet/AddSessionSheet';
 import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetailSheet';
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
+import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
+import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
 import { Toast } from './components/Toast/Toast';
@@ -31,6 +33,7 @@ import {
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
 import { plansForType, sortByType } from './state/planOps';
+import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
 
 export function App() {
@@ -42,7 +45,13 @@ export function App() {
   return <TrainingApp userEmail={user?.email ?? ''} onLogout={logout} />;
 }
 
-function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () => void }) {
+function TrainingApp({
+  userEmail,
+  onLogout,
+}: {
+  userEmail: string;
+  onLogout: (notice?: string) => void;
+}) {
   const toast = useToast();
   const sessions = usePlannedSessions(toast.show);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -196,7 +205,8 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
         userEmail={userEmail}
         onReopenIntro={() => setIntroForced(true)}
-        onLogout={onLogout}
+        onChangePassword={() => setSheet({ type: 'changePassword' })}
+        onLogout={() => onLogout()}
       />
 
       <main>
@@ -296,6 +306,25 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
                 setMode('edit');
                 closeSheet();
               }}
+              onImport={() => setSheet({ type: 'importPlan' })}
+            />
+          )}
+
+          {sheet.type === 'importPlan' && (
+            <ImportPlanSheet
+              types={sessions.types}
+              onAddType={sessions.addSessionType}
+              onImport={(imported, typeFor) => {
+                const days = toDays(imported, typeFor);
+                t.importDays(days, imported.warmup);
+                setEditDayId(days[0].id);
+                setMode('edit');
+                setView('training');
+                closeSheet();
+                toast.show(
+                  days.length === 1 ? 'Plan importiert' : `${days.length} Pläne importiert`,
+                );
+              }}
             />
           )}
 
@@ -387,6 +416,15 @@ function TrainingApp({ userEmail, onLogout }: { userEmail: string; onLogout: () 
                   closeSheet();
                 }
               }}
+            />
+          )}
+
+          {sheet.type === 'changePassword' && (
+            <ChangePasswordSheet
+              onChanged={() =>
+                onLogout('Passwort geändert — bitte mit dem neuen Passwort anmelden.')
+              }
+              onClose={closeSheet}
             />
           )}
         </Sheet>

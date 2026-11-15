@@ -5,6 +5,7 @@ export type SheetState =
   | { type: 'info'; exId: string }
   | { type: 'entry'; exId: string; side: Side; index: number; name: string; exType: ExerciseType }
   | { type: 'newPlan' }
+  | { type: 'importPlan' }
   | { type: 'editPlan'; day: Day }
   | { type: 'addSession'; date: string }
   | { type: 'sessionDetail'; session: PlannedSession }
@@ -13,4 +14,5 @@ export type SheetState =
    * date the edit applies from — the occurrence it was opened on, matching "alle künftigen Termine".
    */
   | { type: 'editSeries'; rule: RecurringRule; from: string }
+  | { type: 'changePassword' }
   | null;

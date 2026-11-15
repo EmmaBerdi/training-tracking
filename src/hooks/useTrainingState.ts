@@ -7,6 +7,7 @@ import { prepareImage } from '../utils/image';
 import type { ExerciseSetsField, ExerciseTextField } from '../state/planOps';
 import * as planOps from '../state/planOps';
 import * as logOps from '../state/logOps';
+import { mergeImport } from '../state/planImport';
 
 /** Which day is being looked at: the date logs are written under, and the plan shown for it. */
 export interface Selection {
@@ -87,6 +88,10 @@ export function useTrainingState(notify: (message: string) => void, selection: S
   const updateDay = useCallback(
     (targetDayId: string, input: DayInput) =>
       updatePlan((p) => planOps.updateDay(p, targetDayId, input)),
+    [updatePlan],
+  );
+  const importDays = useCallback(
+    (days: Day[], warmup: string[]) => updatePlan((p) => mergeImport(p, days, warmup)),
     [updatePlan],
   );
   const deleteDay = useCallback(
@@ -238,6 +243,7 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     toggleWarmupItem,
     addDay,
     updateDay,
+    importDays,
     deleteDay,
     addBlock,
     deleteBlock,
