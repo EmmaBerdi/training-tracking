@@ -9,6 +9,7 @@ import { EntrySheet } from './components/EntrySheet/EntrySheet';
 import { AddSessionSheet } from './components/AddSessionSheet/AddSessionSheet';
 import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetailSheet';
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
+import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
 import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
@@ -32,6 +33,7 @@ import {
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
 import { plansForType, sortByType } from './state/planOps';
+import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
 
 export function App() {
@@ -303,6 +305,25 @@ function TrainingApp({
                 setEditDayId(day.id);
                 setMode('edit');
                 closeSheet();
+              }}
+              onImport={() => setSheet({ type: 'importPlan' })}
+            />
+          )}
+
+          {sheet.type === 'importPlan' && (
+            <ImportPlanSheet
+              types={sessions.types}
+              onAddType={sessions.addSessionType}
+              onImport={(imported, typeFor) => {
+                const days = toDays(imported, typeFor);
+                t.importDays(days, imported.warmup);
+                setEditDayId(days[0].id);
+                setMode('edit');
+                setView('training');
+                closeSheet();
+                toast.show(
+                  days.length === 1 ? 'Plan importiert' : `${days.length} Pläne importiert`,
+                );
               }}
             />
           )}

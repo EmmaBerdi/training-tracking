@@ -10,9 +10,11 @@ interface PlanSheetProps {
   types: SessionType[];
   onSubmit: (input: DayInput) => void;
   onDelete?: () => void;
+  /** Offered only when creating: switches to importing whole plans from JSON instead. */
+  onImport?: () => void;
 }
 
-export function PlanSheet({ day, types, onSubmit, onDelete }: PlanSheetProps) {
+export function PlanSheet({ day, types, onSubmit, onDelete, onImport }: PlanSheetProps) {
   const [title, setTitle] = useState(day?.title ?? '');
   const [short, setShort] = useState(day?.short ?? '');
   // No preselection for a new plan: which activity it belongs to is the one thing worth deciding.
@@ -75,6 +77,12 @@ export function PlanSheet({ day, types, onSubmit, onDelete }: PlanSheetProps) {
       <button type="button" className={styles.solid} onClick={handleSubmit} disabled={!complete}>
         {day ? 'Änderungen speichern' : 'Plan anlegen'}
       </button>
+
+      {onImport && !day && (
+        <button type="button" className={styles.ghost} onClick={onImport}>
+          Plan aus JSON importieren
+        </button>
+      )}
 
       {onDelete && day && (
         <button

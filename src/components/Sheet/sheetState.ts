@@ -5,6 +5,7 @@ export type SheetState =
   | { type: 'info'; exId: string }
   | { type: 'entry'; exId: string; side: Side; index: number; name: string; exType: ExerciseType }
   | { type: 'newPlan' }
+  | { type: 'importPlan' }
   | { type: 'editPlan'; day: Day }
   | { type: 'addSession'; date: string }
   | { type: 'sessionDetail'; session: PlannedSession }
