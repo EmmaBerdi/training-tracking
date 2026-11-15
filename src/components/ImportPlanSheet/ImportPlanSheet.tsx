@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type DragEvent } from 'react';
 import type { SessionType } from '../../types';
 import {
   importedTypeLabels,
@@ -22,12 +22,13 @@ export function ImportPlanSheet({ types, onAddType, onImport }: ImportPlanSheetP
   const [plan, setPlan] = useState<ImportedPlan | null>(null);
   const [typeFor, setTypeFor] = useState<Record<string, number>>({});
   const [creating, setCreating] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const labels = plan ? importedTypeLabels(plan) : [];
   const complete = labels.every((l) => typeFor[l] != null);
 
-  const handleCheck = () => {
-    const result = parsePlanImport(text);
+  const handleCheck = (source: string) => {
+    const result = parsePlanImport(source);
     if (!result.ok) {
       setErrors(result.errors);
       return;
@@ -43,6 +44,30 @@ export function ImportPlanSheet({ types, onAddType, onImport }: ImportPlanSheetP
     setTypeFor(matched);
   };
 
+  /** A dropped or picked file is checked straight away: choosing it is the whole gesture. */
+  const loadFile = async (file: File) => {
+    const content = await file.text();
+    setText(content);
+    handleCheck(content);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    // Dragged text is left to the textarea's own drop handling.
+    if (!file) return;
+    e.preventDefault();
+    void loadFile(file);
+  };
+
+  const pickFile = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    if (!file) return;
+    await loadFile(file);
+    // Cleared so picking the same file again after fixing it still counts as a change.
+    input.value = '';
+  };
+
   const handleCreateType = async (label: string) => {
     setCreating(true);
     const created = await onAddType({ label, color: defaultSessionTypeColor() });
@@ -55,17 +80,34 @@ export function ImportPlanSheet({ types, onAddType, onImport }: ImportPlanSheetP
       <>
         <h2 className={styles.title}>Plan importieren</h2>
         <div className={styles.sub}>
-          JSON im Import-Format einfügen. Die Pläne werden zu den bestehenden hinzugefügt.
+          JSON-Datei wählen, ins Feld ziehen oder den Inhalt einfügen. Die Pläne werden zu den
+          bestehenden hinzugefügt.
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="import-file">Datei</label>
+          <input
+            id="import-file"
+            type="file"
+            accept=".json,application/json"
+            onChange={(e) => void pickFile(e.currentTarget)}
+          />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="import-json">JSON</label>
           <textarea
             id="import-json"
-            className={styles.json}
+            className={`${styles.json} ${dragging ? styles.dragging : ''}`}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder='{ "warmup": [...], "days": [...] }'
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            placeholder="JSON-Datei hierher ziehen oder Inhalt einfügen"
             spellCheck={false}
             rows={10}
           />
@@ -82,7 +124,7 @@ export function ImportPlanSheet({ types, onAddType, onImport }: ImportPlanSheetP
         <button
           type="button"
           className={styles.solid}
-          onClick={handleCheck}
+          onClick={() => handleCheck(text)}
           disabled={!text.trim()}
         >
           Prüfen
