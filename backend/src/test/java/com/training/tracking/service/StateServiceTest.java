@@ -70,12 +70,9 @@ class StateServiceTest {
         return sessionTypeRepository.save(type).getId();
     }
 
-    private static ExerciseDto exercise(String id, String name) {
-        return exercise(id, name, null);
-    }
-
-    private static ExerciseDto exercise(String id, String name, String imageId) {
-        return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung", imageId);
+    private static ExerciseDto exercise(String id, String name, String... imageIds) {
+        return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung",
+                imageIds.length == 0 ? null : List.of(imageIds), null);
     }
 
     private DayDto day(String id, ExerciseDto... exercises) {
@@ -247,8 +244,36 @@ class StateServiceTest {
         StateDto loaded = stateService.getState(userId);
         ExerciseDto reloaded = loaded.plan().days().get(0).blocks().get(0).ex().get(0);
         assertThat(reloaded.name()).isEqualTo("Sprungkasten 60cm");
-        assertThat(reloaded.imageId()).isEqualTo(image.getId().toString());
+        assertThat(reloaded.imageIds()).containsExactly(image.getId().toString());
         assertThat(exerciseImageRepository.findById(image.getId())).isPresent();
+    }
+
+    @Test
+    void keepsSeveralPicturesInTheirOrder() {
+        String first = storeImage(userId, Instant.now()).getId().toString();
+        String second = storeImage(userId, Instant.now()).getId().toString();
+        String third = storeImage(userId, Instant.now()).getId().toString();
+
+        stateService.saveState(userId, state(
+                List.of(day("mo", exercise("ex1", "Band-Rudern", third, first, second))), List.of()));
+
+        ExerciseDto reloaded = stateService.getState(userId).plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(reloaded.imageIds()).containsExactly(third, first, second);
+        // What a client predating the list reads: the first picture.
+        assertThat(reloaded.imageId()).isEqualTo(third);
+    }
+
+    /** An installed app still running the old code sends its one picture the old way. */
+    @Test
+    void acceptsTheSinglePictureOfAnOlderClient() {
+        String image = storeImage(userId, Instant.now()).getId().toString();
+        ExerciseDto legacy = new ExerciseDto("ex1", "Sprungkasten", "kg", false, 3, null, null, "8",
+                null, null, null, image);
+
+        stateService.saveState(userId, state(List.of(day("mo", legacy)), List.of()));
+
+        ExerciseDto reloaded = stateService.getState(userId).plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(reloaded.imageIds()).containsExactly(image);
     }
 
     /** Otherwise naming a stranger's id in your own plan would read their photo back out of it. */
@@ -288,6 +313,21 @@ class StateServiceTest {
      * The upload answers before the plan carrying its id is saved. A save landing in that window
      * would otherwise collect the picture the user is in the middle of attaching.
      */
+    @Test
+    void sweepsOnlyThePictureTakenOutOfAList() {
+        Instant old = Instant.now().minus(Duration.ofDays(1));
+        String kept = storeImage(userId, old).getId().toString();
+        String dropped = storeImage(userId, old).getId().toString();
+        stateService.saveState(userId, state(
+                List.of(day("mo", exercise("ex1", "Sprungkasten", kept, dropped))), List.of()));
+
+        stateService.saveState(userId, state(
+                List.of(day("mo", exercise("ex1", "Sprungkasten", kept))), List.of()));
+
+        assertThat(exerciseImageRepository.findById(UUID.fromString(kept))).isPresent();
+        assertThat(exerciseImageRepository.findById(UUID.fromString(dropped))).isEmpty();
+    }
+
     @Test
     void sparesAPictureUploadedMomentsAgoThatNothingReferencesYet() {
         ExerciseImage justUploaded = storeImage(userId, Instant.now());

@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A setup photo for one exercise. Owned by a user, referenced by {@link Exercise#getImageId()}.
+ * A setup photo for one exercise. Owned by a user, referenced by {@link Exercise#getImageIds()}.
  *
  * <p>The id is assigned by the application rather than the database: the upload has to answer with
  * it before any exercise references it.

@@ -170,7 +170,8 @@ function TrainingApp({
     setType: t.setExerciseType,
     setText: t.setExerciseText,
     setSets: t.setExerciseSets,
-    setImage: t.setExerciseImage,
+    addImages: t.addExerciseImages,
+    removeImage: t.removeExerciseImage,
   };
 
   const blockActions = {

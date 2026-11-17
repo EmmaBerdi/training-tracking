@@ -155,30 +155,39 @@ export function useTrainingState(notify: (message: string) => void, selection: S
   );
 
   /**
-   * The picture is uploaded first and the plan only ever stores the id that came back, so a failed
-   * upload leaves the plan exactly as it was.
+   * The pictures are uploaded first and the plan only ever stores the ids that came back, so a
+   * failed upload leaves no gap. One after another rather than in parallel: each is a full photo
+   * being re-encoded and sent, often over mobile data. The plan is saved once, after the last.
    */
-  const setExerciseImage = useCallback(
-    async (ref: BlockRef, exId: string, file: File | null) => {
-      if (!file) {
-        updatePlan((p) => planOps.setExerciseImage(p, ref, exId, undefined));
-        return;
+  const addExerciseImages = useCallback(
+    async (ref: BlockRef, exId: string, files: File[]) => {
+      const ids: string[] = [];
+      let failed = 0;
+      for (const file of files) {
+        try {
+          const uploaded = await uploadImage(await prepareImage(file));
+          if (uploaded) ids.push(uploaded.id);
+          else failed++;
+        } catch (err) {
+          console.error(err);
+          failed++;
+        }
       }
-      let uploaded;
-      try {
-        uploaded = await uploadImage(await prepareImage(file));
-      } catch (err) {
-        console.error(err);
-        notify('Bild konnte nicht gelesen werden');
-        return;
+      if (failed) {
+        notify(
+          failed === 1
+            ? 'Ein Bild konnte nicht hochgeladen werden'
+            : `${failed} Bilder konnten nicht hochgeladen werden`,
+        );
       }
-      if (!uploaded) {
-        notify('Bild hochladen fehlgeschlagen');
-        return;
-      }
-      updatePlan((p) => planOps.setExerciseImage(p, ref, exId, uploaded.id));
+      if (ids.length) updatePlan((p) => planOps.addExerciseImages(p, ref, exId, ids));
     },
     [notify, updatePlan],
+  );
+  const removeExerciseImage = useCallback(
+    (ref: BlockRef, exId: string, imageId: string) =>
+      updatePlan((p) => planOps.removeExerciseImage(p, ref, exId, imageId)),
+    [updatePlan],
   );
 
   const addWarmupItem = useCallback(
@@ -257,7 +266,8 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     setExerciseType,
     setExerciseText,
     setExerciseSets,
-    setExerciseImage,
+    addExerciseImages,
+    removeExerciseImage,
     addWarmupItem,
     deleteWarmupItem,
     moveWarmupItem,

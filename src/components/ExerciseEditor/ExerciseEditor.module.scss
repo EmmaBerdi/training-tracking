@@ -28,9 +28,36 @@
   gap: 8px;
 }
 
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.thumb {
+  position: relative;
+  flex: none;
+}
+
 .preview {
   composes: photoThumb from '../../styles/shared.module.scss';
-  flex: none;
+  display: block;
+}
+
+/** Sits on the photo's corner, so each picture carries its own way out. */
+.remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--mute);
+  font-size: 13px;
+  line-height: 1;
 }
 
 /** The native picker button carries its own padding, so it only needs to be allowed to shrink. */

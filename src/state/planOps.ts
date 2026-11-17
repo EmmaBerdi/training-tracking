@@ -138,8 +138,8 @@ export type ExerciseSetsField = 'sets' | 'setsL' | 'setsR';
 
 function convertUni(x: Exercise, uni: boolean): Exercise {
   if (x.uni === uni) return x;
-  const { id, name, type, reps, note, desc, imageId } = x;
-  const base = { id, name, type, reps, note, desc, imageId };
+  const { id, name, type, reps, note, desc, imageIds } = x;
+  const base = { id, name, type, reps, note, desc, imageIds };
   if (uni) {
     const fallback = (x as BilateralExercise).sets || 3;
     return { ...base, uni: true, setsL: fallback, setsR: fallback };
@@ -184,14 +184,30 @@ export function setExerciseText(
   return withExercise(plan, ref, exId, (x) => ({ ...x, [field]: value }));
 }
 
-/** `imageId` undefined removes the picture; the backend collects it once nothing points at it. */
-export function setExerciseImage(
+/** Appends after the photos already there, so a new picture never reorders the old ones. */
+export function addExerciseImages(
   plan: Plan,
   ref: BlockRef,
   exId: string,
-  imageId: string | undefined,
+  imageIds: string[],
 ): Plan {
-  return withExercise(plan, ref, exId, (x) => ({ ...x, imageId }));
+  return withExercise(plan, ref, exId, (x) => ({
+    ...x,
+    imageIds: [...(x.imageIds ?? []), ...imageIds],
+  }));
+}
+
+/** The backend collects the picture itself once nothing points at it any more. */
+export function removeExerciseImage(
+  plan: Plan,
+  ref: BlockRef,
+  exId: string,
+  imageId: string,
+): Plan {
+  return withExercise(plan, ref, exId, (x) => ({
+    ...x,
+    imageIds: (x.imageIds ?? []).filter((id) => id !== imageId),
+  }));
 }
 
 export function setExerciseSets(

@@ -171,9 +171,10 @@ public class StateService {
     }
 
     private static ExerciseDto toDto(Exercise e) {
+        List<String> images = e.getImageIds().stream().map(UUID::toString).toList();
         return new ExerciseDto(e.getClientId(), e.getName(), e.getType(), e.isUni(),
                 e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription(),
-                e.getImageId() == null ? null : e.getImageId().toString());
+                images.isEmpty() ? null : images, images.isEmpty() ? null : images.get(0));
     }
 
     @Transactional
@@ -210,8 +211,8 @@ public class StateService {
         for (DayDto day : dayDtos) {
             for (BlockDto block : nullToEmpty(day.blocks())) {
                 for (ExerciseDto ex : nullToEmpty(block.ex())) {
-                    if (ex.imageId() != null) {
-                        ids.add(ExerciseImageService.parseId(ex.imageId()));
+                    for (String imageId : ex.images()) {
+                        ids.add(ExerciseImageService.parseId(imageId));
                     }
                 }
             }
@@ -227,6 +228,7 @@ public class StateService {
         sessionValueRepository.deleteAllByUserId(userId);
         sessionWarmupRepository.deleteAllByUserId(userId);
         sessionRepository.deleteAllInBatch(sessionRepository.findAllByUserId(userId));
+        exerciseRepository.deleteImageLinksByUserId(userId);
         exerciseRepository.deleteAllInBatch(exerciseRepository.findAllByBlock_UserIdOrderByPosition(userId));
         blockRepository.deleteAllInBatch(blockRepository.findAllByUserIdOrderByPosition(userId));
         dayRepository.deleteAllInBatch(dayRepository.findAllByUserIdOrderByPosition(userId));
@@ -355,7 +357,8 @@ public class StateService {
         entity.setReps(ex.reps());
         entity.setNote(ex.note());
         entity.setDescription(ex.desc());
-        entity.setImageId(ex.imageId() == null ? null : ExerciseImageService.parseId(ex.imageId()));
+        entity.setImageIds(new ArrayList<>(
+                ex.images().stream().map(ExerciseImageService::parseId).toList()));
         entity.setPosition(position);
         return entity;
     }

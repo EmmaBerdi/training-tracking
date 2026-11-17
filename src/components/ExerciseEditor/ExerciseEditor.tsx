@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BlockRef, Exercise, ExerciseType } from '../../types';
-import { EXERCISE_TYPES, UNIT } from '../../data/constants';
+import { EXERCISE_TYPES, MAX_IMAGES, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
 import type { ExerciseActions } from '../actions';
 import styles from './ExerciseEditor.module.scss';
@@ -11,15 +11,39 @@ interface ExerciseEditorProps {
   actions: ExerciseActions;
 }
 
-export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
-  const preview = useExerciseImage(x.imageId);
-  const [uploading, setUploading] = useState(false);
+/** One attached photo with its remove button; its own component so each loads its own picture. */
+function Thumb({ imageId, onRemove }: { imageId: string; onRemove: () => void }) {
+  const preview = useExerciseImage(imageId);
+  return (
+    <div className={styles.thumb}>
+      {preview ? (
+        <img className={styles.preview} src={preview} alt="" />
+      ) : (
+        <span className={styles.preview} />
+      )}
+      <button
+        type="button"
+        className={styles.remove}
+        aria-label="Bild entfernen"
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
-  const pickImage = async (input: HTMLInputElement) => {
-    const file = input.files?.[0];
-    if (!file) return;
+export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
+  const [uploading, setUploading] = useState(false);
+  const imageIds = x.imageIds ?? [];
+  const room = MAX_IMAGES - imageIds.length;
+
+  const pickImages = async (input: HTMLInputElement) => {
+    // Beyond the limit the backend would refuse the whole plan save, so the extras are left out.
+    const files = Array.from(input.files ?? []).slice(0, room);
+    if (!files.length) return;
     setUploading(true);
-    await actions.setImage(blockRef, x.id, file);
+    await actions.addImages(blockRef, x.id, files);
     setUploading(false);
     // Cleared so picking the same file again still counts as a change.
     input.value = '';
@@ -119,27 +143,33 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
           />
         </div>
         <div className={`${styles.field} ${styles.wide}`}>
-          <label htmlFor={`image-${x.id}`}>Bild — Aufbau, zum Beispiel Kastenhöhe</label>
+          <label htmlFor={`image-${x.id}`}>Bilder — Aufbau, zum Beispiel Kastenhöhe</label>
+          {imageIds.length > 0 && (
+            <div className={styles.thumbs}>
+              {imageIds.map((id) => (
+                <Thumb
+                  key={id}
+                  imageId={id}
+                  onRemove={() => actions.removeImage(blockRef, x.id, id)}
+                />
+              ))}
+            </div>
+          )}
           <div className={styles.imageRow}>
-            {preview && <img className={styles.preview} src={preview} alt="" />}
-            <input
-              id={`image-${x.id}`}
-              className={styles.file}
-              type="file"
-              accept="image/*"
-              disabled={uploading}
-              onChange={(e) => void pickImage(e.currentTarget)}
-            />
-            {uploading && <span className={styles.hint}>lädt …</span>}
-            {x.imageId && !uploading && (
-              <button
-                type="button"
-                className={styles.smallButton}
-                onClick={() => void actions.setImage(blockRef, x.id, null)}
-              >
-                Entfernen
-              </button>
+            {room > 0 ? (
+              <input
+                id={`image-${x.id}`}
+                className={styles.file}
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={uploading}
+                onChange={(e) => void pickImages(e.currentTarget)}
+              />
+            ) : (
+              <span className={styles.hint}>Höchstens {MAX_IMAGES} Bilder pro Übung.</span>
             )}
+            {uploading && <span className={styles.hint}>lädt …</span>}
           </div>
         </div>
       </div>

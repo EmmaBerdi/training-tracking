@@ -8,6 +8,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ExerciseDto(
         @NotBlank @Size(max = 32) String id,
@@ -21,6 +23,22 @@ public record ExerciseDto(
         @NotNull @Size(max = 64) String reps,
         @Size(max = 2000) String note,
         @Size(max = 20000) String desc,
+        @Size(max = MAX_IMAGES) List<@NotBlank @Size(max = 36) String> imageIds,
+        /**
+         * The single photo of clients that predate {@link #imageIds}, and the first photo for them on
+         * the way out. An installed PWA can run the old code until it next reloads, and its save
+         * would otherwise drop every picture it doesn't know how to send.
+         */
         @Size(max = 36) String imageId
 ) {
+
+    public static final int MAX_IMAGES = 10;
+
+    /** The photos this exercise carries, whichever of the two fields the client sent them in. */
+    public List<String> images() {
+        if (imageIds != null) {
+            return imageIds;
+        }
+        return imageId == null ? List.of() : List.of(imageId);
+    }
 }

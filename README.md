@@ -6,7 +6,7 @@ Personal training PWA, in German: a calendar for planning sessions and a diary f
 
 - **Calendar** — plan sessions per day, once or as a series (weekly on chosen weekdays, or every N days, optionally ending). Move, skip or delete one occurrence or everything from there on, Apple-Calendar style. Under the month grid, a weekly strip shows planned against done per activity ("Kraft 2/3").
 - **Activities** — seeded types (Laufen, Kraft, Bouldern, …) plus your own, each with a color.
-- **Workout plans** — optional, for activities that have structure. A plan belongs to one activity and holds blocks of exercises: bilateral or left/right sets, seven units (kg, Band, Sek., …), notes, a description and a setup photo. A series can carry one fixed plan, one per weekday, or a rotation.
+- **Workout plans** — optional, for activities that have structure. A plan belongs to one activity and holds blocks of exercises: bilateral or left/right sets, seven units (kg, Band, Sek., …), notes, a description and setup photos. A series can carry one fixed plan, one per weekday, or a rotation.
 - **Logging** — open a scheduled session, tap a set, enter the value; the previous value for that set is shown alongside. The first logged value marks the session as done.
 - **Onboarding** — a skippable three-step wizard turns "Laufen Mo + Do, Bouldern Fr" into real series on a fresh account.
 

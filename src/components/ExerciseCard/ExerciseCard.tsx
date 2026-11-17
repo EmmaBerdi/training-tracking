@@ -47,7 +47,9 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   const sets = x.uni ? `${x.setsL || 0}/${x.setsR || 0}` : `${x.sets}`;
   const last = lastSummary(x, lastVal);
-  const thumb = useExerciseImage(x.imageId);
+  // The card has room for one picture; the info sheet behind it shows them all.
+  const firstImage = x.imageIds?.[0];
+  const thumb = useExerciseImage(firstImage);
 
   return (
     <div className={styles.exercise}>
@@ -57,7 +59,7 @@ export function ExerciseCard({
           <div className={styles.spec}>{`${sets} × ${x.reps}  ·  ${UNIT[x.type]}`}</div>
           {last && <div className={styles.last}>{`zuletzt  ${last}`}</div>}
         </div>
-        {x.imageId ? (
+        {firstImage ? (
           <button
             type="button"
             className={styles.thumbButton}

@@ -19,10 +19,11 @@ export interface ExerciseActions {
   setText: (ref: BlockRef, exId: string, field: ExerciseTextField, value: string) => void;
   setSets: (ref: BlockRef, exId: string, field: ExerciseSetsField, value: number) => void;
   /**
-   * Attaches a setup photo, or removes it when passed null. Resolves once the upload has been
-   * stored, so the editor can show that it is busy — a photo takes a moment over mobile data.
+   * Attaches setup photos after the existing ones. Resolves once the uploads have been stored, so
+   * the editor can show that it is busy — a photo takes a moment over mobile data.
    */
-  setImage: (ref: BlockRef, exId: string, file: File | null) => Promise<void>;
+  addImages: (ref: BlockRef, exId: string, files: File[]) => Promise<void>;
+  removeImage: (ref: BlockRef, exId: string, imageId: string) => void;
 }
 
 export interface WarmupActions {

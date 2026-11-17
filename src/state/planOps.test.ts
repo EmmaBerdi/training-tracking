@@ -177,24 +177,28 @@ describe('exercises', () => {
     expect(planOps.setExerciseUni(p, FIRST_BLOCK, 'a', false)).toEqual(p);
   });
 
-  it('attaches and removes a picture without touching its siblings', () => {
+  it('appends and removes pictures without touching their siblings', () => {
     let p = plan(day('mo'));
 
-    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', 'img-1');
-    expect(p.days[0].blocks[0].ex[0].imageId).toBe('img-1');
-    expect(p.days[0].blocks[0].ex[1].imageId).toBeUndefined();
+    p = planOps.addExerciseImages(p, FIRST_BLOCK, 'a', ['img-1']);
+    p = planOps.addExerciseImages(p, FIRST_BLOCK, 'a', ['img-2', 'img-3']);
+    expect(p.days[0].blocks[0].ex[0].imageIds).toEqual(['img-1', 'img-2', 'img-3']);
+    expect(p.days[0].blocks[0].ex[1].imageIds).toBeUndefined();
 
-    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', undefined);
-    expect(p.days[0].blocks[0].ex[0].imageId).toBeUndefined();
+    p = planOps.removeExerciseImage(p, FIRST_BLOCK, 'a', 'img-2');
+    expect(p.days[0].blocks[0].ex[0].imageIds).toEqual(['img-1', 'img-3']);
   });
 
-  it('keeps the picture when the exercise switches sides', () => {
+  it('keeps the pictures when the exercise switches sides', () => {
     let p = plan(day('mo'));
-    p = planOps.setExerciseImage(p, FIRST_BLOCK, 'a', 'img-1');
+    p = planOps.addExerciseImages(p, FIRST_BLOCK, 'a', ['img-1', 'img-2']);
 
     const uni = planOps.setExerciseUni(p, FIRST_BLOCK, 'a', true);
 
-    expect(uni.days[0].blocks[0].ex[0]).toMatchObject({ uni: true, imageId: 'img-1' });
+    expect(uni.days[0].blocks[0].ex[0]).toMatchObject({
+      uni: true,
+      imageIds: ['img-1', 'img-2'],
+    });
   });
 });
 

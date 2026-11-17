@@ -40,4 +40,7 @@ export const BLOCK_KIND_LABEL: Record<BlockKind, string> = {
   ausdauer: 'Ausdauer',
 };
 
+/** Photos one exercise can carry; mirrors `ExerciseDto.MAX_IMAGES` on the backend. */
+export const MAX_IMAGES = 10;
+
 export const BLOCK_KINDS = Object.keys(BLOCK_KIND_LABEL) as BlockKind[];

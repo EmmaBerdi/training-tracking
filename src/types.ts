@@ -12,10 +12,10 @@ interface ExerciseBase {
   note?: string;
   desc?: string;
   /**
-   * The setup photo, held as the id the upload answered with rather than as bytes: every plan edit
-   * re-sends the whole plan, and the picture itself lives on the backend under this id.
+   * The setup photos in display order, held as the ids the uploads answered with rather than as
+   * bytes: every plan edit re-sends the whole plan, and the pictures live on the backend.
    */
-  imageId?: string;
+  imageIds?: string[];
 }
 
 export interface BilateralExercise extends ExerciseBase {

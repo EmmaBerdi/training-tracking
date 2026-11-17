@@ -59,6 +59,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/002-exercise-image.sql` | Setup photos: the `exercise_image` table and `exercise.image_id` |
 | `db/changelog/changes/003-day-session-type.sql` | Plans belong to a session type: `day.session_type_id` (backfilled), `day.slot` dropped |
 | `db/changelog/changes/004-password-reset-token.sql` | Hashed one-time codes for "Passwort vergessen?" — see [Passwords](#passwords) |
+| `db/changelog/changes/005-exercise-image-list.sql` | Several ordered photos per exercise: `exercise_image_link`, backfilled from `exercise.image_id` |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
@@ -134,7 +135,8 @@ anonymous callers.
 
 ## Exercise setup photos
 
-One picture per exercise, on its own endpoints because JSON is the wrong envelope for image bytes:
+Up to ten pictures per exercise, in the order the user added them, on their own endpoints because
+JSON is the wrong envelope for image bytes:
 
 | Call | Answer |
 |---|---|
@@ -154,7 +156,11 @@ header, so a renamed non-image is rejected outright.
 **Why images live in their own table.** `PUT /api/state` deletes and recreates every exercise row of
 a user on each save, and the frontend saves on every plan edit. Anything held on that row has to be
 re-sent by the client every time — cheap for a UUID, absurd for a few hundred KB of JPEG. So the
-plan carries `exercise.image_id` and the picture keeps its own identity across the wipe. The other
+plan carries the ids — `imageIds` in the JSON, rows of `exercise_image_link` in the database — and
+each picture keeps its own identity across the wipe. A client predating the list still sends and
+reads a single `imageId`; the backend accepts it and answers with the first picture in it, so an
+installed app running old code doesn't drop pictures on its next save. `exercise.image_id` is no
+longer written and empties itself on each user's next save. The other
 side of that is orphans: a save also deletes this user's images that no exercise points at any more,
 skipping any uploaded within the last hour, since the upload necessarily answers before the plan
 that will reference it has been saved.

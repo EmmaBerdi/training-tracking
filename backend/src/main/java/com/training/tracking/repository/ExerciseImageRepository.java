@@ -30,6 +30,6 @@ public interface ExerciseImageRepository extends JpaRepository<ExerciseImage, UU
      */
     @Modifying
     @Query("DELETE FROM ExerciseImage i WHERE i.userId = :userId AND i.createdAt < :cutoff "
-            + "AND NOT EXISTS (SELECT 1 FROM Exercise e WHERE e.imageId = i.id)")
+            + "AND NOT EXISTS (SELECT 1 FROM Exercise e JOIN e.imageIds img WHERE img = i.id)")
     int deleteUnreferenced(@Param("userId") Long userId, @Param("cutoff") Instant cutoff);
 }
