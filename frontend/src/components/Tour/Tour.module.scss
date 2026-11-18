@@ -10,7 +10,7 @@
 
   /* No element to cut out of the scrim: the blocker carries it instead. */
   &.dim {
-    background: var(--scrim);
+    background: var(--scrim-tour);
   }
 }
 
@@ -18,7 +18,7 @@
 .spotlight {
   position: fixed;
   border-radius: 12px;
-  box-shadow: 0 0 0 200vmax var(--scrim);
+  box-shadow: 0 0 0 200vmax var(--scrim-tour);
   outline: 1px solid var(--line-strong);
   pointer-events: none;
   transition:
