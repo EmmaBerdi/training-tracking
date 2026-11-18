@@ -1,0 +1,76 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg);
+  display: flex;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/** Centred in the overlay, and as narrow as a phone on every screen. */
+.panel {
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
+  padding: 28px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.eyebrow {
+  composes: overline from '../../styles/shared.module.scss';
+  margin: 0;
+}
+
+.title {
+  margin: 6px 0 22px;
+  font-size: 24px;
+  font-weight: 680;
+  line-height: 1.25;
+}
+
+.points {
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+}
+
+.point {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--mute);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.pointMark {
+  flex: none;
+  width: 18px;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+/** The point's name, on its own line above the explanation. */
+.pointTitle {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.solid {
+  composes: solid from '../../styles/shared.module.scss';
+  margin-top: 0;
+}
+
+.link {
+  display: block;
+  margin: 4px auto 0;
+  padding: 10px;
+  color: var(--mute);
+  font-size: 13.5px;
+}

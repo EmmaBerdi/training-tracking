@@ -39,7 +39,7 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 
 ## Pointing the frontend at the backend
 
-The frontend calls `window.API_BASE` if it's set before the app loads, otherwise `VITE_API_BASE` at build time, otherwise it defaults to `http://localhost:8080/api`. For a deployed build, set `window.API_BASE` in `index.html` — it just needs to run before `main.tsx`, so anywhere in `<head>` works:
+The frontend calls `window.API_BASE` if it's set before the app loads, otherwise `VITE_API_BASE` at build time, otherwise it defaults to `http://localhost:8080/api`. For a deployed build, set `window.API_BASE` in `frontend/index.html` — it just needs to run before `main.tsx`, so anywhere in `<head>` works:
 
 ```html
 <script>window.API_BASE = 'https://your-backend-host/api';</script>

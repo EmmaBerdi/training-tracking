@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { colorAccent } from '../../utils/cssVar';
+import { TOUR_TARGET } from '../Tour/targets';
 import styles from './Tabs.module.scss';
 
 export interface TabItem {
@@ -41,7 +42,7 @@ export function Tabs({
   }, [activeId, items.length]);
 
   return (
-    <div className={styles.tabs}>
+    <div className={styles.tabs} data-tour={TOUR_TARGET.tabs}>
       {onPrevMonth && (
         <button
           type="button"

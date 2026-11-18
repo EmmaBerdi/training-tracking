@@ -54,7 +54,7 @@ services:
 
   frontend:
     build:
-      context: ..
+      context: ../frontend
       args:
         # Same origin as the page, so the client never needs to know the hostname it is served from.
         VITE_API_BASE: /api

@@ -13,6 +13,8 @@ import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
 import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
+import { Tour, type TourStep } from './components/Tour/Tour';
+import { TOUR_TARGET } from './components/Tour/targets';
 import { Toast } from './components/Toast/Toast';
 import { AuthScreen } from './components/AuthScreen/AuthScreen';
 import { PlainSession } from './components/PlainSession/PlainSession';
@@ -36,6 +38,7 @@ import { isOnboarded, markOnboarded } from './utils/onboarding';
 import { plansForType, sortByType } from './state/planOps';
 import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
+import { NAV } from './data/constants';
 
 export function App() {
   const { status, user, logout } = useAuth();
@@ -64,7 +67,8 @@ function TrainingApp({
   /** Edit mode follows the plan list instead, since an unscheduled plan still needs editing. */
   const [editDayId, setEditDayId] = useState('');
   const [introDone, setIntroDone] = useState(false);
-  const [introForced, setIntroForced] = useState(false);
+  /** Set once the introduction is asked for or under way; null leaves it to the first-run rule. */
+  const [introStage, setIntroStage] = useState<'welcome' | 'tour' | null>(null);
 
   const currentDate = today();
   const { setVisibleRange } = sessions;
@@ -90,13 +94,13 @@ function TrainingApp({
 
   // A brand-new account has nothing to look at, so the introduction opens by itself — once.
   const empty = t.plan.days.length === 0 && sessions.sessions.length === 0;
-  const introOpen =
-    introForced || (t.ready && sessions.ready && empty && !introDone && !isOnboarded(userEmail));
+  const firstRun = t.ready && sessions.ready && empty && !introDone && !isOnboarded(userEmail);
+  const intro = introStage ?? (firstRun ? 'welcome' : null);
 
   const closeIntro = () => {
     markOnboarded(userEmail);
     setIntroDone(true);
-    setIntroForced(false);
+    setIntroStage(null);
   };
 
   useEffect(() => {
@@ -192,6 +196,60 @@ function TrainingApp({
 
   const closeSheet = () => setSheet(null);
 
+  // Sets are only on screen when the training the log opens on has a plan with exercises.
+  const hasSets = !!t.plan.days
+    .find((d) => d.id === activeSession?.dayId)
+    ?.blocks.some((b) => b.ex.length > 0);
+  const showLog = () => handleModeChange('log');
+
+  const tourSteps: TourStep[] = [
+    {
+      target: TOUR_TARGET.log,
+      title: NAV.log.label,
+      text: 'Hier steht dein aktuelles Training, so wie du es im Studio vor dir hast.',
+      show: showLog,
+    },
+    {
+      target: TOUR_TARGET.tabs,
+      title: 'Deine Trainings',
+      text: 'Die Trainings des Monats nebeneinander. Antippen wechselt, mit ‹ und › blätterst du Monate.',
+      show: showLog,
+    },
+    ...(hasSets
+      ? [
+          {
+            target: TOUR_TARGET.sets,
+            title: 'Sätze eintragen',
+            text: 'Einen Satz antippen und den Wert eintragen. Grau steht der Wert vom letzten Mal, und der erste Eintrag hakt das Training ab.',
+            show: showLog,
+          },
+        ]
+      : []),
+    {
+      target: TOUR_TARGET.edit,
+      title: NAV.edit.label,
+      text: 'Workout-Pläne aus Blöcken und Übungen, mit Sätzen und Wiederholungen. Oben mit „+ Plan“ legst du einen an; Laufen oder Bouldern kommen auch ohne Plan aus.',
+      show: () => handleModeChange('edit'),
+    },
+    {
+      target: TOUR_TARGET.calendar,
+      title: NAV.calendar.label,
+      text: 'Einen Tag antippen, um ein Training einmalig oder als Serie einzuplanen. Serien tragen ein ↻.',
+      show: () => setView('calendar'),
+    },
+    {
+      target: TOUR_TARGET.stats,
+      title: NAV.stats.label,
+      text: 'Verlauf und Rekorde je Übung, und je Woche, wie viel vom Geplanten erledigt ist.',
+      show: () => setView('stats'),
+    },
+    {
+      target: TOUR_TARGET.account,
+      title: 'Konto',
+      text: 'Hier findest du diese Einführung wieder, änderst dein Passwort oder meldest dich ab.',
+    },
+  ];
+
   return (
     <div data-view={view}>
       <Header
@@ -206,7 +264,7 @@ function TrainingApp({
         onNextMonth={() => setMonth(addMonths(month, 1))}
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
         userEmail={userEmail}
-        onReopenIntro={() => setIntroForced(true)}
+        onReopenIntro={() => setIntroStage('welcome')}
         onChangePassword={() => setSheet({ type: 'changePassword' })}
         onLogout={() => onLogout()}
       />
@@ -440,18 +498,25 @@ function TrainingApp({
         </Sheet>
       )}
 
-      {introOpen && (
+      {intro === 'welcome' && (
         <Onboarding
-          types={sessions.types}
-          startDate={currentDate}
-          onAddType={sessions.addSessionType}
-          onFinish={async (rules) => {
-            await sessions.addRules(rules);
-            closeIntro();
-            setView('calendar');
+          onStartTour={() => {
+            setSheet(null);
+            setIntroStage('tour');
           }}
           onSkip={closeIntro}
-          tourOnly={introForced && !empty}
+        />
+      )}
+
+      {intro === 'tour' && (
+        <Tour
+          steps={tourSteps}
+          onClose={() => {
+            closeIntro();
+            // A new account's next move is scheduling something; anyone else goes back to training.
+            if (empty) setView('calendar');
+            else handleModeChange('log');
+          }}
         />
       )}
 

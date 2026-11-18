@@ -6,6 +6,3 @@ dist/
 dev-dist/
 *.tsbuildinfo
 .DS_Store
-backend/
-docs/
-deploy/

@@ -20,7 +20,7 @@ GitHub Pages funktioniert im kostenlosen Tarif nur mit öffentlichen Repositorie
 
 Das ist hier unkritisch: Öffentlich ist nur der Programmcode. **Deine Trainingsdaten landen nie im Repo** — sie liegen ausschliesslich in der Postgres-Datenbank hinter deinem Backend, das du selbst hostest. Wer die URL der App kennt, aber nicht die Adresse deines Backends, sieht nur eine leere Hülle.
 
-Was du beachten solltest: Trägst du später persönliche Notizen direkt in den Quellcode ein (etwa Befunde deiner Physio in den Anleitungstexten unter `src/data/`), stünden die öffentlich. Solche Dinge gehören in die App selbst über "Plan bearbeiten", nicht in den Quelltext.
+Was du beachten solltest: Trägst du später persönliche Notizen direkt in den Quellcode ein (etwa Befunde deiner Physio in den Anleitungstexten unter `frontend/src/data/`), stünden die öffentlich. Solche Dinge gehören in die App selbst über "Plan bearbeiten", nicht in den Quelltext.
 
 ---
 
@@ -72,7 +72,7 @@ Kleine Korrekturen — Übungen, Sätze, Notizen — machst du direkt in der App
 
 Am Code selbst änderst du so:
 
-1. Im Repo auf die betroffene Datei (z. B. eine Datei unter `src/components/` oder `src/data/`) → Stift-Symbol oben rechts, oder lokal klonen und in einem Editor öffnen
+1. Im Repo auf die betroffene Datei (z. B. eine Datei unter `frontend/src/components/` oder `frontend/src/data/`) → Stift-Symbol oben rechts, oder lokal klonen und in einem Editor öffnen
 2. Ändern → **Commit changes** (bzw. `git push`)
 3. Im Reiter **Actions** den Build-Lauf abwarten (dauert selten länger als eine Minute)
 
@@ -96,10 +96,10 @@ Spiel das Zurückspielen eines Dumps einmal durch, solange nichts kaputt ist. De
 Prüfe zuerst den Reiter **Actions** — ist der letzte Lauf rot, ist der Build fehlgeschlagen und es wurde nichts deployt. Ist er grün, unter Settings → Pages prüfen, ob *Source* auf **GitHub Actions** steht.
 
 **Kein Icon, kein Vollbild**
-Die Icons müssen in `public/` liegen (siehe README-Layout). Prüfen kannst du das, indem du `https://DEINNAME.github.io/training/manifest.webmanifest` direkt aufrufst — kommt eine 404, liegt etwas falsch oder der Build ist fehlgeschlagen.
+Die Icons müssen in `frontend/public/` liegen (siehe README-Layout). Prüfen kannst du das, indem du `https://DEINNAME.github.io/training/manifest.webmanifest` direkt aufrufst — kommt eine 404, liegt etwas falsch oder der Build ist fehlgeschlagen.
 
 **Änderungen erscheinen nicht**
 Ist der Actions-Lauf für deinen Commit durch und grün? App vollständig geschlossen und neu geöffnet?
 
 **Daten weg oder Seite zeigt nichts an**
-Läuft das Backend noch, und ist es unter der in `index.html` gesetzten `API_BASE`-Adresse erreichbar? Das ist inzwischen die häufigste Ursache — nicht mehr ein lokaler Speicher, der abgelaufen ist. Prüfe `docs/BACKEND.md`. Als letzter Ausweg hilft das Zurückspielen des letzten `pg_dump`.
+Läuft das Backend noch, und ist es unter der in `frontend/index.html` gesetzten `API_BASE`-Adresse erreichbar? Das ist inzwischen die häufigste Ursache — nicht mehr ein lokaler Speicher, der abgelaufen ist. Prüfe `docs/BACKEND.md`. Als letzter Ausweg hilft das Zurückspielen des letzten `pg_dump`.

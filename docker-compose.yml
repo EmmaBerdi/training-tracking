@@ -34,7 +34,7 @@ services:
         condition: service_healthy
 
   frontend:
-    build: .
+    build: ./frontend
     restart: on-failure:5
     ports:
       - "5500:80"

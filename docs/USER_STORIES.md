@@ -29,14 +29,14 @@ Registration, login, refresh tokens and per-user data isolation work today
 
 Was broken: `useTrainingState.ts` seeded `defaultPlan()` — "Unterkörper + Pistol", the shared hip
 block — into every brand-new account, with `dayId` hardcoded to `'mo'`, and `resetPlan()` restored
-that same personal program. Now `src/data/plan.ts` exposes `emptyPlan()`, nothing is seeded, nothing
+that same personal program. Now `frontend/src/data/plan.ts` exposes `emptyPlan()`, nothing is seeded, nothing
 is written until the user creates something, and `Plan.hip` is optional so no one inherits a block
 repeated on every day.
 
 **Acceptance criteria**
 - A new account has **no** workout plans and **no** planned sessions.
 - Nothing in the app restores the pistol program; a reset, if one returns (US-7.2), clears to empty.
-- Nothing in `src/data/defaultPlan.ts` describes one specific person's training.
+- Nothing in `frontend/src/data/defaultPlan.ts` describes one specific person's training.
 - Emma's existing plan is untouched — it lives in Postgres, not in the seed.
 
 ### US-1.2 Get told how the app works, once ✅

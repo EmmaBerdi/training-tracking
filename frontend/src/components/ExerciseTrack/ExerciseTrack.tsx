@@ -1,5 +1,6 @@
 import type { ExerciseType, Side } from '../../types';
 import { UNIT } from '../../data/constants';
+import { TOUR_TARGET } from '../Tour/targets';
 import styles from './ExerciseTrack.module.scss';
 
 interface ExerciseTrackProps {
@@ -44,7 +45,7 @@ export function ExerciseTrack({
       <span className={`${styles.side} ${side === 'R' ? styles.sideRight : ''}`}>
         {SIDE_LABEL[side]}
       </span>
-      <div className={styles.chips}>
+      <div className={styles.chips} data-tour={TOUR_TARGET.sets}>
         {Array.from({ length: count }, (_, i) => {
           const current = getVal(exId, side, i);
           const last = lastVal(exId, side, i);

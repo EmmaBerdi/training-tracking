@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TOUR_TARGET } from '../Tour/targets';
 import styles from './UserMenu.module.scss';
 
 interface UserMenuProps {
@@ -40,6 +41,7 @@ export function UserMenu({ email, onReopenIntro, onChangePassword, onLogout }: U
         type="button"
         className={styles.avatar}
         aria-label="Konto"
+        data-tour={TOUR_TARGET.account}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >

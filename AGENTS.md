@@ -8,7 +8,7 @@ Personal training PWA: a React + TypeScript + SCSS frontend (Vite) backed by a J
 REST API and Postgres. See `README.md` for the full layout table and `docs/BACKEND.md` /
 `docs/SETUP.md` for backend and deployment details.
 
-- Frontend: `src/` (components, hooks, state, api client, styles)
+- Frontend: `frontend/src/` (components, hooks, state, api client, styles)
 - Backend: `backend/` (Spring Boot, Maven, JWT auth, Postgres schema in `backend/src/main/resources/db`)
 - Local stack: `docker-compose.yml` (Postgres + backend)
 
@@ -28,7 +28,7 @@ anything project-specific below. This includes, but is not limited to:
   auth checks.
 - **Consistency with existing conventions.** Match the style already in the file/module you're
   editing (naming, error handling, folder structure) rather than inventing a new pattern. In
-  particular: a style rule wanted by a second component moves to `src/styles/shared.module.scss`;
+  particular: a style rule wanted by a second component moves to `frontend/src/styles/shared.module.scss`;
   a closed set of string values gets a DB `CHECK` plus named constants, never bare literals; and
   the client's own ids (`day_key`, `exercise.client_id`) are what cross-table references store,
   because `PUT /api/state` recreates every plan row on each save.
@@ -44,7 +44,7 @@ anything project-specific below. This includes, but is not limited to:
 
 ## Commands
 
-Frontend (run from repo root):
+Frontend (run from `frontend/`):
 
 ```bash
 npm install         # install deps
@@ -54,7 +54,7 @@ npm run lint          # eslint .
 npm test              # vitest run (state/ and utils/ unit tests)
 ```
 
-Format with Prettier (`.prettierrc.json`: single quotes, 100 col width) before finishing frontend work.
+Format with Prettier (`frontend/.prettierrc.json`: single quotes, 100 col width) before finishing frontend work.
 
 Backend (run from `backend/`):
 
@@ -77,7 +77,7 @@ docker compose up --build
 ## Verification checklist before finishing a task
 
 - [ ] `npm run lint` passes for any frontend change
-- [ ] `npm test` passes for any change under `src/state/` or `src/utils/`
+- [ ] `npm test` passes for any change under `frontend/src/state/` or `frontend/src/utils/`
 - [ ] `npm run build` succeeds if TypeScript types or build config changed
 - [ ] `./mvnw test` passes for any backend change (especially anything touching `security/` or auth)
 - [ ] No secrets, tokens, or real personal training data added to the repo

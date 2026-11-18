@@ -179,26 +179,16 @@ export function usePlannedSessions(notify: (message: string) => void) {
     [notify, reload],
   );
 
-  /**
-   * Creates every rule before reloading, so onboarding's handful of rules costs one range refetch
-   * instead of one per rule.
-   */
-  const addRules = useCallback(
-    async (inputs: NewRecurringRule[]) => {
-      let created = 0;
-      for (const input of inputs) {
-        if (await createRecurringRule(input)) created += 1;
+  const addRule = useCallback(
+    async (input: NewRecurringRule) => {
+      if (!(await createRecurringRule(input))) {
+        notify('Wiederholung konnte nicht angelegt werden');
+        return false;
       }
-      if (created < inputs.length) notify('Wiederholung konnte nicht angelegt werden');
-      if (created > 0) reload();
-      return created;
+      reload();
+      return true;
     },
     [notify, reload],
-  );
-
-  const addRule = useCallback(
-    async (input: NewRecurringRule) => (await addRules([input])) === 1,
-    [addRules],
   );
 
   const loadRule = useCallback(
@@ -266,7 +256,6 @@ export function usePlannedSessions(notify: (message: string) => void) {
     reload,
     addSession,
     addRule,
-    addRules,
     loadRule,
     updateRule,
     updateSession,

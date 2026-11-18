@@ -1,0 +1,97 @@
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.blocker {
+  position: absolute;
+  inset: 0;
+
+  /* No element to cut out of the scrim: the blocker carries it instead. */
+  &.dim {
+    background: var(--scrim);
+  }
+}
+
+/** A hole in the scrim: everything outside the box is shaded by its spread shadow. */
+.spotlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 200vmax var(--scrim);
+  outline: 1px solid var(--line-strong);
+  pointer-events: none;
+  transition:
+    top 0.25s,
+    left 0.25s,
+    width 0.25s,
+    height 0.25s;
+}
+
+.bubble {
+  position: fixed;
+  background: var(--panel3);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 14px 16px 10px;
+
+  &:focus {
+    outline: none;
+  }
+
+  &.centered {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(340px, calc(100% - 32px));
+  }
+}
+
+.count {
+  composes: overline from '../../styles/shared.module.scss';
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.text {
+  margin: 6px 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.end {
+  margin-right: auto;
+  padding: 10px 0;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+
+.back,
+.next {
+  composes: focusRing from '../../styles/shared.module.scss';
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.back {
+  color: var(--mute);
+}
+
+.next {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 650;
+}

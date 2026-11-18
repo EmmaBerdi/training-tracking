@@ -184,30 +184,6 @@
   }
 }
 
-/* --- Weekday picker, shared by the onboarding and the add-session sheet --- */
-
-.weekdayGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.weekday {
-  padding: 9px 0;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--mute);
-  font-size: 12.5px;
-}
-
-.weekdayOn {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--bg);
-  font-weight: 650;
-}
-
 /* --- Pictures --- */
 
 /**
