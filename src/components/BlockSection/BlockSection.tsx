@@ -14,6 +14,8 @@ interface BlockSectionProps {
   editing: boolean;
   getVal: (exId: string, side: Side, i: number) => string;
   lastVal: (exId: string, side: Side, i: number) => string;
+  getReps: (exId: string, side: Side, i: number) => string;
+  lastReps: (exId: string, side: Side, i: number) => string;
   onOpenInfo: (exId: string) => void;
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
   actions: ExerciseActions;
@@ -28,6 +30,8 @@ export function BlockSection({
   editing,
   getVal,
   lastVal,
+  getReps,
+  lastReps,
   onOpenInfo,
   onOpenEntry,
   actions,
@@ -78,7 +82,11 @@ export function BlockSection({
               type="button"
               className={`${styles.smallButton} ${styles.danger} ${styles.pushRight}`}
               onClick={() => {
-                if (window.confirm(`Block "${block.name}" mit allen Übungen löschen?`)) {
+                if (
+                  window.confirm(
+                    `Block "${block.name}" mit allen Übungen löschen? Die dafür eingetragenen Werte werden ebenfalls gelöscht.`,
+                  )
+                ) {
                   blockActions.deleteBlock(blockRef);
                 }
               }}
@@ -103,6 +111,8 @@ export function BlockSection({
             exercise={x}
             getVal={getVal}
             lastVal={lastVal}
+            getReps={getReps}
+            lastReps={lastReps}
             onOpenInfo={onOpenInfo}
             onOpenEntry={onOpenEntry}
           />

@@ -8,6 +8,9 @@ import { NO_CONTENT, request, requestOk, type NoContent } from './base';
 export const SERIES_CHANGED = NO_CONTENT;
 export type SeriesChanged = NoContent;
 
+/** The most days one load may span; inside `PlannedSessionService.MAX_RANGE_DAYS` on the backend. */
+export const MAX_LOAD_DAYS = 365;
+
 export function loadPlannedSessions(from: string, to: string): Promise<PlannedSession[] | null> {
   const query = new URLSearchParams({ from, to });
   return request<PlannedSession[]>(`/planned-sessions?${query}`);

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { WeekdayMask } from '../types';
 import {
   addMonths,
+  shiftDays,
+  weekStart,
   formatTabDate,
   isoDate,
   isoWeek,
@@ -17,6 +19,19 @@ describe('isoDate', () => {
     // Late evening local time is already the next day in UTC; the app's dates are local.
     expect(isoDate(new Date(2026, 7, 21, 23, 30))).toBe('2026-08-21');
     expect(isoDate(new Date(2026, 7, 21, 0, 15))).toBe('2026-08-21');
+  });
+});
+
+describe('shiftDays / weekStart', () => {
+  it('shifts across month and year boundaries', () => {
+    expect(shiftDays('2026-12-30', 3)).toBe('2027-01-02');
+    expect(shiftDays('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('finds the Monday of the week, Sunday included', () => {
+    expect(weekStart('2026-11-18')).toBe('2026-11-16');
+    expect(weekStart('2026-11-16')).toBe('2026-11-16');
+    expect(weekStart('2026-11-22')).toBe('2026-11-16');
   });
 });
 

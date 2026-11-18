@@ -9,6 +9,8 @@
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
   padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px);
+  /* Four buttons spread over a laptop's width are a long way apart; they stay together. */
+  padding-inline: max(8px, calc((100% - 560px) / 2));
 }
 
 .navButton {

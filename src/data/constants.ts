@@ -1,4 +1,4 @@
-import type { BlockKind, ExerciseType } from '../types';
+import type { BlockKind, ExerciseType, Mode, Side, View } from '../types';
 
 /**
  * How each exercise type is labelled. The keys are the single source of truth for
@@ -15,6 +15,19 @@ export const UNIT: Record<ExerciseType, string> = {
 };
 
 export const EXERCISE_TYPES = Object.keys(UNIT) as ExerciseType[];
+
+/**
+ * Types whose value is a load, so the reps done with it are logged next to it. For `bw` the value
+ * already is the rep count; the remaining types measure something reps don't apply to.
+ */
+export const WITH_REPS: Partial<Record<ExerciseType, true>> = { kg: true, band: true };
+
+/** The rep counts a set accepts; mirrors the CHECK on `session_value.reps`. */
+export const REPS_MIN = 1;
+export const REPS_MAX = 999;
+
+/** How a side is named in text; empty for a bilateral exercise, which has none. */
+export const SIDE_LABEL: Record<Side, string> = { B: '', L: 'Links', R: 'Rechts' };
 
 /** Types whose values are picked from a fixed word list instead of typed as a number. */
 export const TEXTY: Partial<Record<ExerciseType, true>> = { band: true };
@@ -38,6 +51,17 @@ export const BLOCK_KIND_LABEL: Record<BlockKind, string> = {
   explosiv: 'Explosiv',
   core: 'Core',
   ausdauer: 'Ausdauer',
+};
+
+/** A button in the bottom bar: the two training modes, then the other views. */
+export type NavTarget = Mode | Exclude<View, 'training'>;
+
+/** The bottom bar's buttons, in bar order; the introduction names them the same way. */
+export const NAV: Record<NavTarget, { icon: string; label: string }> = {
+  log: { icon: '◉', label: 'Protokoll' },
+  edit: { icon: '◎', label: 'Plan' },
+  calendar: { icon: '▦', label: 'Kalender' },
+  stats: { icon: '▥', label: 'Statistik' },
 };
 
 /** Photos one exercise can carry; mirrors `ExerciseDto.MAX_IMAGES` on the backend. */

@@ -54,6 +54,17 @@ export function isoWeek(iso: string): number {
   return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86400000));
 }
 
+/** `iso` um `days` Tage verschoben (negativ = davor), wieder als `YYYY-MM-DD`. */
+export function shiftDays(iso: string, days: number): string {
+  return isoDate(addDays(parseIso(iso), days));
+}
+
+/** Der Montag der Woche, in der `iso` liegt. */
+export function weekStart(iso: string): string {
+  const d = parseIso(iso);
+  return isoDate(addDays(d, -mondayIndex(d)));
+}
+
 /** Neues Datum, `delta` Monate nach `d` versetzt (negativ = davor); Tag wird auf den 1. gesetzt. */
 export function addMonths(d: Date, delta: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1);

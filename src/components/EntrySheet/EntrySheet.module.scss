@@ -26,6 +26,18 @@
   font-weight: 600;
 }
 
+.reps {
+  composes: field from '../../styles/shared.module.scss';
+  margin: 16px 0 0;
+
+  /* Two classes deep to outrank the shared field's own input styling. */
+  .repsInput {
+    font-family: var(--num);
+    font-size: 18px;
+    text-align: center;
+  }
+}
+
 .quick {
   display: flex;
   gap: 6px;

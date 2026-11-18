@@ -7,6 +7,7 @@ import type {
   Exercise,
   Plan,
   SessionType,
+  Side,
   UnilateralExercise,
 } from '../types';
 import { uid } from '../data/plan';
@@ -28,6 +29,37 @@ export function findExercise(plan: Plan, id: string): Exercise | null {
     }
   }
   return null;
+}
+
+/** Every exercise of a plan, block by block. */
+export function dayExercises(day: Day): Exercise[] {
+  return day.blocks.flatMap((b) => b.ex);
+}
+
+/** The sides an exercise is logged on, with their set counts; a side without sets is left out. */
+export function exerciseTracks(x: Exercise): { side: Side; count: number }[] {
+  if (!x.uni) return [{ side: 'B', count: x.sets }];
+  return [
+    { side: 'L' as Side, count: x.setsL },
+    { side: 'R' as Side, count: x.setsR },
+  ].filter((t) => t.count > 0);
+}
+
+export type PlanRepsHint = { kind: 'single'; reps: number } | { kind: 'range'; reps: number[] };
+
+/**
+ * What a plan's rep text suggests for one set: a single count ("8") to prefill, or the counts of a
+ * range ("6-8") to offer. Anything else ("max", "8/Seite") suggests nothing.
+ */
+export function planRepsHint(planReps: string): PlanRepsHint | null {
+  const single = /^\s*(\d{1,3})\s*$/.exec(planReps);
+  if (single) return { kind: 'single', reps: Number(single[1]) };
+  const range = /^\s*(\d{1,3})\s*[-–]\s*(\d{1,3})\s*$/.exec(planReps);
+  if (!range) return null;
+  const [from, to] = [Number(range[1]), Number(range[2])];
+  // A wide range ("5-20") would be a wall of chips; past a handful, typing is quicker.
+  if (to <= from || to - from > 5) return null;
+  return { kind: 'range', reps: Array.from({ length: to - from + 1 }, (_, i) => from + i) };
 }
 
 /**

@@ -10,6 +10,7 @@
 .body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px 20px 12px;
 }
 
@@ -208,6 +209,18 @@
 
 .hintMark {
   color: var(--ink);
+}
+
+/** The step's name, on its own line above the explanation. */
+.hintTitle {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.subtitle {
+  composes: overline from '../../styles/shared.module.scss';
+  margin-top: 4px;
 }
 
 .footer {

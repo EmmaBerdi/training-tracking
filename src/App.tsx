@@ -16,13 +16,14 @@ import { Onboarding } from './components/Onboarding/Onboarding';
 import { Toast } from './components/Toast/Toast';
 import { AuthScreen } from './components/AuthScreen/AuthScreen';
 import { PlainSession } from './components/PlainSession/PlainSession';
+import { StatsView } from './components/StatsView/StatsView';
 import type { SheetState } from './components/Sheet/sheetState';
 import { useTrainingState } from './hooks/useTrainingState';
 import { usePlannedSessions } from './hooks/usePlannedSessions';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './auth/useAuth';
 import type { TabItem } from './components/Tabs/Tabs';
-import type { ExerciseType, Mode, PlannedSession, Side } from './types';
+import type { ExerciseType, Mode, PlannedSession, Side, View } from './types';
 import {
   addMonths,
   formatMonthLabel,
@@ -55,7 +56,7 @@ function TrainingApp({
   const toast = useToast();
   const sessions = usePlannedSessions(toast.show);
   const [sheet, setSheet] = useState<SheetState>(null);
-  const [view, setView] = useState<'training' | 'calendar'>('training');
+  const [view, setView] = useState<View>('training');
   const [month, setMonth] = useState(() => new Date());
   const [mode, setMode] = useState<Mode>('log');
   /** Log mode follows the calendar: which scheduled session the training view is showing. */
@@ -151,12 +152,12 @@ function TrainingApp({
    * Logging a value also ticks the session off — on the workout's first entry only, and only while
    * it is still "geplant", so a manual "übersprungen" or a deliberate reset is never overridden.
    */
-  const logValue = (exId: string, side: Side, index: number, value: string) => {
+  const logValue = (exId: string, side: Side, index: number, value: string, reps: string) => {
     const session = mode === 'log' ? activeSession : undefined;
     if (session?.status === 'planned' && startsWorkout(t.log, value)) {
       void sessions.markStatus(session.id, 'done');
     }
-    t.setVal(exId, side, index, value);
+    t.setVal(exId, side, index, value, reps);
   };
 
   const openEntry = (exId: string, side: Side, index: number, name: string, exType: ExerciseType) =>
@@ -192,7 +193,7 @@ function TrainingApp({
   const closeSheet = () => setSheet(null);
 
   return (
-    <>
+    <div data-view={view}>
       <Header
         monthLabel={formatMonthLabel(month)}
         view={view}
@@ -211,7 +212,9 @@ function TrainingApp({
       />
 
       <main>
-        {view === 'calendar' ? (
+        {view === 'stats' ? (
+          <StatsView plan={t.plan} logs={t.logs} types={sessions.types} />
+        ) : view === 'calendar' ? (
           <CalendarView
             month={month}
             onMonthChange={setMonth}
@@ -234,6 +237,8 @@ function TrainingApp({
             warmupActions={warmupActions}
             getVal={t.getVal}
             lastVal={t.lastVal}
+            getReps={t.getReps}
+            lastReps={t.lastReps}
             onOpenInfo={(exId) => setSheet({ type: 'info', exId })}
             onOpenEntry={openEntry}
             actions={exerciseActions}
@@ -268,6 +273,7 @@ function TrainingApp({
         mode={mode}
         onModeChange={handleModeChange}
         onOpenCalendar={() => setView('calendar')}
+        onOpenStats={() => setView('stats')}
       />
 
       {sheet && (
@@ -287,8 +293,11 @@ function TrainingApp({
               index={sheet.index}
               current={t.getVal(sheet.exId, sheet.side, sheet.index)}
               last={t.lastVal(sheet.exId, sheet.side, sheet.index)}
-              onSubmit={(value) => {
-                logValue(sheet.exId, sheet.side, sheet.index, value);
+              currentReps={t.getReps(sheet.exId, sheet.side, sheet.index)}
+              lastReps={t.lastReps(sheet.exId, sheet.side, sheet.index)}
+              planReps={t.findExercise(sheet.exId)?.reps ?? ''}
+              onSubmit={(value, reps) => {
+                logValue(sheet.exId, sheet.side, sheet.index, value, reps);
                 closeSheet();
               }}
               onClear={() => {
@@ -442,10 +451,11 @@ function TrainingApp({
             setView('calendar');
           }}
           onSkip={closeIntro}
+          tourOnly={introForced && !empty}
         />
       )}
 
       <Toast message={toast.message} />
-    </>
+    </div>
   );
 }

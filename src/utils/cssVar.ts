@@ -13,9 +13,14 @@ export function blockAccent(kind: BlockKind): CSSProperties {
   return accent(`var(--${kind})`);
 }
 
+/** A session type's own color, or the neutral one for a type without (or one since deleted). */
+export function sessionTypeColor(type: SessionType | undefined): string {
+  return type?.color || 'var(--faint)';
+}
+
 /** The accent color a session type's chip/pill chrome reads from. */
 export function sessionTypeAccent(type: SessionType | undefined): CSSProperties {
-  return accent(type?.color || 'var(--faint)');
+  return accent(sessionTypeColor(type));
 }
 
 /** An accent taken straight from a stored color, for a tab whose type is already resolved. */

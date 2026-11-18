@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * The whole state (plan + logs) for one user is saved as one blob, mirroring the frontend's
@@ -49,6 +51,9 @@ public class StateService {
 
     private static final Set<String> VALID_SIDES = Set.of("B", "L", "R");
     private static final int MAX_VALUE_LENGTH = 64;
+    /** Mirror the CHECK on {@code session_value.reps}. */
+    private static final int MIN_REPS = 1;
+    private static final int MAX_REPS = 999;
 
     private final DayRepository dayRepository;
     private final BlockRepository blockRepository;
@@ -130,11 +135,15 @@ public class StateService {
 
         List<SessionDto> result = new ArrayList<>();
         for (Session s : sessions) {
+            List<SessionValue> values = valuesBySession.getOrDefault(s.getId(), List.of());
+            boolean anyReps = values.stream().anyMatch(sv -> sv.getReps() != null);
             result.add(new SessionDto(
                     s.getSessionDate().toString(),
                     s.getDayKey(),
-                    valuesOf(valuesBySession.getOrDefault(s.getId(), List.of()), clientIdByExerciseId),
-                    warmupFlags(warmupBySession.getOrDefault(s.getId(), List.of()))));
+                    perSet(values, clientIdByExerciseId, SessionValue::getValue),
+                    warmupFlags(warmupBySession.getOrDefault(s.getId(), List.of())),
+                    anyReps ? perSet(values, clientIdByExerciseId,
+                            sv -> sv.getReps() == null ? "" : sv.getReps().toString()) : null));
         }
         return result;
     }
@@ -150,8 +159,10 @@ public class StateService {
         return warm;
     }
 
-    private static Map<String, Map<String, List<String>>> valuesOf(
-            List<SessionValue> values, Map<Long, String> clientIdByExerciseId) {
+    /** Exercise client id -> side -> one entry per set index, read from each row by {@code field}. */
+    private static Map<String, Map<String, List<String>>> perSet(
+            List<SessionValue> values, Map<Long, String> clientIdByExerciseId,
+            Function<SessionValue, String> field) {
         Map<String, Map<String, List<String>>> vals = new LinkedHashMap<>();
         for (SessionValue sv : values) {
             String clientId = clientIdByExerciseId.get(sv.getId().getExerciseId());
@@ -165,7 +176,7 @@ public class StateService {
             while (setValues.size() <= idx) {
                 setValues.add("");
             }
-            setValues.set(idx, sv.getValue());
+            setValues.set(idx, field.apply(sv));
         }
         return vals;
     }
@@ -187,6 +198,10 @@ public class StateService {
         dayDtos.stream().map(DayDto::sessionTypeId).distinct()
                 .forEach(typeId -> scheduleRefs.sessionType(userId, typeId));
         exerciseImageService.requireOwnership(userId, referencedImageIds(dayDtos));
+        // Read before the wipe: a client that predates reps sends none, and an installed PWA can run
+        // that old code until its next reload. Its save would otherwise erase every rep count.
+        Map<String, Short> carriedReps = logDtos.stream().anyMatch(l -> l.reps() == null)
+                ? storedReps(userId) : Map.of();
 
         wipe(userId);
 
@@ -199,7 +214,7 @@ public class StateService {
         dayRepository.saveAllAndFlush(days);
 
         Map<String, Exercise> exerciseByClientId = saveBlocksAndExercises(userId, dayDtos, days);
-        saveLogs(userId, logDtos, exerciseByClientId);
+        saveLogs(userId, logDtos, exerciseByClientId, carriedReps);
 
         // After the exercises are back in place, so the surviving references are visible to the sweep.
         exerciseImageService.collectOrphans(userId);
@@ -299,7 +314,8 @@ public class StateService {
         return byClientId;
     }
 
-    private void saveLogs(Long userId, List<SessionDto> logDtos, Map<String, Exercise> exerciseByClientId) {
+    private void saveLogs(Long userId, List<SessionDto> logDtos, Map<String, Exercise> exerciseByClientId,
+                          Map<String, Short> carriedReps) {
         List<Session> sessions = new ArrayList<>();
         for (SessionDto logDto : logDtos) {
             Session session = new Session();
@@ -314,7 +330,7 @@ public class StateService {
         List<SessionValue> sessionValues = new ArrayList<>();
         for (int i = 0; i < logDtos.size(); i++) {
             collectWarmups(logDtos.get(i), sessions.get(i), sessionWarmups);
-            collectValues(logDtos.get(i), sessions.get(i), exerciseByClientId, sessionValues);
+            collectValues(logDtos.get(i), sessions.get(i), exerciseByClientId, carriedReps, sessionValues);
         }
         sessionWarmupRepository.saveAllAndFlush(sessionWarmups);
         sessionValueRepository.saveAllAndFlush(sessionValues);
@@ -375,8 +391,46 @@ public class StateService {
         }
     }
 
+    /**
+     * The stored rep counts, keyed by everything that identifies their set plus its value: carried
+     * over only while the set still holds the value the reps were logged with.
+     */
+    private Map<String, Short> storedReps(Long userId) {
+        Map<String, Short> reps = new HashMap<>();
+        for (SessionValue sv : sessionValueRepository.findAllBySession_UserIdAndRepsNotNull(userId)) {
+            Session s = sv.getSession();
+            reps.put(setKey(s.getSessionDate().toString(), s.getDayKey(), sv.getExercise().getClientId(),
+                    sv.getId().getSide(), sv.getId().getSetIndex(), sv.getValue()), sv.getReps());
+        }
+        return reps;
+    }
+
+    private static String setKey(String date, String dayKey, String clientId, String side, int setIdx,
+                                 String value) {
+        return String.join("\u0000", date, dayKey, clientId, side, Integer.toString(setIdx), value);
+    }
+
+    /** The reps logged for one set, or null; anything but a whole number from 1 to 999 is refused. */
+    private static Short parseReps(Map<String, Map<String, List<String>>> reps, String clientId, String side,
+                                   int setIdx) {
+        List<String> perSet = reps.getOrDefault(clientId, Map.of()).get(side);
+        String raw = perSet == null || setIdx >= perSet.size() ? null : perSet.get(setIdx);
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(raw);
+            if (parsed >= MIN_REPS && parsed <= MAX_REPS) {
+                return (short) parsed;
+            }
+        } catch (NumberFormatException ignored) {
+            // falls through to the same refusal as an out-of-range count
+        }
+        throw badRequest("reps must be a whole number from " + MIN_REPS + " to " + MAX_REPS + ", got " + raw);
+    }
+
     private void collectValues(SessionDto logDto, Session session, Map<String, Exercise> exerciseByClientId,
-                                List<SessionValue> out) {
+                                Map<String, Short> carriedReps, List<SessionValue> out) {
         Map<String, Map<String, List<String>>> vals = logDto.vals() == null ? Map.of() : logDto.vals();
         for (Map.Entry<String, Map<String, List<String>>> exEntry : vals.entrySet()) {
             Exercise exercise = exerciseByClientId.get(exEntry.getKey());
@@ -402,6 +456,10 @@ public class StateService {
                     sv.setSession(session);
                     sv.setExercise(exercise);
                     sv.setValue(value);
+                    sv.setReps(logDto.reps() != null
+                            ? parseReps(logDto.reps(), exEntry.getKey(), side, setIdx)
+                            : carriedReps.get(setKey(logDto.date(), logDto.dayId(), exEntry.getKey(), side,
+                                    setIdx, value)));
                     out.add(sv);
                 }
             }

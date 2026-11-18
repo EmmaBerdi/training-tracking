@@ -1,0 +1,112 @@
+.exercise {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 14px;
+}
+
+.title {
+  composes: sheetTitle from '../../styles/shared.module.scss';
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  composes: overline from '../../styles/shared.module.scss';
+  margin-bottom: 6px;
+}
+
+.empty {
+  composes: emptyNote from '../../styles/shared.module.scss';
+  margin-bottom: 8px;
+}
+
+.metrics {
+  composes: chips from '../../styles/shared.module.scss';
+  margin-bottom: 12px;
+}
+
+.chip {
+  composes: chip from '../../styles/shared.module.scss';
+}
+
+.chipOn {
+  composes: chipNeutralOn from '../../styles/shared.module.scss';
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 10px;
+}
+
+.stat {
+  composes: figure from '../../styles/shared.module.scss';
+}
+
+.statLabel {
+  composes: figureLabel from '../../styles/shared.module.scss';
+}
+
+.statValue {
+  composes: figureValue from '../../styles/shared.module.scss';
+}
+
+.statDelta {
+  composes: figureSub from '../../styles/shared.module.scss';
+}
+
+.legend {
+  composes: chartLegend from '../../styles/shared.module.scss';
+}
+
+.key {
+  composes: chartKeyLine from '../../styles/shared.module.scss';
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--panel2);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.records {
+  margin-top: 16px;
+}
+
+.recordSide + .recordSide {
+  margin-top: 8px;
+}
+
+.recordRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+
+  span:first-child {
+    color: var(--mute);
+    flex: 1;
+  }
+
+  strong {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.recordDate {
+  color: var(--faint);
+  font-size: 12px;
+  min-width: 46px;
+  text-align: right;
+}
+
+.table {
+  composes: chartTable from '../../styles/shared.module.scss';
+}

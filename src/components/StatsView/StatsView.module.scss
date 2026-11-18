@@ -1,0 +1,124 @@
+@use '../../styles/breakpoints' as *;
+
+.stats {
+  padding: 14px 16px 24px;
+}
+
+/** One row above everything it scopes: every number below follows the same range. */
+.filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+}
+
+.range {
+  composes: chip from '../../styles/shared.module.scss';
+  flex: none;
+}
+
+.rangeOn {
+  composes: chipNeutralOn from '../../styles/shared.module.scss';
+}
+
+/* Side by side from tablet width: overview beside the plans, a plan's list beside its exercise. */
+.columns,
+.columnsDetail {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+
+.columns {
+  grid-template-columns: 3fr 2fr;
+}
+
+.columnsDetail {
+  grid-template-columns: minmax(280px, 2fr) 3fr;
+
+  @include laptop {
+    grid-template-columns: minmax(320px, 1fr) 2fr;
+  }
+}
+
+.back {
+  color: var(--mute);
+  font-size: 14px;
+  padding: 6px 0;
+  margin-bottom: 8px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.heading {
+  composes: overline from '../../styles/shared.module.scss';
+}
+
+.empty {
+  composes: emptyNote from '../../styles/shared.module.scss';
+}
+
+.tiles {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tile {
+  composes: figure from '../../styles/shared.module.scss';
+  flex: 1;
+  background: var(--panel2);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.tileLabel {
+  composes: figureLabel from '../../styles/shared.module.scss';
+}
+
+.tileValue {
+  composes: figureValue from '../../styles/shared.module.scss';
+}
+
+.tileSub {
+  composes: figureSub from '../../styles/shared.module.scss';
+}
+
+.plans {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.planRow {
+  composes: listRow from '../../styles/shared.module.scss';
+  padding: 13px 12px;
+}
+
+.planDot {
+  composes: accentDot from '../../styles/shared.module.scss';
+  flex: none;
+}
+
+.planName {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.planMeta {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.chevron {
+  color: var(--faint);
+  font-size: 18px;
+}

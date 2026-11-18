@@ -1,0 +1,26 @@
+.spark {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.empty {
+  display: block;
+  flex: none;
+  width: 72px;
+  height: 24px;
+}
+
+.line {
+  fill: none;
+  stroke: var(--mute);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.end {
+  fill: var(--chart-left);
+  stroke: var(--panel);
+  stroke-width: 2;
+}

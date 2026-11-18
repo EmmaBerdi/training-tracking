@@ -208,8 +208,8 @@ export function useTrainingState(notify: (message: string) => void, selection: S
   );
 
   const setVal = useCallback(
-    (exId: string, side: Side, i: number, value: string) =>
-      updateLogs((l) => logOps.setVal(l, selectedDate, dayId, exId, side, i, value)),
+    (exId: string, side: Side, i: number, value: string, reps = '') =>
+      updateLogs((l) => logOps.setVal(l, selectedDate, dayId, exId, side, i, value, reps)),
     [updateLogs, selectedDate, dayId],
   );
   const toggleWarmupItem = useCallback(
@@ -222,7 +222,7 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     [state.logs, selectedDate, dayId],
   );
   const previous = useMemo(
-    () => logOps.lastValues(state.logs, selectedDate),
+    () => logOps.lastSets(state.logs, selectedDate),
     [state.logs, selectedDate],
   );
 
@@ -230,8 +230,18 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     (exId: string, side: Side, i: number) => logOps.getVal(log, exId, side, i),
     [log],
   );
+  const getReps = useCallback(
+    (exId: string, side: Side, i: number) => logOps.getReps(log, exId, side, i),
+    [log],
+  );
   const lastVal = useCallback(
-    (exId: string, side: Side, i: number) => previous.get(logOps.positionKey(exId, side, i)) ?? '',
+    (exId: string, side: Side, i: number) =>
+      previous.get(logOps.positionKey(exId, side, i))?.value ?? '',
+    [previous],
+  );
+  const lastReps = useCallback(
+    (exId: string, side: Side, i: number) =>
+      previous.get(logOps.positionKey(exId, side, i))?.reps ?? '',
     [previous],
   );
 
@@ -247,7 +257,9 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     findExercise: (id: string) => planOps.findExercise(state.plan, id),
     setOpen,
     getVal,
+    getReps,
     lastVal,
+    lastReps,
     setVal,
     toggleWarmupItem,
     addDay,

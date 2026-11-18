@@ -18,6 +18,12 @@
   --explosiv: #4e9e6a;
   --core: #8a8a94;
   --ausdauer: #c08040;
+  /* Chart series, checked for colour-blind separation against --panel (the chart surface): one
+     side of an exercise each, and the left one doubles as the colour of a single series. */
+  --chart-left: #3a89d6;
+  --chart-right: #c08820;
+  /* The content column on wide screens; header and footer line their content up with it. */
+  --content-max: 760px;
   --num: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
@@ -39,6 +45,16 @@ body {
   padding: 0 0 96px;
   font-size: 16px;
   line-height: 1.4;
+}
+
+/* Statistics put two columns side by side on a wide screen, so they get a wider column. */
+[data-view='stats'] {
+  --content-max: 1180px;
+}
+
+main {
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 
 button,

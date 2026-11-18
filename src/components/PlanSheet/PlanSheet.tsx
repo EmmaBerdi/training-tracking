@@ -91,7 +91,7 @@ export function PlanSheet({ day, types, onSubmit, onDelete, onImport }: PlanShee
           onClick={() => {
             if (
               window.confirm(
-                `Plan "${day.title}" mit allen Übungen löschen? Bereits protokollierte Einheiten bleiben im Verlauf.`,
+                `Plan "${day.title}" mit allen Übungen löschen? Die dafür eingetragenen Werte werden ebenfalls gelöscht.`,
               )
             ) {
               onDelete();

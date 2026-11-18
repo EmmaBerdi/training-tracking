@@ -24,14 +24,25 @@ export function getVal(log: WorkoutLog | undefined, exId: string, side: Side, i:
   return log?.vals[exId]?.[side]?.[i] ?? '';
 }
 
+export function getReps(log: WorkoutLog | undefined, exId: string, side: Side, i: number): string {
+  return log?.reps?.[exId]?.[side]?.[i] ?? '';
+}
+
+/** A set as entered: its value, and the reps done with it ('' when none were logged). */
+export interface SetEntry {
+  value: string;
+  reps: string;
+}
+
 /**
- * The most recent entry for one position before `beforeDate`, across every logged workout.
+ * The most recent entry for one position before `beforeDate`, across every logged workout. The reps
+ * come from the same workout as the value, so the pair always describes one real set.
  *
  * Built once per render as a lookup rather than scanned per set: the exercise view asks for this
  * on every chip, and the log grows without bound.
  */
-export function lastValues(logs: WorkoutLog[], beforeDate: string): Map<string, string> {
-  const byPosition = new Map<string, string>();
+export function lastSets(logs: WorkoutLog[], beforeDate: string): Map<string, SetEntry> {
+  const byPosition = new Map<string, SetEntry>();
   const earlier = logs
     .filter((s) => s.date < beforeDate)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -41,7 +52,9 @@ export function lastValues(logs: WorkoutLog[], beforeDate: string): Map<string, 
     for (const [exId, sides] of Object.entries(log.vals)) {
       for (const [side, values] of Object.entries(sides)) {
         values?.forEach((value, i) => {
-          if (value !== '') byPosition.set(positionKey(exId, side as Side, i), value);
+          if (value === '') return;
+          const reps = getReps(log, exId, side as Side, i);
+          byPosition.set(positionKey(exId, side as Side, i), { value, reps });
         });
       }
     }
@@ -61,11 +74,18 @@ export function setVal(
   side: Side,
   i: number,
   value: string,
+  reps = '',
 ): WorkoutLog[] {
   return upsert(logs, date, dayId, (log) => {
     const sideVals = [...(log.vals[exId]?.[side] ?? [])];
     sideVals[i] = value;
-    return { ...log, vals: { ...log.vals, [exId]: { ...log.vals[exId], [side]: sideVals } } };
+    const next = { ...log, vals: { ...log.vals, [exId]: { ...log.vals[exId], [side]: sideVals } } };
+    // Reps never outlive their value; and a log that never had any stays without the field.
+    const setReps = value === '' ? '' : reps;
+    if (setReps === '' && !log.reps?.[exId]?.[side]) return next;
+    const sideReps = [...(log.reps?.[exId]?.[side] ?? [])];
+    sideReps[i] = setReps;
+    return { ...next, reps: { ...log.reps, [exId]: { ...log.reps?.[exId], [side]: sideReps } } };
   });
 }
 

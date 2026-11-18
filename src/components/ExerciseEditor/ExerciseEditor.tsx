@@ -192,7 +192,11 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
           type="button"
           className={`${styles.smallButton} ${styles.danger} ${styles.pushRight}`}
           onClick={() => {
-            if (window.confirm(`Übung "${x.name}" löschen?`)) {
+            if (
+              window.confirm(
+                `Übung "${x.name}" löschen? Die dafür eingetragenen Werte werden ebenfalls gelöscht.`,
+              )
+            ) {
               actions.deleteExercise(blockRef, x.id);
             }
           }}

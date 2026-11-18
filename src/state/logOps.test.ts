@@ -92,17 +92,17 @@ describe('previous values', () => {
   ];
 
   it('takes the most recent entry strictly before the given date', () => {
-    const previous = logOps.lastValues(logs, '2026-08-24');
-    expect(previous.get(logOps.positionKey('squat', 'B', 0))).toBe('55');
+    const previous = logOps.lastSets(logs, '2026-08-24');
+    expect(previous.get(logOps.positionKey('squat', 'B', 0))?.value).toBe('55');
   });
 
   it('skips blanks and falls back to the newest workout that has a value', () => {
-    const previous = logOps.lastValues(logs, '2026-08-24');
-    expect(previous.get(logOps.positionKey('squat', 'B', 1))).toBe('50');
+    const previous = logOps.lastSets(logs, '2026-08-24');
+    expect(previous.get(logOps.positionKey('squat', 'B', 1))?.value).toBe('50');
   });
 
   it('is empty when nothing precedes the date', () => {
-    expect(logOps.lastValues(logs, '2026-08-01').size).toBe(0);
+    expect(logOps.lastSets(logs, '2026-08-01').size).toBe(0);
   });
 
   it('looks across plans, since an exercise can appear on more than one', () => {
@@ -110,15 +110,39 @@ describe('previous values', () => {
       log('2026-08-10', 'mo', { squat: { B: ['50'] } }),
       log('2026-08-12', 'di', { squat: { B: ['52'] } }),
     ];
-    const previous = logOps.lastValues(across, '2026-08-20');
-    expect(previous.get(logOps.positionKey('squat', 'B', 0))).toBe('52');
+    const previous = logOps.lastSets(across, '2026-08-20');
+    expect(previous.get(logOps.positionKey('squat', 'B', 0))?.value).toBe('52');
   });
 
   it('keeps sides apart', () => {
     const sided = [log('2026-08-10', 'mo', { row: { L: ['20'], R: ['24'] } })];
-    const previous = logOps.lastValues(sided, '2026-08-20');
-    expect(previous.get(logOps.positionKey('row', 'L', 0))).toBe('20');
-    expect(previous.get(logOps.positionKey('row', 'R', 0))).toBe('24');
+    const previous = logOps.lastSets(sided, '2026-08-20');
+    expect(previous.get(logOps.positionKey('row', 'L', 0))?.value).toBe('20');
+    expect(previous.get(logOps.positionKey('row', 'R', 0))?.value).toBe('24');
+  });
+});
+
+describe('reps', () => {
+  it('stores reps next to the value, and drops them when the value is cleared', () => {
+    let logs = logOps.setVal([], '2026-08-20', 'mo', 'squat', 'B', 1, '60', '8');
+    expect(logOps.getReps(logs[0], 'squat', 'B', 1)).toBe('8');
+
+    logs = logOps.setVal(logs, '2026-08-20', 'mo', 'squat', 'B', 1, '', '8');
+    expect(logOps.getReps(logs[0], 'squat', 'B', 1)).toBe('');
+  });
+
+  it('adds no reps field to a log that never had reps', () => {
+    const logs = logOps.setVal([], '2026-08-20', 'mo', 'squat', 'B', 0, '60');
+    expect(logs[0]).not.toHaveProperty('reps');
+  });
+
+  it('pairs the previous value with the reps of that same workout', () => {
+    const logs = [
+      { ...log('2026-08-10', 'mo', { squat: { B: ['50'] } }), reps: { squat: { B: ['10'] } } },
+      log('2026-08-17', 'mo', { squat: { B: ['55'] } }),
+    ];
+    const previous = logOps.lastSets(logs, '2026-08-24');
+    expect(previous.get(logOps.positionKey('squat', 'B', 0))).toEqual({ value: '55', reps: '' });
   });
 });
 

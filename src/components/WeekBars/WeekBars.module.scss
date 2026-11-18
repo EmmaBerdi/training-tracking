@@ -1,0 +1,64 @@
+.block {
+  width: 100%;
+}
+
+.wrap {
+  position: relative;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+}
+
+.base {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tick {
+  composes: chartTick from '../../styles/shared.module.scss';
+}
+
+/** The hovered week lifts a little so the reader sees which one the readout belongs to. */
+.barActive path {
+  filter: brightness(1.2);
+}
+
+/** Vertical swipes still scroll the page; only a sideways drag moves between weeks. */
+.hit {
+  fill: transparent;
+  touch-action: pan-y;
+}
+
+.tooltip {
+  composes: chartTooltip from '../../styles/shared.module.scss';
+}
+
+.tipDate {
+  composes: chartTipDate from '../../styles/shared.module.scss';
+}
+
+.tipRow {
+  composes: chartTipRow from '../../styles/shared.module.scss';
+}
+
+.tipKey {
+  composes: chartTipKey from '../../styles/shared.module.scss';
+}
+
+.tipLabel {
+  composes: chartTipLabel from '../../styles/shared.module.scss';
+}
+
+.legend {
+  composes: chartLegend from '../../styles/shared.module.scss';
+}
+
+.swatch {
+  composes: chartKeyBlock from '../../styles/shared.module.scss';
+}
+
+.table {
+  composes: chartTable from '../../styles/shared.module.scss';
+}

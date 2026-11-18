@@ -1,11 +1,12 @@
 import { Tabs } from '../Tabs/Tabs';
 import type { TabItem } from '../Tabs/Tabs';
+import type { View } from '../../types';
 import { UserMenu } from '../UserMenu/UserMenu';
 import styles from './Header.module.scss';
 
 interface HeaderProps {
   monthLabel: string;
-  view: 'training' | 'calendar';
+  view: View;
   tabItems: TabItem[];
   activeTabId: string | null;
   onSelectTab: (id: string) => void;

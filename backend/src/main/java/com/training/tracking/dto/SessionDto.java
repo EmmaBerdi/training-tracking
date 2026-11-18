@@ -1,5 +1,6 @@
 package com.training.tracking.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -12,6 +13,13 @@ public record SessionDto(
         @NotBlank @Size(max = 16) String dayId,
         /** Exercise client id -> side ('B' | 'L' | 'R') -> value per set index. */
         Map<String, Map<String, List<String>>> vals,
-        List<Boolean> warm
+        List<Boolean> warm,
+        /**
+         * Same shape as {@code vals}: the reps done per set, {@code ""} where none were logged. Null
+         * when the client predates reps, which is not the same as having logged none — see
+         * {@code StateService#saveState}.
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Map<String, Map<String, List<String>>> reps
 ) {
 }

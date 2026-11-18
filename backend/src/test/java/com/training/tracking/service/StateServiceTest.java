@@ -87,7 +87,7 @@ class StateServiceTest {
     @Test
     void roundTripsAPlanWithItsLoggedValues() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60", "62", ""))), List.of(true, false));
+                Map.of("ex1", Map.of("B", List.of("60", "62", ""))), List.of(true, false), null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         StateDto loaded = stateService.getState(userId);
@@ -125,7 +125,7 @@ class StateServiceTest {
     @Test
     void deletingEveryPlanKeepsTheHistory() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60"))), List.of(true));
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(true), null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         stateService.saveState(userId, state(List.of(), List.of(log)));
@@ -142,7 +142,7 @@ class StateServiceTest {
     @Test
     void editingThePlanKeepsValuesAttachedToTheirExercise() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60"))), List.of());
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         // Same exercise id, renamed, plus a new sibling — the shape of a normal plan edit.
@@ -159,7 +159,7 @@ class StateServiceTest {
 
     @Test
     void logsForAPlanThatNoLongerExistsAreStillReadable() {
-        SessionDto orphan = new SessionDto("2026-08-20", "geloescht", Map.of(), List.of());
+        SessionDto orphan = new SessionDto("2026-08-20", "geloescht", Map.of(), List.of(), null);
         stateService.saveState(userId, state(List.of(day("mo")), List.of(orphan)));
 
         StateDto loaded = stateService.getState(userId);
@@ -190,7 +190,7 @@ class StateServiceTest {
 
     @Test
     void rejectsTwoLogsForTheSameDayAndDate() {
-        SessionDto log = new SessionDto("2026-08-20", "mo", Map.of(), List.of());
+        SessionDto log = new SessionDto("2026-08-20", "mo", Map.of(), List.of(), null);
 
         assertThatThrownBy(() -> stateService.saveState(userId, state(List.of(day("mo")), List.of(log, log))))
                 .isInstanceOf(ResponseStatusException.class)
@@ -201,7 +201,7 @@ class StateServiceTest {
     @Test
     void rejectsALoggedSideThatIsNotBLeftOrRight() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("X", List.of("60"))), List.of());
+                Map.of("ex1", Map.of("X", List.of("60"))), List.of(), null);
         StateDto bad = state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log));
 
         assertThatThrownBy(() -> stateService.saveState(userId, bad))
@@ -226,6 +226,62 @@ class StateServiceTest {
         assertThat(stateService.getState(userId).plan().days()).extracting(DayDto::id).containsExactly("mo");
         assertThat(stateService.getState(other.getId()).plan().days())
                 .extracting(DayDto::id).containsExactly("di");
+    }
+
+    @Test
+    void roundTripsTheRepsOfEachSet() {
+        SessionDto log = new SessionDto("2026-08-20", "mo",
+                Map.of("ex1", Map.of("B", List.of("60", "62.5", "65"))), List.of(),
+                Map.of("ex1", Map.of("B", List.of("8", "", "6"))));
+        stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
+
+        SessionDto loaded = stateService.getState(userId).logs().get(0);
+        assertThat(loaded.vals().get("ex1").get("B")).containsExactly("60", "62.5", "65");
+        assertThat(loaded.reps().get("ex1").get("B")).containsExactly("8", "", "6");
+    }
+
+    @Test
+    void leavesRepsOutOfALogThatHasNone() {
+        SessionDto log = new SessionDto("2026-08-20", "mo",
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), Map.of());
+        stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
+
+        assertThat(stateService.getState(userId).logs().get(0).reps()).isNull();
+    }
+
+    @Test
+    void refusesARepCountOutsideOneTo999() {
+        for (String reps : List.of("0", "1000", "8.5", "acht")) {
+            SessionDto log = new SessionDto("2026-08-20", "mo",
+                    Map.of("ex1", Map.of("B", List.of("60"))), List.of(),
+                    Map.of("ex1", Map.of("B", List.of(reps))));
+            StateDto bad = state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log));
+
+            assertThatThrownBy(() -> stateService.saveState(userId, bad))
+                    .as("reps %s", reps)
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
+                            .isEqualTo(HttpStatus.BAD_REQUEST));
+        }
+    }
+
+    /**
+     * An installed app still running code from before reps sends logs without them. Its save must not
+     * erase the counts logged from an up-to-date device — unless it changed the value they belong to.
+     */
+    @Test
+    void keepsStoredRepsWhenAnOlderClientSavesWithoutThem() {
+        List<DayDto> plan = List.of(day("mo", exercise("ex1", "Kniebeuge")));
+        stateService.saveState(userId, state(plan, List.of(new SessionDto("2026-08-20", "mo",
+                Map.of("ex1", Map.of("B", List.of("60", "62.5"))), List.of(),
+                Map.of("ex1", Map.of("B", List.of("8", "6")))))));
+
+        // The old client re-sends the first set unchanged and corrects the second.
+        stateService.saveState(userId, state(plan, List.of(new SessionDto("2026-08-20", "mo",
+                Map.of("ex1", Map.of("B", List.of("60", "65"))), List.of(), null))));
+
+        SessionDto loaded = stateService.getState(userId).logs().get(0);
+        assertThat(loaded.reps().get("ex1").get("B")).containsExactly("8", "");
     }
 
     /**

@@ -12,6 +12,8 @@ import java.util.List;
 public interface SessionValueRepository extends JpaRepository<SessionValue, SessionValueId> {
     List<SessionValue> findAllBySession_UserId(Long userId);
 
+    List<SessionValue> findAllBySession_UserIdAndRepsNotNull(Long userId);
+
     /** See {@link SessionWarmupRepository#deleteAllByUserId}. */
     @Modifying
     @Query("DELETE FROM SessionValue sv WHERE sv.session.id IN "

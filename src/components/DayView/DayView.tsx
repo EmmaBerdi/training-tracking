@@ -27,6 +27,8 @@ interface DayViewProps {
   warmupActions: WarmupActions;
   getVal: (exId: string, side: Side, i: number) => string;
   lastVal: (exId: string, side: Side, i: number) => string;
+  getReps: (exId: string, side: Side, i: number) => string;
+  lastReps: (exId: string, side: Side, i: number) => string;
   onOpenInfo: (exId: string) => void;
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
   actions: ExerciseActions;
@@ -53,6 +55,8 @@ export function DayView({
   warmupActions,
   getVal,
   lastVal,
+  getReps,
+  lastReps,
   onOpenInfo,
   onOpenEntry,
   actions,
@@ -104,6 +108,8 @@ export function DayView({
           editing={editing}
           getVal={getVal}
           lastVal={lastVal}
+          getReps={getReps}
+          lastReps={lastReps}
           onOpenInfo={onOpenInfo}
           onOpenEntry={onOpenEntry}
           actions={actions}

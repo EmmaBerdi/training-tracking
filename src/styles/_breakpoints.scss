@@ -1,0 +1,18 @@
+/*
+ * The app is built for phones first; these are where it opens up. `$tablet` is kept in step with
+ * `BREAKPOINT` in src/hooks/useMinWidth.ts, which decides what to render on either side of it.
+ */
+$tablet: 768px;
+$laptop: 1100px;
+
+@mixin tablet {
+  @media (min-width: $tablet) {
+    @content;
+  }
+}
+
+@mixin laptop {
+  @media (min-width: $laptop) {
+    @content;
+  }
+}

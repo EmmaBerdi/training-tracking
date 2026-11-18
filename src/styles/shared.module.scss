@@ -86,6 +86,12 @@
   }
 }
 
+/** A selected chip for a choice with no activity colour of its own (a range, a measure). */
+.chipNeutralOn {
+  composes: chipOn;
+  --k: var(--ink);
+}
+
 /* --- Sheet typography --- */
 
 .sheetTitle {
@@ -233,4 +239,188 @@
   height: 10px;
   border-radius: 50%;
   background: var(--k, var(--faint));
+}
+
+/* --- Charts: the pieces every chart shares --- */
+
+/* The small spaced capitals of `.overline`, as a mixin for nested selectors `composes` can't reach. */
+@mixin overline-type {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+/** The readout that follows the crosshair or the hovered bar; inside the plot, so nothing clips it. */
+.chartTooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--panel3);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.chartTipDate {
+  color: var(--mute);
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+/** The value leads and the series name follows: the reader already knows the series. */
+.chartTipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  strong {
+    font-family: var(--num);
+    color: var(--ink);
+  }
+}
+
+/** A short stroke rather than a box: at tooltip size a filled square is ink doing a label's job. */
+.chartTipKey {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chartLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--mute);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/** Legend keys mirror the mark: a short line for line charts, a block for bars. */
+.chartKeyLine {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chartKeyBlock {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/** Every chart's values, reachable without hovering: the table behind "Als Tabelle". */
+.chartTable {
+  margin-top: 10px;
+  font-size: 13px;
+
+  summary {
+    color: var(--mute);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  table {
+    width: 100%;
+    margin-top: 8px;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  th {
+    @include overline-type;
+  }
+
+  td {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/** Chart axis text: dates under the plot, values beside it. */
+.chartTick {
+  fill: var(--mute);
+  font-family: var(--num);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chartTipLabel {
+  color: var(--mute);
+}
+
+/* --- Statistics --- */
+
+/** The small spaced capitals over a section or a card. */
+.overline {
+  @include overline-type;
+  margin: 0 0 10px;
+}
+
+/** "Nothing here yet", in place of the list or chart that would be. */
+.emptyNote {
+  color: var(--mute);
+  font-size: 14px;
+  margin: 0;
+}
+
+.focusRing:focus-visible {
+  outline: 2px solid var(--skill);
+  outline-offset: 2px;
+}
+
+/** A tappable row in a list of cards: a plan, an exercise. Callers set the padding. */
+.listRow {
+  composes: focusRing;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  border-radius: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+/** A key figure: a small label, the number, a line of context under it. */
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.figureLabel {
+  font-size: 11px;
+  color: var(--mute);
+}
+
+/** A standalone figure keeps proportional digits; tabular ones are for columns. */
+.figureValue {
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.figureSub {
+  font-size: 12px;
+  color: var(--mute);
 }

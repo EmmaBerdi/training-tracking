@@ -1,0 +1,80 @@
+.wrap {
+  composes: focusRing from '../../styles/shared.module.scss';
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tick {
+  composes: chartTick from '../../styles/shared.module.scss';
+}
+
+.crosshair {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.line,
+.lineMuted {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line {
+  stroke-width: 2;
+}
+
+.lineMuted {
+  stroke-width: 1.5;
+}
+
+/** The ring in the surface colour keeps a dot legible where it sits on a line. */
+.dot {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+.endLabel {
+  fill: var(--ink);
+  font-family: var(--num);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/** Vertical swipes still scroll the page; only a sideways drag scrubs the crosshair. */
+.hit {
+  fill: transparent;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.tooltip {
+  composes: chartTooltip from '../../styles/shared.module.scss';
+}
+
+.tipDate {
+  composes: chartTipDate from '../../styles/shared.module.scss';
+}
+
+.tipRow {
+  composes: chartTipRow from '../../styles/shared.module.scss';
+}
+
+.tipKey {
+  composes: chartTipKey from '../../styles/shared.module.scss';
+}
+
+.tipLabel {
+  composes: chartTipLabel from '../../styles/shared.module.scss';
+}

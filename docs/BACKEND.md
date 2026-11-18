@@ -60,6 +60,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/003-day-session-type.sql` | Plans belong to a session type: `day.session_type_id` (backfilled), `day.slot` dropped |
 | `db/changelog/changes/004-password-reset-token.sql` | Hashed one-time codes for "Passwort vergessen?" — see [Passwords](#passwords) |
 | `db/changelog/changes/005-exercise-image-list.sql` | Several ordered photos per exercise: `exercise_image_link`, backfilled from `exercise.image_id` |
+| `db/changelog/changes/006-session-value-reps.sql` | Optional reps per logged set: `session_value.reps` (1–999) |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that

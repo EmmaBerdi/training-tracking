@@ -59,6 +59,8 @@ export interface WorkoutLog {
   date: string;
   dayId: string;
   vals: Record<string, SessionValues>;
+  /** Reps done per set, shaped like `vals`; '' or missing where none were logged. */
+  reps?: Record<string, SessionValues>;
   warm: boolean[];
 }
 
@@ -74,6 +76,9 @@ export interface BlockRef {
 }
 
 export type Mode = 'log' | 'edit';
+
+/** Which surface fills the screen; training is further split by {@link Mode}. */
+export type View = 'training' | 'calendar' | 'stats';
 
 export type PlannedSessionStatus = 'planned' | 'done' | 'skipped';
 

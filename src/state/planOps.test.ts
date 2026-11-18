@@ -222,3 +222,29 @@ describe('warmup', () => {
     expect(planOps.moveWarmupItem(p, 0, 1)).toEqual(p);
   });
 });
+
+describe('planRepsHint', () => {
+  it('reads a single count or a short range from the plan, nothing else', () => {
+    expect(planOps.planRepsHint('8')).toEqual({ kind: 'single', reps: 8 });
+    expect(planOps.planRepsHint(' 6 - 8 ')).toEqual({ kind: 'range', reps: [6, 7, 8] });
+    expect(planOps.planRepsHint('5-20')).toBeNull();
+    expect(planOps.planRepsHint('max')).toBeNull();
+    expect(planOps.planRepsHint('8/Seite')).toBeNull();
+  });
+});
+
+describe('exerciseTracks', () => {
+  it('gives a bilateral exercise one track and drops a side without sets', () => {
+    expect(planOps.exerciseTracks(exercise('sq'))).toEqual([{ side: 'B', count: 3 }]);
+    const row: UnilateralExercise = {
+      id: 'row',
+      name: 'row',
+      type: 'kg',
+      uni: true,
+      setsL: 2,
+      setsR: 0,
+      reps: '8',
+    };
+    expect(planOps.exerciseTracks(row)).toEqual([{ side: 'L', count: 2 }]);
+  });
+});

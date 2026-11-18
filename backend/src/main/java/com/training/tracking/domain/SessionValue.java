@@ -30,6 +30,9 @@ public class SessionValue {
     @Column(name = "`value`", nullable = false, length = 64)
     private String value;
 
+    /** The reps done in this set, or null when they weren't logged. */
+    private Short reps;
+
     public SessionValueId getId() { return id; }
     public void setId(SessionValueId id) { this.id = id; }
 
@@ -41,4 +44,7 @@ public class SessionValue {
 
     public String getValue() { return value; }
     public void setValue(String value) { this.value = value; }
+
+    public Short getReps() { return reps; }
+    public void setReps(Short reps) { this.reps = reps; }
 }
