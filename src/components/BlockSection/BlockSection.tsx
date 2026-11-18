@@ -102,22 +102,24 @@ export function BlockSection({
         </div>
       )}
 
-      {block.ex.map((x) =>
-        editing ? (
-          <ExerciseEditor key={x.id} exercise={x} blockRef={blockRef} actions={actions} />
-        ) : (
-          <ExerciseCard
-            key={x.id}
-            exercise={x}
-            getVal={getVal}
-            lastVal={lastVal}
-            getReps={getReps}
-            lastReps={lastReps}
-            onOpenInfo={onOpenInfo}
-            onOpenEntry={onOpenEntry}
-          />
-        ),
-      )}
+      <div className={editing ? undefined : styles.exercises}>
+        {block.ex.map((x) =>
+          editing ? (
+            <ExerciseEditor key={x.id} exercise={x} blockRef={blockRef} actions={actions} />
+          ) : (
+            <ExerciseCard
+              key={x.id}
+              exercise={x}
+              getVal={getVal}
+              lastVal={lastVal}
+              getReps={getReps}
+              lastReps={lastReps}
+              onOpenInfo={onOpenInfo}
+              onOpenEntry={onOpenEntry}
+            />
+          ),
+        )}
+      </div>
 
       {editing && (
         <button

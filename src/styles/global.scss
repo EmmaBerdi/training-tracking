@@ -1,3 +1,5 @@
+@use 'breakpoints' as *;
+
 :root {
   --bg: #17171a;
   /* --bg with alpha, for the sticky header/footer that blur what scrolls behind them. */
@@ -47,9 +49,16 @@ body {
   line-height: 1.4;
 }
 
-/* Statistics put two columns side by side on a wide screen, so they get a wider column. */
+/* A laptop gets the wide column too: the training view puts its exercises side by side there, and
+   statistics put two columns side by side from tablet width on. */
 [data-view='stats'] {
   --content-max: 1180px;
+}
+
+:root {
+  @include laptop {
+    --content-max: 1180px;
+  }
 }
 
 main {

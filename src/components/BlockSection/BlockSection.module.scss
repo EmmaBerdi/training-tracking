@@ -1,5 +1,18 @@
+@use '../../styles/breakpoints' as *;
+
 .block {
   margin: 22px 16px 0;
+}
+
+/* On a laptop one card per row leaves most of each card empty; cards keep their own bottom margin
+   as the row gap. */
+.exercises {
+  @include laptop {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    column-gap: 8px;
+    align-items: start;
+  }
 }
 
 .blockHead {
