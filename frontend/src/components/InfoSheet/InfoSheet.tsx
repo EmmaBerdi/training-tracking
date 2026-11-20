@@ -1,6 +1,7 @@
 import type { Exercise } from '../../types';
 import { UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
+import { exerciseSpec } from '../../state/planOps';
 import styles from './InfoSheet.module.scss';
 
 interface InfoSheetProps {
@@ -15,7 +16,7 @@ function Photo({ imageId, alt }: { imageId: string; alt: string }) {
 }
 
 export function InfoSheet({ exercise: x, onClose }: InfoSheetProps) {
-  const spec = x.uni ? `${x.setsL || 0}/${x.setsR || 0} × ${x.reps}` : `${x.sets} × ${x.reps}`;
+  const spec = exerciseSpec(x);
   const imageIds = x.imageIds ?? [];
   return (
     <>

@@ -1,8 +1,19 @@
-export type ExerciseType = 'kg' | 'band' | 'sek' | 'bw' | 'cm' | 'm' | 'min';
+export type ExerciseType = 'kg' | 'band' | 'sek' | 'bw' | 'cm' | 'm' | 'min' | 'kcal';
 
 export type BlockKind = 'huefte' | 'skill' | 'kraft' | 'explosiv' | 'core' | 'ausdauer';
 
 export type Side = 'B' | 'L' | 'R';
+
+/** How hard an exercise felt in one workout. */
+export type Effort = 'leicht' | 'mittel' | 'schwer';
+
+/** One step of a planned progression ("W2 3×5"); `sets` and `reps` replace the plan's when set. */
+export interface ProgressionStep {
+  name: string;
+  sets?: number;
+  reps?: string;
+  text?: string;
+}
 
 interface ExerciseBase {
   id: string;
@@ -16,6 +27,10 @@ interface ExerciseBase {
    * bytes: every plan edit re-sends the whole plan, and the pictures live on the backend.
    */
   imageIds?: string[];
+  /** The planned progression in order; sent as [] once edited, so the backend can tell it apart. */
+  steps?: ProgressionStep[];
+  /** Index into `steps` of the step the exercise is at; 0 when unset. */
+  step?: number;
 }
 
 export interface BilateralExercise extends ExerciseBase {
@@ -61,7 +76,15 @@ export interface WorkoutLog {
   vals: Record<string, SessionValues>;
   /** Reps done per set, shaped like `vals`; '' or missing where none were logged. */
   reps?: Record<string, SessionValues>;
+  /** How hard each exercise felt, by exercise id; kept as {} once rated, like `steps`. */
+  ratings?: Record<string, Rating>;
   warm: boolean[];
+}
+
+/** An effort rating with the progression step it was given at. */
+export interface Rating {
+  effort: Effort;
+  step?: string;
 }
 
 export interface AppState {

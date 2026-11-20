@@ -3,7 +3,10 @@ package com.training.tracking.service;
 import com.training.tracking.domain.Block;
 import com.training.tracking.domain.Day;
 import com.training.tracking.domain.Exercise;
+import com.training.tracking.domain.ExerciseStep;
 import com.training.tracking.domain.Session;
+import com.training.tracking.domain.SessionRating;
+import com.training.tracking.domain.SessionRatingId;
 import com.training.tracking.domain.SessionValue;
 import com.training.tracking.domain.SessionValueId;
 import com.training.tracking.domain.SessionWarmup;
@@ -12,12 +15,15 @@ import com.training.tracking.domain.WarmupItem;
 import com.training.tracking.dto.BlockDto;
 import com.training.tracking.dto.DayDto;
 import com.training.tracking.dto.ExerciseDto;
+import com.training.tracking.dto.ExerciseStepDto;
 import com.training.tracking.dto.PlanDto;
+import com.training.tracking.dto.RatingDto;
 import com.training.tracking.dto.SessionDto;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.repository.BlockRepository;
 import com.training.tracking.repository.DayRepository;
 import com.training.tracking.repository.ExerciseRepository;
+import com.training.tracking.repository.SessionRatingRepository;
 import com.training.tracking.repository.SessionRepository;
 import com.training.tracking.repository.SessionValueRepository;
 import com.training.tracking.repository.SessionWarmupRepository;
@@ -37,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * The whole state (plan + logs) for one user is saved as one blob, mirroring the frontend's
@@ -51,6 +58,8 @@ public class StateService {
 
     private static final Set<String> VALID_SIDES = Set.of("B", "L", "R");
     private static final int MAX_VALUE_LENGTH = 64;
+    /** Mirrors {@code session_rating.exercise_client_id}. */
+    private static final int MAX_CLIENT_ID_LENGTH = 32;
     /** Mirror the CHECK on {@code session_value.reps}. */
     private static final int MIN_REPS = 1;
     private static final int MAX_REPS = 999;
@@ -62,6 +71,7 @@ public class StateService {
     private final SessionRepository sessionRepository;
     private final SessionWarmupRepository sessionWarmupRepository;
     private final SessionValueRepository sessionValueRepository;
+    private final SessionRatingRepository sessionRatingRepository;
     private final ExerciseImageService exerciseImageService;
     private final ScheduleRefs scheduleRefs;
 
@@ -72,6 +82,7 @@ public class StateService {
                          SessionRepository sessionRepository,
                          SessionWarmupRepository sessionWarmupRepository,
                          SessionValueRepository sessionValueRepository,
+                         SessionRatingRepository sessionRatingRepository,
                          ExerciseImageService exerciseImageService,
                          ScheduleRefs scheduleRefs) {
         this.dayRepository = dayRepository;
@@ -81,6 +92,7 @@ public class StateService {
         this.sessionRepository = sessionRepository;
         this.sessionWarmupRepository = sessionWarmupRepository;
         this.sessionValueRepository = sessionValueRepository;
+        this.sessionRatingRepository = sessionRatingRepository;
         this.exerciseImageService = exerciseImageService;
         this.scheduleRefs = scheduleRefs;
     }
@@ -133,6 +145,12 @@ public class StateService {
             valuesBySession.computeIfAbsent(sv.getId().getSessionId(), k -> new ArrayList<>()).add(sv);
         }
 
+        Map<Long, Map<String, RatingDto>> ratingsBySession = new LinkedHashMap<>();
+        for (SessionRating sr : sessionRatingRepository.findAllBySession_UserId(userId)) {
+            ratingsBySession.computeIfAbsent(sr.getId().getSessionId(), k -> new LinkedHashMap<>())
+                    .put(sr.getId().getExerciseClientId(), new RatingDto(sr.getEffort(), sr.getStep()));
+        }
+
         List<SessionDto> result = new ArrayList<>();
         for (Session s : sessions) {
             List<SessionValue> values = valuesBySession.getOrDefault(s.getId(), List.of());
@@ -143,7 +161,8 @@ public class StateService {
                     perSet(values, clientIdByExerciseId, SessionValue::getValue),
                     warmupFlags(warmupBySession.getOrDefault(s.getId(), List.of())),
                     anyReps ? perSet(values, clientIdByExerciseId,
-                            sv -> sv.getReps() == null ? "" : sv.getReps().toString()) : null));
+                            sv -> sv.getReps() == null ? "" : sv.getReps().toString()) : null,
+                    ratingsBySession.get(s.getId())));
         }
         return result;
     }
@@ -183,9 +202,13 @@ public class StateService {
 
     private static ExerciseDto toDto(Exercise e) {
         List<String> images = e.getImageIds().stream().map(UUID::toString).toList();
+        List<ExerciseStepDto> steps = e.getSteps().stream()
+                .map(st -> new ExerciseStepDto(st.getName(), st.getSets(), st.getReps(), st.getText()))
+                .toList();
         return new ExerciseDto(e.getClientId(), e.getName(), e.getType(), e.isUni(),
                 e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription(),
-                images.isEmpty() ? null : images, images.isEmpty() ? null : images.get(0));
+                images.isEmpty() ? null : images, images.isEmpty() ? null : images.get(0),
+                steps.isEmpty() ? null : steps, steps.isEmpty() ? null : e.getCurrentStep());
     }
 
     @Transactional
@@ -202,6 +225,11 @@ public class StateService {
         // that old code until its next reload. Its save would otherwise erase every rep count.
         Map<String, Short> carriedReps = logDtos.stream().anyMatch(l -> l.reps() == null)
                 ? storedReps(userId) : Map.of();
+        // The same holds for progression steps and ratings, which such a client knows nothing about.
+        Map<String, StoredSteps> carriedSteps = submittedExercises(dayDtos).anyMatch(ex -> ex.steps() == null)
+                ? storedSteps(userId) : Map.of();
+        Map<String, Map<String, RatingDto>> carriedRatings = logDtos.stream().anyMatch(l -> l.ratings() == null)
+                ? storedRatings(userId) : Map.of();
 
         wipe(userId);
 
@@ -213,8 +241,8 @@ public class StateService {
         }
         dayRepository.saveAllAndFlush(days);
 
-        Map<String, Exercise> exerciseByClientId = saveBlocksAndExercises(userId, dayDtos, days);
-        saveLogs(userId, logDtos, exerciseByClientId, carriedReps);
+        Map<String, Exercise> exerciseByClientId = saveBlocksAndExercises(userId, dayDtos, days, carriedSteps);
+        saveLogs(userId, logDtos, exerciseByClientId, carriedReps, carriedRatings);
 
         // After the exercises are back in place, so the surviving references are visible to the sweep.
         exerciseImageService.collectOrphans(userId);
@@ -240,10 +268,12 @@ public class StateService {
      * delegated to ON DELETE CASCADE so it holds whatever created the schema.
      */
     private void wipe(Long userId) {
+        sessionRatingRepository.deleteAllByUserId(userId);
         sessionValueRepository.deleteAllByUserId(userId);
         sessionWarmupRepository.deleteAllByUserId(userId);
         sessionRepository.deleteAllInBatch(sessionRepository.findAllByUserId(userId));
         exerciseRepository.deleteImageLinksByUserId(userId);
+        exerciseRepository.deleteStepsByUserId(userId);
         exerciseRepository.deleteAllInBatch(exerciseRepository.findAllByBlock_UserIdOrderByPosition(userId));
         blockRepository.deleteAllInBatch(blockRepository.findAllByUserIdOrderByPosition(userId));
         dayRepository.deleteAllInBatch(dayRepository.findAllByUserIdOrderByPosition(userId));
@@ -278,7 +308,8 @@ public class StateService {
         }
     }
 
-    private Map<String, Exercise> saveBlocksAndExercises(Long userId, List<DayDto> dayDtos, List<Day> days) {
+    private Map<String, Exercise> saveBlocksAndExercises(Long userId, List<DayDto> dayDtos, List<Day> days,
+                                                         Map<String, StoredSteps> carriedSteps) {
         Map<String, Day> dayByKey = new LinkedHashMap<>();
         days.forEach(d -> dayByKey.put(d.getDayKey(), d));
 
@@ -304,7 +335,7 @@ public class StateService {
         for (int bi = 0; bi < blocks.size(); bi++) {
             List<ExerciseDto> exDtos = exercisesPerBlock.get(bi);
             for (int i = 0; i < exDtos.size(); i++) {
-                exercises.add(toExercise(exDtos.get(i), blocks.get(bi), i));
+                exercises.add(toExercise(exDtos.get(i), blocks.get(bi), i, carriedSteps));
             }
         }
         exerciseRepository.saveAllAndFlush(exercises);
@@ -315,7 +346,7 @@ public class StateService {
     }
 
     private void saveLogs(Long userId, List<SessionDto> logDtos, Map<String, Exercise> exerciseByClientId,
-                          Map<String, Short> carriedReps) {
+                          Map<String, Short> carriedReps, Map<String, Map<String, RatingDto>> carriedRatings) {
         List<Session> sessions = new ArrayList<>();
         for (SessionDto logDto : logDtos) {
             Session session = new Session();
@@ -328,12 +359,18 @@ public class StateService {
 
         List<SessionWarmup> sessionWarmups = new ArrayList<>();
         List<SessionValue> sessionValues = new ArrayList<>();
+        List<SessionRating> sessionRatings = new ArrayList<>();
         for (int i = 0; i < logDtos.size(); i++) {
-            collectWarmups(logDtos.get(i), sessions.get(i), sessionWarmups);
-            collectValues(logDtos.get(i), sessions.get(i), exerciseByClientId, carriedReps, sessionValues);
+            SessionDto logDto = logDtos.get(i);
+            collectWarmups(logDto, sessions.get(i), sessionWarmups);
+            collectValues(logDto, sessions.get(i), exerciseByClientId, carriedReps, sessionValues);
+            collectRatings(logDto.ratings() != null ? logDto.ratings()
+                            : carriedRatings.getOrDefault(logKey(logDto.date(), logDto.dayId()), Map.of()),
+                    sessions.get(i), sessionRatings);
         }
         sessionWarmupRepository.saveAllAndFlush(sessionWarmups);
         sessionValueRepository.saveAllAndFlush(sessionValues);
+        sessionRatingRepository.saveAllAndFlush(sessionRatings);
     }
 
     private List<WarmupItem> toWarmupItems(Long userId, List<String> warmup) {
@@ -360,7 +397,8 @@ public class StateService {
         return day;
     }
 
-    private Exercise toExercise(ExerciseDto ex, Block block, int position) {
+    private Exercise toExercise(ExerciseDto ex, Block block, int position,
+                                Map<String, StoredSteps> carriedSteps) {
         Exercise entity = new Exercise();
         entity.setClientId(ex.id());
         entity.setBlock(block);
@@ -375,8 +413,32 @@ public class StateService {
         entity.setDescription(ex.desc());
         entity.setImageIds(new ArrayList<>(
                 ex.images().stream().map(ExerciseImageService::parseId).toList()));
+        if (ex.steps() != null) {
+            entity.setSteps(new ArrayList<>(ex.steps().stream()
+                    .map(st -> new ExerciseStep(st.name(), st.sets(), st.reps(), st.text()))
+                    .toList()));
+            entity.setCurrentStep(currentStep(ex));
+        } else {
+            StoredSteps stored = carriedSteps.get(ex.id());
+            if (stored != null) {
+                entity.setSteps(new ArrayList<>(stored.steps()));
+                entity.setCurrentStep(stored.current());
+            }
+        }
         entity.setPosition(position);
         return entity;
+    }
+
+    /** The step an exercise is at: null without steps, the first one when the client sent none. */
+    private static Integer currentStep(ExerciseDto ex) {
+        if (ex.steps().isEmpty()) {
+            return null;
+        }
+        int step = ex.step() == null ? 0 : ex.step();
+        if (step >= ex.steps().size()) {
+            throw badRequest("step " + step + " is out of range for exercise " + ex.id());
+        }
+        return step;
     }
 
     private void collectWarmups(SessionDto logDto, Session session, List<SessionWarmup> out) {
@@ -403,6 +465,35 @@ public class StateService {
                     sv.getId().getSide(), sv.getId().getSetIndex(), sv.getValue()), sv.getReps());
         }
         return reps;
+    }
+
+    private record StoredSteps(List<ExerciseStep> steps, Integer current) { }
+
+    /**
+     * The stored progression per exercise client id. Copied out before the wipe: the collection
+     * cannot be loaded lazily once its rows are gone.
+     */
+    private Map<String, StoredSteps> storedSteps(Long userId) {
+        Map<String, StoredSteps> byClientId = new HashMap<>();
+        for (Exercise ex : exerciseRepository.findAllByBlock_UserIdOrderByPosition(userId)) {
+            byClientId.put(ex.getClientId(), new StoredSteps(List.copyOf(ex.getSteps()), ex.getCurrentStep()));
+        }
+        return byClientId;
+    }
+
+    /** The stored ratings, per workout as {@link #logKey} names it, then per exercise client id. */
+    private Map<String, Map<String, RatingDto>> storedRatings(Long userId) {
+        Map<String, Map<String, RatingDto>> ratings = new HashMap<>();
+        for (SessionRating sr : sessionRatingRepository.findAllBySession_UserId(userId)) {
+            Session s = sr.getSession();
+            ratings.computeIfAbsent(logKey(s.getSessionDate().toString(), s.getDayKey()), k -> new HashMap<>())
+                    .put(sr.getId().getExerciseClientId(), new RatingDto(sr.getEffort(), sr.getStep()));
+        }
+        return ratings;
+    }
+
+    private static String logKey(String date, String dayKey) {
+        return date + "\u0000" + dayKey;
     }
 
     private static String setKey(String date, String dayKey, String clientId, String side, int setIdx,
@@ -464,6 +555,30 @@ public class StateService {
                 }
             }
         }
+    }
+
+    private void collectRatings(Map<String, RatingDto> ratings, Session session, List<SessionRating> out) {
+        for (Map.Entry<String, RatingDto> entry : ratings.entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
+            if (entry.getKey().length() > MAX_CLIENT_ID_LENGTH) {
+                throw badRequest("exercise id must be at most " + MAX_CLIENT_ID_LENGTH + " characters");
+            }
+            SessionRating sr = new SessionRating();
+            sr.setId(new SessionRatingId(session.getId(), entry.getKey()));
+            sr.setSession(session);
+            sr.setEffort(entry.getValue().effort());
+            sr.setStep(entry.getValue().step());
+            out.add(sr);
+        }
+    }
+
+    /** Every submitted exercise, across all plans and blocks. */
+    private static Stream<ExerciseDto> submittedExercises(List<DayDto> dayDtos) {
+        return dayDtos.stream()
+                .flatMap(d -> nullToEmpty(d.blocks()).stream())
+                .flatMap(b -> nullToEmpty(b.ex()).stream());
     }
 
     private static <T> List<T> nullToEmpty(List<T> list) {

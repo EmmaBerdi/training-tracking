@@ -6,11 +6,13 @@ import type {
   Day,
   Exercise,
   Plan,
+  ProgressionStep,
   SessionType,
   Side,
   UnilateralExercise,
 } from '../types';
 import { uid } from '../data/plan';
+import { MAX_STEPS } from '../data/constants';
 
 function newExercise(): BilateralExercise {
   return { id: uid(), name: 'Neue Übung', type: 'kg', uni: false, sets: 3, reps: '8' };
@@ -36,13 +38,36 @@ export function dayExercises(day: Day): Exercise[] {
   return day.blocks.flatMap((b) => b.ex);
 }
 
-/** The sides an exercise is logged on, with their set counts; a side without sets is left out. */
+/** The progression step the exercise is at; undefined without steps. */
+export function currentStep(x: Exercise): ProgressionStep | undefined {
+  return x.steps?.[x.step ?? 0];
+}
+
+/**
+ * The sides an exercise is logged on, with their set counts; a side without sets is left out. The
+ * current step's set count replaces the plan's on every side the plan trains.
+ */
 export function exerciseTracks(x: Exercise): { side: Side; count: number }[] {
-  if (!x.uni) return [{ side: 'B', count: x.sets }];
+  const stepSets = currentStep(x)?.sets;
+  if (!x.uni) return [{ side: 'B', count: stepSets ?? x.sets }];
   return [
     { side: 'L' as Side, count: x.setsL },
     { side: 'R' as Side, count: x.setsR },
-  ].filter((t) => t.count > 0);
+  ]
+    .filter((t) => t.count > 0)
+    .map((t) => ({ ...t, count: stepSets ?? t.count }));
+}
+
+/** The rep text in force: the current step's, else the plan's. */
+export function exerciseReps(x: Exercise): string {
+  return currentStep(x)?.reps || x.reps;
+}
+
+/** Sets × reps as currently planned, "3 × 8" or "3/2 × 8" for left/right. */
+export function exerciseSpec(x: Exercise): string {
+  const counts = exerciseTracks(x).map((t) => t.count);
+  const sets = x.uni ? `${counts[0] ?? 0}/${counts[1] ?? 0}` : `${counts[0]}`;
+  return `${sets} × ${exerciseReps(x)}`;
 }
 
 export type PlanRepsHint = { kind: 'single'; reps: number } | { kind: 'range'; reps: number[] };
@@ -170,8 +195,8 @@ export type ExerciseSetsField = 'sets' | 'setsL' | 'setsR';
 
 function convertUni(x: Exercise, uni: boolean): Exercise {
   if (x.uni === uni) return x;
-  const { id, name, type, reps, note, desc, imageIds } = x;
-  const base = { id, name, type, reps, note, desc, imageIds };
+  const { id, name, type, reps, note, desc, imageIds, steps, step } = x;
+  const base = { id, name, type, reps, note, desc, imageIds, steps, step };
   if (uni) {
     const fallback = (x as BilateralExercise).sets || 3;
     return { ...base, uni: true, setsL: fallback, setsR: fallback };
@@ -251,6 +276,58 @@ export function setExerciseSets(
 ): Plan {
   const clamped = Math.min(99, Math.max(0, value || 0));
   return withExercise(plan, ref, exId, (x) => ({ ...x, [field]: clamped }) as Exercise);
+}
+
+export type StepField = 'name' | 'sets' | 'reps' | 'text';
+
+/** A new step after the last, named for the week it would usually be: W1, W2, … */
+export function addExerciseStep(plan: Plan, ref: BlockRef, exId: string): Plan {
+  return withExercise(plan, ref, exId, (x) => {
+    const steps = x.steps ?? [];
+    if (steps.length >= MAX_STEPS) return x;
+    return { ...x, steps: [...steps, { name: `W${steps.length + 1}` }], step: x.step ?? 0 };
+  });
+}
+
+/** An emptied field falls back to the plan's value, so it is dropped rather than kept as ''. */
+export function setExerciseStepField(
+  plan: Plan,
+  ref: BlockRef,
+  exId: string,
+  index: number,
+  field: StepField,
+  value: string,
+): Plan {
+  return withExercise(plan, ref, exId, (x) => ({
+    ...x,
+    steps: (x.steps ?? []).map((s, i) => {
+      if (i !== index) return s;
+      if (field === 'name') return { ...s, name: value };
+      const next = { ...s };
+      if (value.trim() === '') delete next[field];
+      else if (field === 'sets')
+        next.sets = Math.min(99, Math.max(0, Math.round(Number(value)) || 0));
+      else next[field] = value;
+      return next;
+    }),
+  }));
+}
+
+/** Keeps the exercise on the step it was at; removing that step lands on the one taking its place. */
+export function removeExerciseStep(plan: Plan, ref: BlockRef, exId: string, index: number): Plan {
+  return withExercise(plan, ref, exId, (x) => {
+    const steps = (x.steps ?? []).filter((_, i) => i !== index);
+    if (!steps.length) return { ...x, steps: [], step: undefined };
+    const at = x.step ?? 0;
+    const step = Math.min(index < at ? at - 1 : at, steps.length - 1);
+    return { ...x, steps, step };
+  });
+}
+
+export function setExerciseStep(plan: Plan, ref: BlockRef, exId: string, index: number): Plan {
+  return withExercise(plan, ref, exId, (x) =>
+    index >= 0 && index < (x.steps?.length ?? 0) ? { ...x, step: index } : x,
+  );
 }
 
 export function addWarmupItem(plan: Plan): Plan {

@@ -72,6 +72,17 @@ public class Exercise {
     @BatchSize(size = 100)
     private List<UUID> imageIds = new ArrayList<>();
 
+    /** The planned progression, in order. Batched like {@link #imageIds}. */
+    @ElementCollection
+    @CollectionTable(name = "exercise_step", joinColumns = @JoinColumn(name = "exercise_id"))
+    @OrderColumn(name = "position")
+    @BatchSize(size = 100)
+    private List<ExerciseStep> steps = new ArrayList<>();
+
+    /** Index into {@link #steps}; null without steps. */
+    @Column(name = "current_step")
+    private Integer currentStep;
+
     @Column(nullable = false)
     private int position;
 
@@ -113,6 +124,12 @@ public class Exercise {
 
     public List<UUID> getImageIds() { return imageIds; }
     public void setImageIds(List<UUID> imageIds) { this.imageIds = imageIds; }
+
+    public List<ExerciseStep> getSteps() { return steps; }
+    public void setSteps(List<ExerciseStep> steps) { this.steps = steps; }
+
+    public Integer getCurrentStep() { return currentStep; }
+    public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
 
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }

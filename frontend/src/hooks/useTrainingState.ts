@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AppState, BlockKind, BlockRef, Day, Exercise, Side } from '../types';
+import type { AppState, BlockKind, BlockRef, Day, Exercise, Rating, Side } from '../types';
 import { emptyPlan, uid } from '../data/plan';
 import { loadState, saveState } from '../api/client';
 import { uploadImage } from '../api/images';
 import { prepareImage } from '../utils/image';
-import type { ExerciseSetsField, ExerciseTextField } from '../state/planOps';
+import type { ExerciseSetsField, ExerciseTextField, StepField } from '../state/planOps';
 import * as planOps from '../state/planOps';
 import * as logOps from '../state/logOps';
 import { mergeImport } from '../state/planImport';
+import { suggestNextStep } from '../state/progression';
 
 /** Which day is being looked at: the date logs are written under, and the plan shown for it. */
 export interface Selection {
@@ -154,6 +155,26 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     [updatePlan],
   );
 
+  const addExerciseStep = useCallback(
+    (ref: BlockRef, exId: string) => updatePlan((p) => planOps.addExerciseStep(p, ref, exId)),
+    [updatePlan],
+  );
+  const setExerciseStepField = useCallback(
+    (ref: BlockRef, exId: string, index: number, field: StepField, value: string) =>
+      updatePlan((p) => planOps.setExerciseStepField(p, ref, exId, index, field, value)),
+    [updatePlan],
+  );
+  const removeExerciseStep = useCallback(
+    (ref: BlockRef, exId: string, index: number) =>
+      updatePlan((p) => planOps.removeExerciseStep(p, ref, exId, index)),
+    [updatePlan],
+  );
+  const setExerciseStep = useCallback(
+    (ref: BlockRef, exId: string, index: number) =>
+      updatePlan((p) => planOps.setExerciseStep(p, ref, exId, index)),
+    [updatePlan],
+  );
+
   /**
    * The pictures are uploaded first and the plan only ever stores the ids that came back, so a
    * failed upload leaves no gap. One after another rather than in parallel: each is a full photo
@@ -212,6 +233,11 @@ export function useTrainingState(notify: (message: string) => void, selection: S
       updateLogs((l) => logOps.setVal(l, selectedDate, dayId, exId, side, i, value, reps)),
     [updateLogs, selectedDate, dayId],
   );
+  const setRating = useCallback(
+    (exId: string, rating: Rating | null) =>
+      updateLogs((l) => logOps.setRating(l, selectedDate, dayId, exId, rating)),
+    [updateLogs, selectedDate, dayId],
+  );
   const toggleWarmupItem = useCallback(
     (index: number) => updateLogs((l) => logOps.toggleWarmup(l, selectedDate, dayId, index)),
     [updateLogs, selectedDate, dayId],
@@ -244,6 +270,11 @@ export function useTrainingState(notify: (message: string) => void, selection: S
       previous.get(logOps.positionKey(exId, side, i))?.reps ?? '',
     [previous],
   );
+  const getRating = useCallback((exId: string) => logOps.getRating(log, exId), [log]);
+  const suggestNext = useCallback(
+    (x: Exercise) => suggestNextStep(x, state.logs, selectedDate),
+    [state.logs, selectedDate],
+  );
 
   return {
     plan: state.plan,
@@ -261,6 +292,9 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     lastVal,
     lastReps,
     setVal,
+    getRating,
+    setRating,
+    suggestNext,
     toggleWarmupItem,
     addDay,
     updateDay,
@@ -278,6 +312,10 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     setExerciseType,
     setExerciseText,
     setExerciseSets,
+    addExerciseStep,
+    setExerciseStepField,
+    removeExerciseStep,
+    setExerciseStep,
     addExerciseImages,
     removeExerciseImage,
     addWarmupItem,

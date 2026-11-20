@@ -3,7 +3,7 @@ import { BLOCK_KINDS, BLOCK_KIND_LABEL } from '../../data/constants';
 import { blockAccent } from '../../utils/cssVar';
 import { ExerciseCard } from '../ExerciseCard/ExerciseCard';
 import { ExerciseEditor } from '../ExerciseEditor/ExerciseEditor';
-import type { BlockActions, ExerciseActions } from '../actions';
+import type { BlockActions, ExerciseActions, ProgressActions } from '../actions';
 import styles from './BlockSection.module.scss';
 
 interface BlockSectionProps {
@@ -19,6 +19,7 @@ interface BlockSectionProps {
   onOpenInfo: (exId: string) => void;
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
   actions: ExerciseActions;
+  progress: ProgressActions;
   blockActions: BlockActions;
 }
 
@@ -35,6 +36,7 @@ export function BlockSection({
   onOpenInfo,
   onOpenEntry,
   actions,
+  progress,
   blockActions,
 }: BlockSectionProps) {
   return (
@@ -116,6 +118,10 @@ export function BlockSection({
               lastReps={lastReps}
               onOpenInfo={onOpenInfo}
               onOpenEntry={onOpenEntry}
+              rating={progress.getRating(x.id)}
+              onRate={(rating) => progress.rate(x.id, rating)}
+              suggestion={progress.suggestNext(x)}
+              onSetStep={(index) => progress.setStep(blockRef, x.id, index)}
             />
           ),
         )}

@@ -162,3 +162,21 @@ describe('the first entry of a workout', () => {
     );
   });
 });
+
+describe('ratings', () => {
+  it('rates an exercise, starting the log if needed, and removes the rating again', () => {
+    let logs: WorkoutLog[] = [];
+    logs = logOps.setRating(logs, '2026-11-20', 'mo', 'row', { effort: 'mittel', step: 'W2' });
+    expect(logOps.getRating(logs[0], 'row')).toEqual({ effort: 'mittel', step: 'W2' });
+
+    logs = logOps.setRating(logs, '2026-11-20', 'mo', 'row', null);
+    expect(logOps.getRating(logs[0], 'row')).toBeUndefined();
+    // Kept as {} so the backend can tell a removal from a client that knows nothing of ratings.
+    expect(logs[0].ratings).toEqual({});
+  });
+
+  it('a rating alone does not count as the workout being done', () => {
+    const logs = logOps.setRating([], '2026-11-20', 'mo', 'row', { effort: 'leicht' });
+    expect(logOps.hasValues(logs[0])).toBe(false);
+  });
+});

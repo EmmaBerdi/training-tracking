@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BlockRef, Exercise, ExerciseType } from '../../types';
-import { EXERCISE_TYPES, MAX_IMAGES, UNIT } from '../../data/constants';
+import { EXERCISE_TYPES, MAX_IMAGES, MAX_STEPS, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
 import type { ExerciseActions } from '../actions';
 import styles from './ExerciseEditor.module.scss';
@@ -29,6 +29,84 @@ function Thumb({ imageId, onRemove }: { imageId: string; onRemove: () => void })
       >
         ×
       </button>
+    </div>
+  );
+}
+
+/**
+ * The planned progression: one row per step, the current one marked. Empty sets and reps keep the
+ * plan's, which the placeholders show.
+ */
+function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
+  const steps = x.steps ?? [];
+  const at = x.step ?? 0;
+  const planSets = x.uni ? `${x.setsL || 0}/${x.setsR || 0}` : String(x.sets);
+  return (
+    <div className={`${styles.field} ${styles.wide}`}>
+      <label>Progression — Stufen, z. B. W1, W2, Taper</label>
+      {steps.map((s, i) => (
+        <div key={i} className={styles.stepRow}>
+          <input
+            type="radio"
+            name={`step-${x.id}`}
+            aria-label={`${s.name || `Stufe ${i + 1}`} ist die aktuelle Stufe`}
+            checked={i === at}
+            onChange={() => actions.setStep(blockRef, x.id, i)}
+          />
+          <input
+            className={styles.stepName}
+            aria-label="Name der Stufe"
+            maxLength={32}
+            value={s.name}
+            onChange={(e) => actions.setStepField(blockRef, x.id, i, 'name', e.target.value)}
+          />
+          <input
+            className={styles.stepNumber}
+            type="number"
+            inputMode="numeric"
+            aria-label="Sätze dieser Stufe"
+            placeholder={planSets}
+            value={s.sets ?? ''}
+            onChange={(e) => actions.setStepField(blockRef, x.id, i, 'sets', e.target.value)}
+          />
+          <span className={styles.times}>×</span>
+          <input
+            className={styles.stepNumber}
+            aria-label="Wiederholungen dieser Stufe"
+            maxLength={64}
+            placeholder={x.reps}
+            value={s.reps ?? ''}
+            onChange={(e) => actions.setStepField(blockRef, x.id, i, 'reps', e.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.stepRemove}
+            aria-label={`Stufe ${s.name || i + 1} entfernen`}
+            onClick={() => actions.removeStep(blockRef, x.id, i)}
+          >
+            ×
+          </button>
+          <input
+            className={styles.stepText}
+            aria-label="Hinweis zu dieser Stufe"
+            placeholder="Hinweis, z. B. Seil als Kniehebelauf"
+            maxLength={500}
+            value={s.text ?? ''}
+            onChange={(e) => actions.setStepField(blockRef, x.id, i, 'text', e.target.value)}
+          />
+        </div>
+      ))}
+      {steps.length < MAX_STEPS && (
+        <div>
+          <button
+            type="button"
+            className={styles.smallButton}
+            onClick={() => actions.addStep(blockRef, x.id)}
+          >
+            + Stufe
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -125,6 +203,7 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
             />
           </div>
         )}
+        <Steps exercise={x} blockRef={blockRef} actions={actions} />
         <div className={`${styles.field} ${styles.wide}`}>
           <label htmlFor={`note-${x.id}`}>Notiz — kurzer Hinweis unter der Übung</label>
           <input

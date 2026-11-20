@@ -90,3 +90,76 @@
   margin-top: 6px;
   line-height: 1.45;
 }
+
+/** The progression step the exercise is at, between the heading and the sets it sets. */
+.step {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.stepName {
+  font-weight: 650;
+}
+
+.stepText {
+  color: var(--mute);
+}
+
+.stepCount {
+  margin-left: auto;
+  font-family: var(--num);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.suggestion {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.suggestionWhy {
+  color: var(--mute);
+}
+
+.suggestionButtons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.advance {
+  composes: chip chipNeutralOn from '../../styles/shared.module.scss';
+}
+
+.stay {
+  composes: chip from '../../styles/shared.module.scss';
+}
+
+.effort {
+  composes: chips from '../../styles/shared.module.scss';
+  align-items: center;
+  margin-top: 10px;
+}
+
+.effortLabel {
+  font-size: 12px;
+  color: var(--mute);
+  margin-right: 2px;
+}
+
+.chip {
+  composes: chip from '../../styles/shared.module.scss';
+}
+
+.chipOn {
+  composes: chipNeutralOn from '../../styles/shared.module.scss';
+}

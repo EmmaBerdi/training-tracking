@@ -61,6 +61,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/004-password-reset-token.sql` | Hashed one-time codes for "Passwort vergessen?" — see [Passwords](#passwords) |
 | `db/changelog/changes/005-exercise-image-list.sql` | Several ordered photos per exercise: `exercise_image_link`, backfilled from `exercise.image_id` |
 | `db/changelog/changes/006-session-value-reps.sql` | Optional reps per logged set: `session_value.reps` (1–999) |
+| `db/changelog/changes/007-intervals.sql` | `kcal` as an exercise type, progression steps (`exercise_step`, `exercise.current_step`), effort ratings (`session_rating`) |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
@@ -83,7 +84,7 @@ Hibernate rewrites into whichever quote character the dialect wants.
 
 - `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable.
 - `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day, and every day (a plan) to one `session_type`.
-- `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items and per-set logged values hanging off it.
+- `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items, per-set logged values and per-exercise effort ratings (`session_rating`) hanging off it.
 - `session_type`, `recurring_rule`, `recurring_rule_plan`, `recurring_rule_exception`, `planned_session` — the calendar: activity kinds, repeating series and the sessions they generate.
 
 ### Adding a change

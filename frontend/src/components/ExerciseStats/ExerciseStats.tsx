@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { Exercise, Side, WorkoutLog } from '../../types';
-import { SIDE_LABEL } from '../../data/constants';
+import type { Exercise, Rating, Side, WorkoutLog } from '../../types';
+import { EFFORTS, EFFORT_LABEL, SIDE_LABEL, TOTALLED, UNIT } from '../../data/constants';
 import {
+  effortSeries,
   exerciseRecords,
   exerciseSeries,
   exerciseSides,
@@ -28,7 +29,7 @@ interface ExerciseStatsProps {
   tall?: boolean;
 }
 
-type Metric = 'best' | 'volume' | 'e1rm';
+type Metric = 'best' | 'volume' | 'e1rm' | 'effort';
 
 const SIDE_COLOR: Record<Side, string> = {
   B: 'var(--chart-left)',
@@ -36,8 +37,14 @@ const SIDE_COLOR: Record<Side, string> = {
   R: 'var(--chart-right)',
 };
 
-function metricValue(p: WorkoutPoint, metric: Metric): number | null {
+function metricValue(p: WorkoutPoint, metric: Exclude<Metric, 'effort'>): number | null {
   return metric === 'best' ? p.best : metric === 'volume' ? p.volume : p.e1rm;
+}
+
+/** An effort step (1–3) back to its word. */
+function effortLabel(value: number): string {
+  const effort = EFFORTS[Math.round(value) - 1];
+  return effort ? EFFORT_LABEL[effort] : '';
 }
 
 export function ExerciseStats({ exercise: x, logs, from, tall = false }: ExerciseStatsProps) {
@@ -47,14 +54,16 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
     side,
     points: exerciseSeries(logs, x.id, side, x.type, from),
   }));
-  const hasPoints = pointsBySide.some((s) => s.points.length > 0);
+  const efforts = effortSeries(logs, x.id, from);
+  const hasPoints = pointsBySide.some((s) => s.points.length > 0) || efforts.length > 0;
 
   // Volume and estimated max only exist once reps were logged; until then they are not offered.
   const metrics: { key: Metric; label: string }[] = [{ key: 'best', label: 'Bester Satz' }];
   if (pointsBySide.some((s) => s.points.some((p) => p.volume !== null)))
-    metrics.push({ key: 'volume', label: x.type === 'bw' ? 'Wdh gesamt' : 'Volumen' });
+    metrics.push({ key: 'volume', label: TOTALLED[x.type] ?? 'Volumen' });
   if (pointsBySide.some((s) => s.points.some((p) => p.e1rm !== null)))
     metrics.push({ key: 'e1rm', label: 'Geschätztes Max' });
+  if (efforts.length) metrics.push({ key: 'effort', label: 'Belastung' });
   const shown = metrics.some((m) => m.key === metric) ? metric : 'best';
   const shownLabel = metrics.find((m) => m.key === shown)?.label ?? '';
 
@@ -63,17 +72,23 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
       ? formatValue(v, x.type)
       : shown === 'e1rm'
         ? formatValue(v, 'kg')
-        : `${formatNumber(v)} ${x.type === 'bw' ? 'Wdh' : 'kg'}`;
+        : shown === 'effort'
+          ? effortLabel(v)
+          : `${formatNumber(v)} ${TOTALLED[x.type] ? UNIT[x.type] : 'kg'}`;
 
-  const series: ChartSeries[] = pointsBySide.map(({ side, points }) => ({
-    key: side,
-    label: side === 'B' ? shownLabel : SIDE_LABEL[side],
-    color: SIDE_COLOR[side],
-    points: points.flatMap((p) => {
-      const value = metricValue(p, shown);
-      return value === null ? [] : [{ date: p.date, value }];
-    }),
-  }));
+  // A rating belongs to the whole exercise, not to a side, so it is one line either way.
+  const series: ChartSeries[] =
+    shown === 'effort'
+      ? [{ key: 'effort', label: shownLabel, color: SIDE_COLOR.B, points: efforts }]
+      : pointsBySide.map(({ side, points }) => ({
+          key: side,
+          label: side === 'B' ? shownLabel : SIDE_LABEL[side],
+          color: SIDE_COLOR[side],
+          points: points.flatMap((p) => {
+            const value = metricValue(p, shown);
+            return value === null ? [] : [{ date: p.date, value }];
+          }),
+        }));
   // Beside a single best-set line, the average shows whether the whole workout moved or one set.
   if (shown === 'best' && sides.length === 1) {
     series.push({
@@ -89,8 +104,13 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
     sides.length === 2 ? sideGap(pointsBySide[0].points, pointsBySide[1].points, x.type) : null;
 
   const rows = logs
-    .filter((l) => (!from || l.date >= from) && sides.some((s) => l.vals[x.id]?.[s]?.some(Boolean)))
+    .filter(
+      (l) =>
+        (!from || l.date >= from) &&
+        (sides.some((s) => l.vals[x.id]?.[s]?.some(Boolean)) || l.ratings?.[x.id]),
+    )
     .sort((a, b) => b.date.localeCompare(a.date));
+  const rated = rows.some((l) => l.ratings?.[x.id]);
 
   return (
     <section className={styles.exercise}>
@@ -131,7 +151,12 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
                       <span className={styles.statDelta}>
                         {shown === 'best'
                           ? formatDelta(delta, x.type)
-                          : formatSigned(delta, format)}{' '}
+                          : shown === 'effort'
+                            ? formatSigned(
+                                delta,
+                                (size) => `${size} ${size === 1 ? 'Stufe' : 'Stufen'}`,
+                              )
+                            : formatSigned(delta, format)}{' '}
                         seit {formatDayLabel(first.date)}
                       </span>
                     )}
@@ -143,7 +168,7 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
           <LineChart
             series={series}
             format={format}
-            integerTicks={shown === 'best' && x.type === 'band'}
+            integerTicks={(shown === 'best' && x.type === 'band') || shown === 'effort'}
             height={tall ? 300 : 200}
             label={`${x.name}: ${shownLabel} je Training`}
           />
@@ -178,6 +203,7 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
                 <th>Datum</th>
                 {sides.length > 1 && <th>Seite</th>}
                 <th>Sätze</th>
+                {rated && <th>Belastung</th>}
               </tr>
             </thead>
             <tbody>
@@ -192,6 +218,7 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
                         .filter(Boolean)
                         .join(' · ') || '–'}
                     </td>
+                    {rated && <td>{ratingText(log.ratings?.[x.id])}</td>}
                   </tr>
                 )),
               )}
@@ -201,6 +228,12 @@ export function ExerciseStats({ exercise: x, logs, from, tall = false }: Exercis
       )}
     </section>
   );
+}
+
+/** "W2 · schwer", or just the effort when it was rated outside a progression. */
+function ratingText(rating: Rating | undefined): string {
+  if (!rating) return '–';
+  return [rating.step, EFFORT_LABEL[rating.effort]].filter(Boolean).join(' · ');
 }
 
 /** All-time bests, so a short range on screen never hides a record set earlier. */

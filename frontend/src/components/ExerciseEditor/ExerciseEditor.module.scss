@@ -94,3 +94,41 @@
 .pushRight {
   margin-left: auto;
 }
+
+/** One progression step: marker, name, sets × reps and remove on a line, its hint beneath. */
+.stepRow {
+  display: grid;
+  grid-template-columns: auto 1fr 52px auto 64px auto;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.stepName,
+.stepNumber {
+  min-width: 0;
+}
+
+/* The field's input styling is for text; the current-step marker stays a plain radio. */
+.stepRow input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.stepText {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
+.times {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
+.stepRemove {
+  composes: remove;
+  position: static;
+}

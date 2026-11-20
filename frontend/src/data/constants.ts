@@ -1,4 +1,4 @@
-import type { BlockKind, ExerciseType, Mode, Side, View } from '../types';
+import type { BlockKind, Effort, ExerciseType, Mode, Side, View } from '../types';
 
 /**
  * How each exercise type is labelled. The keys are the single source of truth for
@@ -12,6 +12,7 @@ export const UNIT: Record<ExerciseType, string> = {
   cm: 'cm',
   m: 'm',
   min: 'Min',
+  kcal: 'kcal',
 };
 
 export const EXERCISE_TYPES = Object.keys(UNIT) as ExerciseType[];
@@ -40,8 +41,30 @@ export const QUICK: Record<ExerciseType, (number | string)[]> = {
   cm: [20, 25, 30, 35, 40, 45, 50],
   m: [1.2, 1.4, 1.6, 1.8, 2.0],
   min: [15, 20, 25, 30],
+  kcal: [10, 15, 20, 25, 30, 40, 50],
   band: ['gelb', 'rot', 'grün', 'blau', 'schwarz'],
 };
+
+/**
+ * Types whose sets are summed into a per-workout total, and that total's label. For `bw` the sets
+ * are rep counts; for `kcal` each set is one interval round.
+ */
+export const TOTALLED: Partial<Record<ExerciseType, string>> = {
+  bw: 'Wdh gesamt',
+  kcal: 'kcal gesamt',
+};
+
+/** Effort ratings in rising order; mirrors the CHECK on `session_rating.effort`. */
+export const EFFORT_LABEL: Record<Effort, string> = {
+  leicht: 'leicht',
+  mittel: 'mittel',
+  schwer: 'schwer',
+};
+
+export const EFFORTS = Object.keys(EFFORT_LABEL) as Effort[];
+
+/** Progression steps one exercise can carry; mirrors `ExerciseDto.MAX_STEPS` on the backend. */
+export const MAX_STEPS = 20;
 
 /** Block kinds and their labels; the keys mirror the CHECK constraint on `blocks.kind`. */
 export const BLOCK_KIND_LABEL: Record<BlockKind, string> = {
