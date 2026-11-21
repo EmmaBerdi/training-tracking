@@ -37,12 +37,13 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
 | `frontend/vite.config.ts` | Build config, incl. the PWA plugin |
 | `backend/` | Spring Boot REST API + Liquibase-managed Postgres schema — see [`docs/BACKEND.md`](docs/BACKEND.md) |
 | `docker-compose.yml` | Local stack: Postgres + backend + frontend |
-| `deploy/` | Raspberry Pi deployment: compose stack, nginx reverse proxy, Cloudflare tunnel, backup script |
-| `.github/workflows/deploy.yml` | Builds the frontend and deploys it to GitHub Pages on push to `main` |
-| `docs/SETUP.md` | Step-by-step guide: GitHub repo → GitHub Pages → install on iPhone |
+| `deploy/` | Raspberry Pi deployment: compose stack, nginx reverse proxy, Cloudflare tunnel, backup script, auto-deploy timer |
+| `.github/workflows/ci.yml` | Lint, tests and build on every pull request into `main` (which auto-deploys to the Pi) |
+| `docs/SETUP.md` | Feature-branch workflow, install on iPhone, backups (German) |
 | `docs/BACKEND.md` | Running and configuring the backend + database |
 | `docs/DEPLOY-PI.md` | Self-hosting the whole stack on a Raspberry Pi behind a Cloudflare tunnel |
 | `docs/USER_STORIES.md` | What the app should do, and how much of it is built |
+| `docs/PLAN_IMPORT.md` | The JSON format for importing plans, written so an AI can produce it |
 | `docs/Trainingsplan_v6.md` | The training plan the app was originally built around (German) |
 | `AGENTS.md` | Conventions and the verification checklist for AI coding agents |
 
@@ -56,7 +57,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
    npm run dev
    ```
    The dev server runs on `http://localhost:5500` (matches the backend's default CORS allowlist). `npm run build` produces a static `frontend/dist/` you can serve anywhere.
-3. Deploying and installing on an iPhone: see [`docs/SETUP.md`](docs/SETUP.md), or [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) to host everything yourself.
+3. Deploying: [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) — the Pi rebuilds itself on every merge to `main`. Installing on an iPhone: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Checks
 

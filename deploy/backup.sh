@@ -13,7 +13,8 @@ KEEP=${KEEP:-14}
 . "$REPO_DIR/deploy/.env"
 
 mkdir -p "$BACKUP_DIR"
-STAMP=$(date +%Y-%m-%d)
+# Down to the minute: deploy/auto-deploy.sh also backs up, and must not overwrite the nightly dump.
+STAMP=$(date +%Y-%m-%d-%H%M)
 OUT="$BACKUP_DIR/training-$STAMP.sql.gz"
 
 docker compose -f "$REPO_DIR/deploy/docker-compose.pi.yml" --env-file "$REPO_DIR/deploy/.env" \
