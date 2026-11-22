@@ -11,7 +11,9 @@ The pieces, all in `deploy/`:
 | `deploy/docker-compose.pi.yml` | The four services: Postgres, backend, nginx, tunnel |
 | `deploy/nginx.pi.conf` | Serves the built frontend, proxies `/api` to the backend |
 | `deploy/.env.example` | Template for the secrets and hostname; copy to `deploy/.env` |
-| `deploy/backup.sh` | Nightly `pg_dump`, keeps the last 14 |
+| `deploy/backup.sh` | `pg_dump` (nightly and before every deploy), keeps the last 14 |
+| `deploy/auto-deploy.sh` | Pulls `main` and rebuilds when it has moved |
+| `deploy/training-deploy.service`, `.timer` | systemd units that run `auto-deploy.sh` every 2 minutes |
 
 Everything is on one origin, so there is no CORS to configure and no mixed content to worry about:
 the browser loads `https://training.example.com` and calls `https://training.example.com/api/...`.
@@ -54,8 +56,8 @@ Two things worth doing before you put real data on it:
 ## Step 2 — Get the code onto the Pi
 
 ```bash
-git clone https://github.com/YOURNAME/training.git ~/Training_tracking
-cd ~/Training_tracking
+git clone https://github.com/YOURNAME/training.git ~/training-tracking
+cd ~/training-tracking
 ```
 
 ## Step 3 — Create the tunnel
@@ -122,14 +124,14 @@ stored tokens, and it will keep pointing at whatever `window.API_BASE` said.
 
 ```bash
 crontab -e
-30 3 * * * /home/pi/Training_tracking/deploy/backup.sh >> /home/pi/backup.log 2>&1
+30 3 * * * /home/berdi-websites/training-tracking/deploy/backup.sh >> /home/berdi-websites/backup.log 2>&1
 ```
 
 Dumps land in `~/training-backups`. Copy them off the Pi periodically — a backup that only exists
 on the machine it backs up is not a backup. Restoring:
 
 ```bash
-gunzip -c ~/training-backups/training-2026-09-09.sql.gz | \
+gunzip -c ~/training-backups/training-2026-09-09-0330.sql.gz | \
   docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env \
   exec -T postgres psql -U training -d training_tracking
 ```
@@ -145,22 +147,50 @@ so it's reachable from the Pi itself only — the tunnel doesn't need it, and on
 would serve the app over plain HTTP to the LAN and, through Docker's own firewall rules, to the
 Pi's public IPv6 address. Change it in `deploy/.env` if 8090 is taken too.
 
-## Updating
+## Step 7 — Automatic deploys
+
+Every push to `main` goes live on its own. Work happens on feature branches; a pull request into
+`main` has to pass `.github/workflows/ci.yml` (lint, unit tests, build, backend tests) before it
+can be merged, and the merge is the deploy. That gate only holds with branch protection on `main`:
+in the repository, **Settings → Branches → Add branch ruleset**, target `main`, and enable
+*Require a pull request before merging*, *Require status checks to pass* (add `frontend` and
+`backend`) and *Block force pushes*.
+
+On the Pi, a systemd timer runs `deploy/auto-deploy.sh` every 2 minutes. It does one `git fetch`;
+only when `origin/main` has moved does it back up the database, fast-forward the checkout and
+rebuild. The units assume user `berdi-websites` and the repo at
+`/home/berdi-websites/training-tracking` — edit `deploy/training-deploy.service` first if yours
+differ.
 
 ```bash
-cd ~/Training_tracking && git pull
-docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
+cd ~/training-tracking
+git switch main && git status            # must be on main with a clean working tree
+sudo cp deploy/training-deploy.service deploy/training-deploy.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now training-deploy.timer
 ```
 
-The service worker picks up the new frontend the next time you fully close and reopen the app, as
-before.
+Watch it:
 
-## GitHub Pages
+```bash
+systemctl list-timers training-deploy.timer   # next and last run
+journalctl -u training-deploy -f              # deploy output, incl. build errors
+sudo systemctl start training-deploy           # check now instead of waiting
+```
 
-`.github/workflows/deploy.yml` still builds and publishes the frontend on every push to `main`.
-That deployment now points nowhere useful — its `window.API_BASE` is unset, so it falls back to
-`http://localhost:8080/api`. Either leave it as a harmless dead build or delete the workflow and
-turn Pages off in the repository settings.
+If a build fails, the old containers keep running and the checkout already sits on the new
+commit, so the timer won't retry it — fix forward with another merge, or rerun the `up -d --build`
+below by hand. The merge itself refuses (`--ff-only`) if someone edited files on the Pi; `git
+status` there shows what.
+
+The service worker picks up the new frontend the next time you fully close and reopen the app.
+
+### Updating by hand
+
+```bash
+cd ~/training-tracking && git pull
+docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
+```
 
 ## When something doesn't work
 
