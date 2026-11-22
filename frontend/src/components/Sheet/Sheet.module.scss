@@ -21,3 +21,18 @@
   border-top: 1px solid var(--line);
   padding: 20px 16px calc(env(safe-area-inset-bottom) + 20px);
 }
+
+.centered {
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+
+  .card {
+    max-width: 440px;
+    max-height: 80vh;
+    max-height: 80dvh;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    padding: 20px;
+  }
+}
