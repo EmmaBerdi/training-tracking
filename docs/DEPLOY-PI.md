@@ -56,8 +56,8 @@ Two things worth doing before you put real data on it:
 ## Step 2 — Get the code onto the Pi
 
 ```bash
-git clone https://github.com/YOURNAME/training.git ~/Training_tracking
-cd ~/Training_tracking
+git clone https://github.com/YOURNAME/training.git ~/training-tracking
+cd ~/training-tracking
 ```
 
 ## Step 3 — Create the tunnel
@@ -124,7 +124,7 @@ stored tokens, and it will keep pointing at whatever `window.API_BASE` said.
 
 ```bash
 crontab -e
-30 3 * * * /home/pi/Training_tracking/deploy/backup.sh >> /home/pi/backup.log 2>&1
+30 3 * * * /home/berdi-websites/training-tracking/deploy/backup.sh >> /home/berdi-websites/backup.log 2>&1
 ```
 
 Dumps land in `~/training-backups`. Copy them off the Pi periodically — a backup that only exists
@@ -158,11 +158,12 @@ in the repository, **Settings → Branches → Add branch ruleset**, target `mai
 
 On the Pi, a systemd timer runs `deploy/auto-deploy.sh` every 2 minutes. It does one `git fetch`;
 only when `origin/main` has moved does it back up the database, fast-forward the checkout and
-rebuild. The units assume user `pi` and the repo at `/home/pi/Training_tracking` — edit
-`deploy/training-deploy.service` first if yours differ.
+rebuild. The units assume user `berdi-websites` and the repo at
+`/home/berdi-websites/training-tracking` — edit `deploy/training-deploy.service` first if yours
+differ.
 
 ```bash
-cd ~/Training_tracking
+cd ~/training-tracking
 git switch main && git status            # must be on main with a clean working tree
 sudo cp deploy/training-deploy.service deploy/training-deploy.timer /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -187,7 +188,7 @@ The service worker picks up the new frontend the next time you fully close and r
 ### Updating by hand
 
 ```bash
-cd ~/Training_tracking && git pull
+cd ~/training-tracking && git pull
 docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
 ```
 
