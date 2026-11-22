@@ -95,8 +95,8 @@ function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
               type={TEXTY[x.type] ? 'text' : 'number'}
               inputMode={TEXTY[x.type] ? undefined : 'decimal'}
               step={TEXTY[x.type] ? undefined : 'any'}
-              value={s.value ?? ''}
-              onChange={(e) => actions.setStepField(blockRef, x.id, i, 'value', e.target.value)}
+              value={s.target ?? ''}
+              onChange={(e) => actions.setStepField(blockRef, x.id, i, 'target', e.target.value)}
             />
             <input
               className={styles.stepText}

@@ -18,23 +18,22 @@ public class ExerciseStep {
     @Column(length = 500)
     private String text;
 
-    /** Backtick-quoted because `value` is a reserved word in H2 (used by the test profile). */
-    @Column(name = "`value`", length = 64)
-    private String value;
+    @Column(length = 64)
+    private String target;
 
     public ExerciseStep() { }
 
-    public ExerciseStep(String name, Integer sets, String reps, String text, String value) {
+    public ExerciseStep(String name, Integer sets, String reps, String text, String target) {
         this.name = name;
         this.sets = sets;
         this.reps = reps;
         this.text = text;
-        this.value = value;
+        this.target = target;
     }
 
     public String getName() { return name; }
     public Integer getSets() { return sets; }
     public String getReps() { return reps; }
     public String getText() { return text; }
-    public String getValue() { return value; }
+    public String getTarget() { return target; }
 }

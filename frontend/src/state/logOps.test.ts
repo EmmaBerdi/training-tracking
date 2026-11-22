@@ -159,12 +159,12 @@ describe('what an entry starts with', () => {
 
   it('shows an entered set as it is', () => {
     const current = { value: '60', reps: '' };
-    const step = { name: 'W2', reps: '10', value: '70' };
+    const step = { name: 'W2', reps: '10', target: '70' };
     expect(logOps.entryDefaults(sources({ current, step, planReps: '10' }))).toEqual(current);
   });
 
   it("takes the step's value and reps over last time", () => {
-    const step = { name: 'W2', reps: '10', value: '42.5' };
+    const step = { name: 'W2', reps: '10', target: '42.5' };
     const last = { value: '40', reps: '8' };
     expect(logOps.entryDefaults(sources({ last, step, planReps: '10' }))).toEqual({
       value: '42.5',

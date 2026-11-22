@@ -87,7 +87,7 @@ export interface EntrySources {
  */
 export function entryDefaults({ current, last, previous, step, planReps }: EntrySources): SetEntry {
   if (current.value) return current;
-  const value = step?.value || last.value || previous.value;
+  const value = step?.target || last.value || previous.value;
   const logged = last.reps || previous.reps;
   const hint = planRepsHint(planReps);
   if (hint?.kind === 'single' && (step?.reps || !logged)) return { value, reps: String(hint.reps) };

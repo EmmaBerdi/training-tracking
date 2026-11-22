@@ -105,9 +105,9 @@ export function ExerciseCard({
       {step && (
         <div className={styles.step}>
           <span className={styles.stepName}>{step.name}</span>
-          {step.value && (
+          {step.target && (
             <span className={styles.stepValue}>
-              {TEXTY[x.type] ? step.value : `${step.value} ${UNIT[x.type]}`}
+              {TEXTY[x.type] ? step.target : `${step.target} ${UNIT[x.type]}`}
             </span>
           )}
           {step.text && <span className={styles.stepText}>{step.text}</span>}

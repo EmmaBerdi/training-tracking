@@ -302,9 +302,9 @@ describe('progression steps', () => {
     p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'sets', '');
     p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'sets', '5');
     p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'text', 'weiter springen');
-    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'value', '40');
-    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'value', '42.5');
-    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'value', ' ');
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'target', '40');
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'target', '42.5');
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'target', ' ');
     const x = planOps.findExercise(p, 'a')!;
     expect(x.steps?.[0]).toEqual({ name: 'W1', reps: '4' });
     expect(x.steps?.[1]).toEqual({
@@ -312,7 +312,7 @@ describe('progression steps', () => {
       sets: 5,
       reps: '5',
       text: 'weiter springen',
-      value: '42.5',
+      target: '42.5',
     });
   });
 

@@ -62,7 +62,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/005-exercise-image-list.sql` | Several ordered photos per exercise: `exercise_image_link`, backfilled from `exercise.image_id` |
 | `db/changelog/changes/006-session-value-reps.sql` | Optional reps per logged set: `session_value.reps` (1–999) |
 | `db/changelog/changes/007-intervals.sql` | `kcal` as an exercise type, progression steps (`exercise_step`, `exercise.current_step`), effort ratings (`session_rating`) |
-| `db/changelog/changes/008-step-value.sql` | Optional target value per progression step (`exercise_step.value`) |
+| `db/changelog/changes/008-step-target.sql` | Optional target value per progression step (`exercise_step.target`) |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
