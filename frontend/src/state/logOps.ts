@@ -1,4 +1,5 @@
-import type { Rating, Side, WorkoutLog } from '../types';
+import type { ProgressionStep, Rating, Side, WorkoutLog } from '../types';
+import { planRepsHint } from './planOps';
 
 export function findLog(logs: WorkoutLog[], date: string, dayId: string): WorkoutLog | undefined {
   return logs.find((s) => s.date === date && s.dayId === dayId);
@@ -64,6 +65,38 @@ export function lastSets(logs: WorkoutLog[], beforeDate: string): Map<string, Se
 
 export function positionKey(exId: string, side: Side, i: number): string {
   return `${exId}:${side}:${i}`;
+}
+
+export interface EntrySources {
+  /** What this workout already holds for the set. */
+  current: SetEntry;
+  /** The same set the last time it was logged. */
+  last: SetEntry;
+  /** The set before it in this workout; empty for the first. */
+  previous: SetEntry;
+  /** The progression step the exercise is at. */
+  step: ProgressionStep | undefined;
+  /** The rep text in force: the step's, else the plan's. */
+  planReps: string;
+}
+
+/**
+ * What the entry sheet starts with, so a set done like the plan or like last time is one tap. An
+ * entered set shows itself. Otherwise the step's targets come first, as moving up a step is meant to
+ * change them; then last time, then the set just done, for a set with no history of its own.
+ */
+export function entryDefaults({ current, last, previous, step, planReps }: EntrySources): SetEntry {
+  if (current.value) return current;
+  const value = step?.target || last.value || previous.value;
+  const logged = last.reps || previous.reps;
+  const hint = planRepsHint(planReps);
+  if (hint?.kind === 'single' && (step?.reps || !logged)) return { value, reps: String(hint.reps) };
+  // A range leaves the choice to its chips, unless a logged count already falls within it.
+  if (hint?.kind === 'range' && step?.reps) {
+    const inRange = [last.reps, previous.reps].find((r) => hint.reps.includes(Number(r)));
+    return { value, reps: inRange ?? '' };
+  }
+  return { value, reps: logged };
 }
 
 export function setVal(

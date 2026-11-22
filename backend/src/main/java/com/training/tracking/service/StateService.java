@@ -203,7 +203,8 @@ public class StateService {
     private static ExerciseDto toDto(Exercise e) {
         List<String> images = e.getImageIds().stream().map(UUID::toString).toList();
         List<ExerciseStepDto> steps = e.getSteps().stream()
-                .map(st -> new ExerciseStepDto(st.getName(), st.getSets(), st.getReps(), st.getText()))
+                .map(st -> new ExerciseStepDto(st.getName(), st.getSets(), st.getReps(), st.getText(),
+                        st.getTarget()))
                 .toList();
         return new ExerciseDto(e.getClientId(), e.getName(), e.getType(), e.isUni(),
                 e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription(),
@@ -415,7 +416,7 @@ public class StateService {
                 ex.images().stream().map(ExerciseImageService::parseId).toList()));
         if (ex.steps() != null) {
             entity.setSteps(new ArrayList<>(ex.steps().stream()
-                    .map(st -> new ExerciseStep(st.name(), st.sets(), st.reps(), st.text()))
+                    .map(st -> new ExerciseStep(st.name(), st.sets(), st.reps(), st.text(), st.target()))
                     .toList()));
             entity.setCurrentStep(currentStep(ex));
         } else {

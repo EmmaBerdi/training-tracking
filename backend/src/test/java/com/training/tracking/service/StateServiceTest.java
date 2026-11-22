@@ -292,9 +292,9 @@ class StateServiceTest {
     }
 
     private static final List<ExerciseStepDto> STEPS = List.of(
-            new ExerciseStepDto("W1", 3, "4", null),
-            new ExerciseStepDto("W2", null, "5", "Seil als Kniehebelauf"),
-            new ExerciseStepDto("Taper", 2, null, null));
+            new ExerciseStepDto("W1", 3, "4", null, "15"),
+            new ExerciseStepDto("W2", null, "5", "Seil als Kniehebelauf", null),
+            new ExerciseStepDto("Taper", 2, null, null, "12.5"));
 
     @Test
     void roundTripsKcalProgressionStepsAndRatings() {
