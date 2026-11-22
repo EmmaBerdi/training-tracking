@@ -65,8 +65,9 @@ export function exerciseReps(x: Exercise): string {
 
 /** Sets × reps as currently planned, "3 × 8" or "3/2 × 8" for left/right. */
 export function exerciseSpec(x: Exercise): string {
-  const counts = exerciseTracks(x).map((t) => t.count);
-  const sets = x.uni ? `${counts[0] ?? 0}/${counts[1] ?? 0}` : `${counts[0]}`;
+  // Looked up by side: exerciseTracks leaves out an untrained side, which would shift R into L.
+  const count = (side: Side) => exerciseTracks(x).find((t) => t.side === side)?.count ?? 0;
+  const sets = x.uni ? `${count('L')}/${count('R')}` : `${count('B')}`;
   return `${sets} × ${exerciseReps(x)}`;
 }
 
@@ -285,7 +286,10 @@ export function addExerciseStep(plan: Plan, ref: BlockRef, exId: string): Plan {
   return withExercise(plan, ref, exId, (x) => {
     const steps = x.steps ?? [];
     if (steps.length >= MAX_STEPS) return x;
-    return { ...x, steps: [...steps, { name: `W${steps.length + 1}` }], step: x.step ?? 0 };
+    // The first free name, not the count: ratings find their step by name, so two must not share one.
+    let n = steps.length + 1;
+    while (steps.some((s) => s.name === `W${n}`)) n++;
+    return { ...x, steps: [...steps, { name: `W${n}` }], step: x.step ?? 0 };
   });
 }
 

@@ -271,6 +271,12 @@ describe('progression steps', () => {
     expect(planOps.exerciseTracks(x)).toEqual([{ side: 'L', count: 2 }]);
   });
 
+  it('spells out left/right sets in L/R order, even with only the right side trained', () => {
+    const x: UnilateralExercise = { ...exercise('a'), uni: true, setsL: 0, setsR: 3 };
+    expect(planOps.exerciseSpec(x)).toBe('0/3 × 8');
+    expect(planOps.exerciseSpec({ ...x, steps: [{ name: 'W1', sets: 2 }] })).toBe('0/2 × 8');
+  });
+
   it('adds steps named by week and starts on the first', () => {
     let p = plan(day('mo'));
     p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
@@ -278,6 +284,15 @@ describe('progression steps', () => {
     const x = planOps.findExercise(p, 'a')!;
     expect(x.steps?.map((s) => s.name)).toEqual(['W1', 'W2']);
     expect(x.step).toBe(0);
+  });
+
+  it('names a new step after one that is not taken yet', () => {
+    let p = plan(day('mo'));
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    p = planOps.removeExerciseStep(p, FIRST_BLOCK, 'a', 0);
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    expect(planOps.findExercise(p, 'a')!.steps?.map((s) => s.name)).toEqual(['W2', 'W3']);
   });
 
   it('drops an emptied field so the plan value applies again', () => {
