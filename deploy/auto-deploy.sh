@@ -12,6 +12,9 @@ COMPOSE="docker compose -f $REPO_DIR/deploy/docker-compose.pi.yml --env-file $RE
 # Tracks the tag rather than the commit, so a release on an already checked-out commit still
 # rebuilds and bakes its version into the frontend.
 DEPLOYED_FILE="$REPO_DIR/deploy/.deployed-version"
+# The release notes, baked into the build for the in-app "Neuigkeiten". Public, so no token.
+RELEASES_URL="https://api.github.com/repos/EmmaBerdi/training-tracking/releases?per_page=20"
+NOTES_FILE="$REPO_DIR/frontend/public/whats-new.json"
 
 # A first-time build can outlast the timer interval; a second run must not start alongside it.
 exec 9>"${TMPDIR:-/tmp}/training-auto-deploy.lock"
@@ -35,6 +38,8 @@ git -C "$REPO_DIR" -c advice.detachedHead=false checkout --quiet "$NEW"
 # Recorded before the build: a failing build must not be retried (with a fresh backup) every
 # timer run. Fix it with a new patch release instead.
 echo "$NEW" > "$DEPLOYED_FILE"
+# GitHub being unreachable costs the news, not the deploy.
+curl -fsS --max-time 10 -o "$NOTES_FILE" "$RELEASES_URL" || echo '[]' > "$NOTES_FILE"
 APP_VERSION=${NEW#v} $COMPOSE up -d --build
 # Every rebuild leaves the previous images dangling, a few hundred MB each.
 docker image prune -f >/dev/null

@@ -171,7 +171,10 @@ gh release create v1.5.0 --target main --generate-notes   # or Releases → Draf
 On the Pi, a systemd timer runs `deploy/auto-deploy.sh` every 2 minutes. It does one `git fetch`;
 only when the newest `vX.Y.Z` tag differs from the one in `deploy/.deployed-version` does it back
 up the database, check out the tag and rebuild, passing the version into the frontend build (shown
-at the bottom of the user menu). Pre-release tags like `v2.0.0-rc1` are ignored. The units assume
+at the bottom of the user menu). Before the build it also saves the GitHub release notes (public
+API, no token) as `frontend/public/whats-new.json`, which the app shows as "Neuigkeiten"; if
+GitHub is unreachable the deploy goes ahead without them. Pre-release tags like `v2.0.0-rc1` are
+ignored. The units assume
 user `berdi-websites` and the repo at `/home/berdi-websites/training-tracking` — edit
 `deploy/training-deploy.service` first if yours differ.
 

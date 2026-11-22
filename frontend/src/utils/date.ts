@@ -92,6 +92,17 @@ export function formatDayLabel(iso: string): string {
   return DAY_LABEL_FORMAT.format(parseIso(iso));
 }
 
+const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+/** z.B. "22.11.2026" */
+export function formatDate(iso: string): string {
+  return DATE_FORMAT.format(parseIso(iso));
+}
+
 /** z.B. "Mo" */
 export function formatWeekday(iso: string): string {
   return WEEKDAY_SHORT[mondayIndex(parseIso(iso))];

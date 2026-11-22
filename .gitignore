@@ -8,3 +8,4 @@ dev-dist/
 
 deploy/.env
 deploy/.deployed-version
+frontend/public/whats-new.json

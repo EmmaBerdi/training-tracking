@@ -10,6 +10,7 @@ Personal training PWA, in German: a calendar for planning sessions and a diary f
 - **Logging** — open a scheduled session, tap a set, enter the value (and, for kg and band exercises, optionally the reps done); the previous value for that set is shown alongside. The first logged value marks the session as done.
 - **Statistics** — per plan and exercise: best set and average over time, volume and estimated max where reps were logged, personal records, left/right comparison; plus planned against done per week. Ranges from 4 weeks to everything; side by side on tablet and laptop.
 - **Onboarding** — a fresh account opens on a short welcome (what the app is for, in three points) and a spotlight tour through the real screens; both are skippable and can be replayed from the user menu.
+- **Neuigkeiten** — after a release, the app opens once on what changed, taken from the GitHub release notes; the last few releases stay available in the user menu, next to the running version.
 
 How the pieces relate: an **activity type** says *what kind* of session it is; a **planned session** (or a **series** generating them) says *when*; a **plan** says *which exercises*, and is only offered for sessions of its own type.
 
