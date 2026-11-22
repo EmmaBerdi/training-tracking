@@ -1,6 +1,6 @@
 name: CI
 
-# Every push to main is deployed to the Pi by deploy/auto-deploy.sh, so this is the gate a
+# Releases are cut from main and deployed to the Pi by deploy/auto-deploy.sh, so this is the gate a
 # feature branch has to pass before it can be merged. Branch protection on main requires both jobs.
 on:
   pull_request:

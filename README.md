@@ -38,7 +38,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
 | `backend/` | Spring Boot REST API + Liquibase-managed Postgres schema — see [`docs/BACKEND.md`](docs/BACKEND.md) |
 | `docker-compose.yml` | Local stack: Postgres + backend + frontend |
 | `deploy/` | Raspberry Pi deployment: compose stack, nginx reverse proxy, Cloudflare tunnel, backup script, auto-deploy timer |
-| `.github/workflows/ci.yml` | Lint, tests and build on every pull request into `main` (which auto-deploys to the Pi) |
+| `.github/workflows/ci.yml` | Lint, tests and build on every pull request into `main` (releases from `main` auto-deploy to the Pi) |
 | `docs/SETUP.md` | Feature-branch workflow, install on iPhone, backups (German) |
 | `docs/BACKEND.md` | Running and configuring the backend + database |
 | `docs/DEPLOY-PI.md` | Self-hosting the whole stack on a Raspberry Pi behind a Cloudflare tunnel |
@@ -57,7 +57,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
    npm run dev
    ```
    The dev server runs on `http://localhost:5500` (matches the backend's default CORS allowlist). `npm run build` produces a static `frontend/dist/` you can serve anywhere.
-3. Deploying: [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) — the Pi rebuilds itself on every merge to `main`. Installing on an iPhone: [`docs/SETUP.md`](docs/SETUP.md).
+3. Deploying: [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) — the Pi rebuilds itself on every published release (`vX.Y.Z` tag). Installing on an iPhone: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Checks
 

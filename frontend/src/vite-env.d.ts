@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE?: string;
+  /** Release version without the "v", e.g. "1.2.0"; unset in local dev. */
+  readonly VITE_APP_VERSION?: string;
 }
 
 interface ImportMeta {
