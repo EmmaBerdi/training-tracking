@@ -35,7 +35,7 @@ import {
   today,
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
-import { exerciseReps, plansForType, sortByType } from './state/planOps';
+import { currentStep, exerciseReps, plansForType, sortByType } from './state/planOps';
 import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
 import { NAV } from './data/constants';
@@ -369,6 +369,15 @@ function TrainingApp({
                 const exercise = t.findExercise(sheet.exId);
                 return exercise ? exerciseReps(exercise) : '';
               })()}
+              step={(() => {
+                const exercise = t.findExercise(sheet.exId);
+                return exercise ? currentStep(exercise) : undefined;
+              })()}
+              // Index -1 reads as empty, so the first set has no previous one.
+              previous={{
+                value: t.getVal(sheet.exId, sheet.side, sheet.index - 1),
+                reps: t.getReps(sheet.exId, sheet.side, sheet.index - 1),
+              }}
               onSubmit={(value, reps) => {
                 logValue(sheet.exId, sheet.side, sheet.index, value, reps);
                 closeSheet();

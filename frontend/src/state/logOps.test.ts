@@ -146,6 +146,71 @@ describe('reps', () => {
   });
 });
 
+describe('what an entry starts with', () => {
+  const none = { value: '', reps: '' };
+  const sources = (over: Partial<logOps.EntrySources>): logOps.EntrySources => ({
+    current: none,
+    last: none,
+    previous: none,
+    step: undefined,
+    planReps: '',
+    ...over,
+  });
+
+  it('shows an entered set as it is', () => {
+    const current = { value: '60', reps: '' };
+    const step = { name: 'W2', reps: '10', value: '70' };
+    expect(logOps.entryDefaults(sources({ current, step, planReps: '10' }))).toEqual(current);
+  });
+
+  it("takes the step's value and reps over last time", () => {
+    const step = { name: 'W2', reps: '10', value: '42.5' };
+    const last = { value: '40', reps: '8' };
+    expect(logOps.entryDefaults(sources({ last, step, planReps: '10' }))).toEqual({
+      value: '42.5',
+      reps: '10',
+    });
+  });
+
+  it('falls back to last time for what the step leaves open', () => {
+    const step = { name: 'W2', sets: 4 };
+    const last = { value: '40', reps: '8' };
+    expect(logOps.entryDefaults(sources({ last, step, planReps: '6' }))).toEqual(last);
+  });
+
+  it("keeps a logged count inside the step's range, and leaves one outside it to the chips", () => {
+    const step = { name: 'W3', reps: '8-10' };
+    const within = { value: '40', reps: '9' };
+    expect(logOps.entryDefaults(sources({ last: within, step, planReps: '8-10' }))).toEqual(within);
+    const below = { value: '40', reps: '6' };
+    expect(logOps.entryDefaults(sources({ last: below, step, planReps: '8-10' }))).toEqual({
+      value: '40',
+      reps: '',
+    });
+  });
+
+  it('uses last time without a progression, and the plan count only without any logged reps', () => {
+    const last = { value: '40', reps: '7' };
+    expect(logOps.entryDefaults(sources({ last, planReps: '8' }))).toEqual(last);
+    expect(
+      logOps.entryDefaults(sources({ last: { value: '40', reps: '' }, planReps: '8' })),
+    ).toEqual({ value: '40', reps: '8' });
+  });
+
+  it('copies the set just done when this one has no history', () => {
+    const previous = { value: '45', reps: '6' };
+    expect(logOps.entryDefaults(sources({ previous, planReps: '6-8' }))).toEqual(previous);
+    expect(logOps.entryDefaults(sources({ last: { value: '40', reps: '8' }, previous }))).toEqual({
+      value: '40',
+      reps: '8',
+    });
+  });
+
+  it('starts empty with nothing to go on', () => {
+    expect(logOps.entryDefaults(sources({ planReps: 'max' }))).toEqual(none);
+  });
+});
+
 describe('the first entry of a workout', () => {
   it('is the first non-empty value, ignoring warm-up ticks and cleared sets', () => {
     expect(logOps.startsWorkout(undefined, '60')).toBe(true);

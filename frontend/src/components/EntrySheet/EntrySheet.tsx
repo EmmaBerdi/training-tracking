@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ExerciseType, Side } from '../../types';
+import type { ExerciseType, ProgressionStep, Side } from '../../types';
 import {
   QUICK,
   REPS_MAX,
@@ -9,6 +9,7 @@ import {
   UNIT,
   WITH_REPS,
 } from '../../data/constants';
+import { entryDefaults, type SetEntry } from '../../state/logOps';
 import { planRepsHint } from '../../state/planOps';
 import { formatSet } from '../../utils/format';
 import styles from './EntrySheet.module.scss';
@@ -24,6 +25,9 @@ interface EntrySheetProps {
   lastReps: string;
   /** The plan's rep text for this exercise ("8", "6-8", …), used to suggest a count. */
   planReps: string;
+  step: ProgressionStep | undefined;
+  /** The set before this one in the same workout. */
+  previous: SetEntry;
   onSubmit: (value: string, reps: string) => void;
   onClear: () => void;
 }
@@ -38,16 +42,24 @@ export function EntrySheet({
   currentReps,
   lastReps,
   planReps,
+  step,
+  previous,
   onSubmit,
   onClear,
 }: EntrySheetProps) {
   const withReps = Boolean(WITH_REPS[type]);
   const hint = planRepsHint(planReps);
-  const [value, setValue] = useState(current);
-  // An edit keeps what was entered; a new set starts from last time, else the plan's single count.
-  const [reps, setReps] = useState(() =>
-    current ? currentReps : lastReps || (hint?.kind === 'single' ? String(hint.reps) : ''),
+  const [start] = useState(() =>
+    entryDefaults({
+      current: { value: current, reps: currentReps },
+      last: { value: last, reps: lastReps },
+      previous,
+      step,
+      planReps,
+    }),
   );
+  const [value, setValue] = useState(start.value);
+  const [reps, setReps] = useState(start.reps);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
