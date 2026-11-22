@@ -330,7 +330,7 @@ export function setExerciseSets(
   return withExercise(plan, ref, exId, (x) => ({ ...x, [field]: clamped }) as Exercise);
 }
 
-export type StepField = 'name' | 'sets' | 'reps' | 'text';
+export type StepField = 'name' | 'sets' | 'reps' | 'text' | 'target';
 
 /** A new step after the last, named for the week it would usually be: W1, W2, … */
 export function addExerciseStep(plan: Plan, ref: BlockRef, exId: string): Plan {

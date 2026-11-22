@@ -104,7 +104,7 @@
   margin-left: auto;
 }
 
-/** One progression step: marker, name, sets × reps and remove on a line, its hint beneath. */
+/** One progression step: marker, name, sets × reps and remove on a line, target and hint beneath. */
 .stepRow {
   display: grid;
   grid-template-columns: auto 1fr 52px auto 64px auto;
@@ -127,8 +127,20 @@
   accent-color: var(--ink);
 }
 
-.stepText {
+/* A second line, so the first keeps room for the name at phone width. */
+.stepExtra {
   grid-column: 2 / -1;
+  display: flex;
+  gap: 6px;
+}
+
+.stepValue {
+  flex: 0 0 88px;
+  min-width: 0;
+}
+
+.stepText {
+  flex: 1;
   min-width: 0;
 }
 

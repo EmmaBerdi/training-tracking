@@ -13,6 +13,8 @@ export interface ProgressionStep {
   sets?: number;
   reps?: string;
   text?: string;
+  /** The target per set in the exercise's unit; without it, entries start from what was logged. */
+  target?: string;
 }
 
 interface ExerciseBase {
