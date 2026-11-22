@@ -82,6 +82,16 @@ describe('exerciseSeries', () => {
     expect(points[0].e1rm).toBeNull();
   });
 
+  it('totals the rounds of a kcal exercise', () => {
+    const points = stats.exerciseSeries(
+      [log('2026-11-10', { row: { B: ['18', '17', '15'] } })],
+      'row',
+      'B',
+      'kcal',
+    );
+    expect(points[0]).toMatchObject({ best: 18, volume: 50, e1rm: null });
+  });
+
   it('drops workouts before the range', () => {
     expect(stats.exerciseSeries(logs, 'sq', 'B', 'kg', '2026-11-10')).toHaveLength(2);
   });
@@ -194,5 +204,33 @@ describe('consistency', () => {
       today,
     );
     expect(result.streak).toBe(2);
+  });
+});
+
+describe('effortSeries', () => {
+  const rated = (
+    date: string,
+    effort: 'leicht' | 'mittel' | 'schwer',
+    dayId = 'mo',
+  ): WorkoutLog => ({
+    ...log(date, {}, undefined, dayId),
+    ratings: { row: { effort, step: 'W1' } },
+  });
+
+  it('charts leicht to schwer as 1 to 3, oldest first, within the range', () => {
+    const logs = [
+      rated('2026-11-12', 'schwer'),
+      rated('2026-11-05', 'leicht'),
+      rated('2026-10-01', 'mittel'),
+    ];
+    expect(stats.effortSeries(logs, 'row', '2026-11-01')).toEqual([
+      { date: '2026-11-05', value: 1, step: 'W1' },
+      { date: '2026-11-12', value: 3, step: 'W1' },
+    ]);
+  });
+
+  it('keeps the harder rating when one day was rated twice', () => {
+    const logs = [rated('2026-11-05', 'mittel', 'mo'), rated('2026-11-05', 'leicht', 'di')];
+    expect(stats.effortSeries(logs, 'row').map((p) => p.value)).toEqual([2]);
   });
 });

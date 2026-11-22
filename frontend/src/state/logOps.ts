@@ -1,4 +1,4 @@
-import type { Side, WorkoutLog } from '../types';
+import type { Rating, Side, WorkoutLog } from '../types';
 
 export function findLog(logs: WorkoutLog[], date: string, dayId: string): WorkoutLog | undefined {
   return logs.find((s) => s.date === date && s.dayId === dayId);
@@ -86,6 +86,26 @@ export function setVal(
     const sideReps = [...(log.reps?.[exId]?.[side] ?? [])];
     sideReps[i] = setReps;
     return { ...next, reps: { ...log.reps, [exId]: { ...log.reps?.[exId], [side]: sideReps } } };
+  });
+}
+
+export function getRating(log: WorkoutLog | undefined, exId: string): Rating | undefined {
+  return log?.ratings?.[exId];
+}
+
+/** Sets or, with null, removes one exercise's rating; the field stays as {} once it existed. */
+export function setRating(
+  logs: WorkoutLog[],
+  date: string,
+  dayId: string,
+  exId: string,
+  rating: Rating | null,
+): WorkoutLog[] {
+  return upsert(logs, date, dayId, (log) => {
+    const ratings = { ...log.ratings };
+    if (rating) ratings[exId] = rating;
+    else delete ratings[exId];
+    return { ...log, ratings };
   });
 }
 

@@ -35,7 +35,7 @@ import {
   today,
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
-import { plansForType, sortByType } from './state/planOps';
+import { exerciseReps, plansForType, sortByType } from './state/planOps';
 import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
 import { NAV } from './data/constants';
@@ -175,8 +175,19 @@ function TrainingApp({
     setType: t.setExerciseType,
     setText: t.setExerciseText,
     setSets: t.setExerciseSets,
+    addStep: t.addExerciseStep,
+    setStepField: t.setExerciseStepField,
+    removeStep: t.removeExerciseStep,
+    setStep: t.setExerciseStep,
     addImages: t.addExerciseImages,
     removeImage: t.removeExerciseImage,
+  };
+
+  const progressActions = {
+    getRating: t.getRating,
+    rate: t.setRating,
+    suggestNext: t.suggestNext,
+    setStep: t.setExerciseStep,
   };
 
   const blockActions = {
@@ -300,6 +311,7 @@ function TrainingApp({
             onOpenInfo={(exId) => setSheet({ type: 'info', exId })}
             onOpenEntry={openEntry}
             actions={exerciseActions}
+            progress={progressActions}
             blockActions={blockActions}
             onEditPlan={() => t.day && setSheet({ type: 'editPlan', day: t.day })}
             onOpenSession={
@@ -353,7 +365,10 @@ function TrainingApp({
               last={t.lastVal(sheet.exId, sheet.side, sheet.index)}
               currentReps={t.getReps(sheet.exId, sheet.side, sheet.index)}
               lastReps={t.lastReps(sheet.exId, sheet.side, sheet.index)}
-              planReps={t.findExercise(sheet.exId)?.reps ?? ''}
+              planReps={(() => {
+                const exercise = t.findExercise(sheet.exId);
+                return exercise ? exerciseReps(exercise) : '';
+              })()}
               onSubmit={(value, reps) => {
                 logValue(sheet.exId, sheet.side, sheet.index, value, reps);
                 closeSheet();

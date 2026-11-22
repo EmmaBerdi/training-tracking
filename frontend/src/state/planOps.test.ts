@@ -248,3 +248,95 @@ describe('exerciseTracks', () => {
     expect(planOps.exerciseTracks(row)).toEqual([{ side: 'L', count: 2 }]);
   });
 });
+
+describe('progression steps', () => {
+  const steps = [{ name: 'W1', sets: 3, reps: '4' }, { name: 'W2', reps: '5' }, { name: 'Taper' }];
+
+  it('takes sets and reps from the current step, the plan where the step leaves them out', () => {
+    const w1 = exercise('a', { sets: 4, reps: '6', steps, step: 0 });
+    expect(planOps.exerciseTracks(w1)).toEqual([{ side: 'B', count: 3 }]);
+    expect(planOps.exerciseSpec(w1)).toBe('3 × 4');
+    expect(planOps.exerciseSpec({ ...w1, step: 1 })).toBe('4 × 5');
+    expect(planOps.exerciseSpec({ ...w1, step: 2 })).toBe('4 × 6');
+  });
+
+  it('overrides both sides of a left/right exercise, but never adds a side', () => {
+    const x: UnilateralExercise = {
+      ...exercise('a'),
+      uni: true,
+      setsL: 3,
+      setsR: 0,
+      steps: [{ name: 'W1', sets: 2 }],
+    };
+    expect(planOps.exerciseTracks(x)).toEqual([{ side: 'L', count: 2 }]);
+  });
+
+  it('spells out left/right sets in L/R order, even with only the right side trained', () => {
+    const x: UnilateralExercise = { ...exercise('a'), uni: true, setsL: 0, setsR: 3 };
+    expect(planOps.exerciseSpec(x)).toBe('0/3 × 8');
+    expect(planOps.exerciseSpec({ ...x, steps: [{ name: 'W1', sets: 2 }] })).toBe('0/2 × 8');
+  });
+
+  it('adds steps named by week and starts on the first', () => {
+    let p = plan(day('mo'));
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    const x = planOps.findExercise(p, 'a')!;
+    expect(x.steps?.map((s) => s.name)).toEqual(['W1', 'W2']);
+    expect(x.step).toBe(0);
+  });
+
+  it('names a new step after one that is not taken yet', () => {
+    let p = plan(day('mo'));
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    p = planOps.removeExerciseStep(p, FIRST_BLOCK, 'a', 0);
+    p = planOps.addExerciseStep(p, FIRST_BLOCK, 'a');
+    expect(planOps.findExercise(p, 'a')!.steps?.map((s) => s.name)).toEqual(['W2', 'W3']);
+  });
+
+  it('drops an emptied field so the plan value applies again', () => {
+    let p = plan(
+      day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [exercise('a', { steps })] }] }),
+    );
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 0, 'sets', '');
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'sets', '5');
+    p = planOps.setExerciseStepField(p, FIRST_BLOCK, 'a', 1, 'text', 'weiter springen');
+    const x = planOps.findExercise(p, 'a')!;
+    expect(x.steps?.[0]).toEqual({ name: 'W1', reps: '4' });
+    expect(x.steps?.[1]).toEqual({ name: 'W2', sets: 5, reps: '5', text: 'weiter springen' });
+  });
+
+  it('stays on the same step when another is removed, and clears to [] when none are left', () => {
+    let p = plan(
+      day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [exercise('a', { steps, step: 2 })] }] }),
+    );
+    p = planOps.removeExerciseStep(p, FIRST_BLOCK, 'a', 0);
+    expect(planOps.findExercise(p, 'a')).toMatchObject({ step: 1 });
+    expect(planOps.currentStep(planOps.findExercise(p, 'a')!)?.name).toBe('Taper');
+
+    p = planOps.removeExerciseStep(p, FIRST_BLOCK, 'a', 1);
+    expect(planOps.currentStep(planOps.findExercise(p, 'a')!)?.name).toBe('W2');
+
+    p = planOps.removeExerciseStep(p, FIRST_BLOCK, 'a', 0);
+    expect(planOps.findExercise(p, 'a')).toMatchObject({ steps: [], step: undefined });
+  });
+
+  it('ignores a step index outside the list', () => {
+    const p = plan(
+      day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [exercise('a', { steps })] }] }),
+    );
+    expect(planOps.setExerciseStep(p, FIRST_BLOCK, 'a', 3)).toEqual(p);
+    expect(planOps.findExercise(planOps.setExerciseStep(p, FIRST_BLOCK, 'a', 2), 'a')?.step).toBe(
+      2,
+    );
+  });
+
+  it('keeps the steps when switching between bilateral and left/right', () => {
+    let p = plan(
+      day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [exercise('a', { steps, step: 1 })] }] }),
+    );
+    p = planOps.setExerciseUni(p, FIRST_BLOCK, 'a', true);
+    expect(planOps.findExercise(p, 'a')).toMatchObject({ steps, step: 1 });
+  });
+});

@@ -1,6 +1,7 @@
 package com.training.tracking.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -20,6 +21,12 @@ public record SessionDto(
          * {@code StateService#saveState}.
          */
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        Map<String, Map<String, List<String>>> reps
+        Map<String, Map<String, List<String>>> reps,
+        /**
+         * Exercise client id -> how hard it felt. Null when the client predates ratings, which keeps
+         * the stored ones, as with {@code reps}.
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Map<String, @Valid RatingDto> ratings
 ) {
 }

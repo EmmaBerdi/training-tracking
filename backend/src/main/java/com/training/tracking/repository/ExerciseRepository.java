@@ -21,4 +21,11 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
             + "(SELECT e.id FROM exercise e JOIN block b ON b.id = e.block_id WHERE b.user_id = :userId)",
             nativeQuery = true)
     void deleteImageLinksByUserId(@Param("userId") Long userId);
+
+    /** The progression steps, cleared before the exercises for the same reason as the photos. */
+    @Modifying
+    @Query(value = "DELETE FROM exercise_step WHERE exercise_id IN "
+            + "(SELECT e.id FROM exercise e JOIN block b ON b.id = e.block_id WHERE b.user_id = :userId)",
+            nativeQuery = true)
+    void deleteStepsByUserId(@Param("userId") Long userId);
 }

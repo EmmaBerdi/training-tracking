@@ -1,5 +1,5 @@
 import type { Exercise, ExerciseType, PlannedSession, Side, WorkoutLog } from '../types';
-import { QUICK, WITH_REPS } from '../data/constants';
+import { EFFORTS, QUICK, TOTALLED, WITH_REPS } from '../data/constants';
 import { shiftDays, weekStart } from '../utils/date';
 import { hasValues } from './logOps';
 import { exerciseTracks } from './planOps';
@@ -87,7 +87,7 @@ export interface WorkoutPoint {
   /** The best set: heaviest, longest, furthest — whatever the type measures. */
   best: number;
   avg: number;
-  /** kg × reps over the sets that have reps; for bodyweight, the total reps. */
+  /** kg × reps over the sets that have reps; for {@link TOTALLED} types, the sum of the sets. */
   volume: number | null;
   /** Highest estimated one-rep max among sets with reps; kg only. */
   e1rm: number | null;
@@ -114,7 +114,7 @@ export function exerciseSeries(
       const best = Math.max(...sets.map((s) => s.value));
       const withReps = sets.filter((s): s is LoggedSet & { reps: number } => s.reps !== null);
       let volume: number | null = null;
-      if (type === 'bw') volume = sets.reduce((n, s) => n + s.value, 0);
+      if (TOTALLED[type]) volume = sets.reduce((n, s) => n + s.value, 0);
       else if (type === 'kg' && withReps.length)
         volume = withReps.reduce((n, s) => n + s.value * s.reps, 0);
       return {
@@ -128,6 +128,31 @@ export function exerciseSeries(
             : null,
       };
     });
+}
+
+/** One rated workout: its effort as a step (leicht = 1 … schwer = 3) and the progression step. */
+export interface EffortPoint {
+  date: string;
+  value: number;
+  step?: string;
+}
+
+/** The effort ratings of one exercise, oldest first; one per date, the hardest if rated twice. */
+export function effortSeries(
+  logs: WorkoutLog[],
+  exId: string,
+  from: string | null = null,
+): EffortPoint[] {
+  const byDate = new Map<string, EffortPoint>();
+  for (const log of logs) {
+    const rating = log.ratings?.[exId];
+    if (!rating || (from && log.date < from)) continue;
+    const value = EFFORTS.indexOf(rating.effort) + 1;
+    const held = byDate.get(log.date);
+    if (!held || value > held.value)
+      byDate.set(log.date, { date: log.date, value, step: rating.step });
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export interface RecordEntry {

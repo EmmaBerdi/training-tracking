@@ -6,7 +6,9 @@ import com.training.tracking.domain.User;
 import com.training.tracking.dto.BlockDto;
 import com.training.tracking.dto.DayDto;
 import com.training.tracking.dto.ExerciseDto;
+import com.training.tracking.dto.ExerciseStepDto;
 import com.training.tracking.dto.PlanDto;
+import com.training.tracking.dto.RatingDto;
 import com.training.tracking.dto.SessionDto;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.repository.ExerciseImageRepository;
@@ -72,7 +74,7 @@ class StateServiceTest {
 
     private static ExerciseDto exercise(String id, String name, String... imageIds) {
         return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung",
-                imageIds.length == 0 ? null : List.of(imageIds), null);
+                imageIds.length == 0 ? null : List.of(imageIds), null, null, null);
     }
 
     private DayDto day(String id, ExerciseDto... exercises) {
@@ -87,7 +89,7 @@ class StateServiceTest {
     @Test
     void roundTripsAPlanWithItsLoggedValues() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60", "62", ""))), List.of(true, false), null);
+                Map.of("ex1", Map.of("B", List.of("60", "62", ""))), List.of(true, false), null, null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         StateDto loaded = stateService.getState(userId);
@@ -125,7 +127,7 @@ class StateServiceTest {
     @Test
     void deletingEveryPlanKeepsTheHistory() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60"))), List.of(true), null);
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(true), null, null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         stateService.saveState(userId, state(List.of(), List.of(log)));
@@ -142,7 +144,7 @@ class StateServiceTest {
     @Test
     void editingThePlanKeepsValuesAttachedToTheirExercise() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), null);
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), null, null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         // Same exercise id, renamed, plus a new sibling — the shape of a normal plan edit.
@@ -159,7 +161,7 @@ class StateServiceTest {
 
     @Test
     void logsForAPlanThatNoLongerExistsAreStillReadable() {
-        SessionDto orphan = new SessionDto("2026-08-20", "geloescht", Map.of(), List.of(), null);
+        SessionDto orphan = new SessionDto("2026-08-20", "geloescht", Map.of(), List.of(), null, null);
         stateService.saveState(userId, state(List.of(day("mo")), List.of(orphan)));
 
         StateDto loaded = stateService.getState(userId);
@@ -190,7 +192,7 @@ class StateServiceTest {
 
     @Test
     void rejectsTwoLogsForTheSameDayAndDate() {
-        SessionDto log = new SessionDto("2026-08-20", "mo", Map.of(), List.of(), null);
+        SessionDto log = new SessionDto("2026-08-20", "mo", Map.of(), List.of(), null, null);
 
         assertThatThrownBy(() -> stateService.saveState(userId, state(List.of(day("mo")), List.of(log, log))))
                 .isInstanceOf(ResponseStatusException.class)
@@ -201,7 +203,7 @@ class StateServiceTest {
     @Test
     void rejectsALoggedSideThatIsNotBLeftOrRight() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("X", List.of("60"))), List.of(), null);
+                Map.of("ex1", Map.of("X", List.of("60"))), List.of(), null, null);
         StateDto bad = state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log));
 
         assertThatThrownBy(() -> stateService.saveState(userId, bad))
@@ -232,7 +234,7 @@ class StateServiceTest {
     void roundTripsTheRepsOfEachSet() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
                 Map.of("ex1", Map.of("B", List.of("60", "62.5", "65"))), List.of(),
-                Map.of("ex1", Map.of("B", List.of("8", "", "6"))));
+                Map.of("ex1", Map.of("B", List.of("8", "", "6"))), null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         SessionDto loaded = stateService.getState(userId).logs().get(0);
@@ -243,7 +245,7 @@ class StateServiceTest {
     @Test
     void leavesRepsOutOfALogThatHasNone() {
         SessionDto log = new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), Map.of());
+                Map.of("ex1", Map.of("B", List.of("60"))), List.of(), Map.of(), null);
         stateService.saveState(userId, state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log)));
 
         assertThat(stateService.getState(userId).logs().get(0).reps()).isNull();
@@ -254,7 +256,7 @@ class StateServiceTest {
         for (String reps : List.of("0", "1000", "8.5", "acht")) {
             SessionDto log = new SessionDto("2026-08-20", "mo",
                     Map.of("ex1", Map.of("B", List.of("60"))), List.of(),
-                    Map.of("ex1", Map.of("B", List.of(reps))));
+                    Map.of("ex1", Map.of("B", List.of(reps))), null);
             StateDto bad = state(List.of(day("mo", exercise("ex1", "Kniebeuge"))), List.of(log));
 
             assertThatThrownBy(() -> stateService.saveState(userId, bad))
@@ -274,14 +276,82 @@ class StateServiceTest {
         List<DayDto> plan = List.of(day("mo", exercise("ex1", "Kniebeuge")));
         stateService.saveState(userId, state(plan, List.of(new SessionDto("2026-08-20", "mo",
                 Map.of("ex1", Map.of("B", List.of("60", "62.5"))), List.of(),
-                Map.of("ex1", Map.of("B", List.of("8", "6")))))));
+                Map.of("ex1", Map.of("B", List.of("8", "6"))), null))));
 
         // The old client re-sends the first set unchanged and corrects the second.
         stateService.saveState(userId, state(plan, List.of(new SessionDto("2026-08-20", "mo",
-                Map.of("ex1", Map.of("B", List.of("60", "65"))), List.of(), null))));
+                Map.of("ex1", Map.of("B", List.of("60", "65"))), List.of(), null, null))));
 
         SessionDto loaded = stateService.getState(userId).logs().get(0);
         assertThat(loaded.reps().get("ex1").get("B")).containsExactly("8", "");
+    }
+
+    private static ExerciseDto intervals(List<ExerciseStepDto> steps, Integer step) {
+        return new ExerciseDto("ex1", "Rudern", "kcal", false, 3, null, null, "1",
+                "90 s Pause", null, null, null, steps, step);
+    }
+
+    private static final List<ExerciseStepDto> STEPS = List.of(
+            new ExerciseStepDto("W1", 3, "4", null),
+            new ExerciseStepDto("W2", null, "5", "Seil als Kniehebelauf"),
+            new ExerciseStepDto("Taper", 2, null, null));
+
+    @Test
+    void roundTripsKcalProgressionStepsAndRatings() {
+        SessionDto log = new SessionDto("2026-08-20", "mo",
+                Map.of("ex1", Map.of("B", List.of("18", "17"))), List.of(), Map.of(),
+                Map.of("ex1", new RatingDto("schwer", "W2")));
+        stateService.saveState(userId, state(List.of(day("mo", intervals(STEPS, 1))), List.of(log)));
+
+        StateDto loaded = stateService.getState(userId);
+        ExerciseDto ex = loaded.plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(ex.type()).isEqualTo("kcal");
+        assertThat(ex.steps()).containsExactlyElementsOf(STEPS);
+        assertThat(ex.step()).isEqualTo(1);
+        assertThat(loaded.logs().get(0).ratings()).containsExactly(Map.entry("ex1", new RatingDto("schwer", "W2")));
+    }
+
+    @Test
+    void clearsStepsAndRatingsAnUpToDateClientRemoved() {
+        List<SessionDto> rated = List.of(new SessionDto("2026-08-20", "mo", Map.of(), List.of(), Map.of(),
+                Map.of("ex1", new RatingDto("leicht", "W1"))));
+        stateService.saveState(userId, state(List.of(day("mo", intervals(STEPS, 0))), rated));
+
+        stateService.saveState(userId, state(List.of(day("mo", intervals(List.of(), null))),
+                List.of(new SessionDto("2026-08-20", "mo", Map.of(), List.of(), Map.of(), Map.of()))));
+
+        StateDto loaded = stateService.getState(userId);
+        ExerciseDto ex = loaded.plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(ex.steps()).isNull();
+        assertThat(ex.step()).isNull();
+        assertThat(loaded.logs().get(0).ratings()).isNull();
+    }
+
+    /** As with reps: an installed app running older code must not erase what it cannot see. */
+    @Test
+    void keepsStepsAndRatingsWhenAnOlderClientSavesWithoutThem() {
+        stateService.saveState(userId, state(List.of(day("mo", intervals(STEPS, 2))),
+                List.of(new SessionDto("2026-08-20", "mo", Map.of(), List.of(), Map.of(),
+                        Map.of("ex1", new RatingDto("mittel", "Taper"))))));
+
+        stateService.saveState(userId, state(List.of(day("mo", intervals(null, null))),
+                List.of(new SessionDto("2026-08-20", "mo", Map.of(), List.of(), null, null))));
+
+        StateDto loaded = stateService.getState(userId);
+        ExerciseDto ex = loaded.plan().days().get(0).blocks().get(0).ex().get(0);
+        assertThat(ex.steps()).containsExactlyElementsOf(STEPS);
+        assertThat(ex.step()).isEqualTo(2);
+        assertThat(loaded.logs().get(0).ratings()).containsEntry("ex1", new RatingDto("mittel", "Taper"));
+    }
+
+    @Test
+    void rejectsAStepPastTheLastOne() {
+        StateDto bad = state(List.of(day("mo", intervals(STEPS, 3))), List.of());
+
+        assertThatThrownBy(() -> stateService.saveState(userId, bad))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
     /**
@@ -324,7 +394,7 @@ class StateServiceTest {
     void acceptsTheSinglePictureOfAnOlderClient() {
         String image = storeImage(userId, Instant.now()).getId().toString();
         ExerciseDto legacy = new ExerciseDto("ex1", "Sprungkasten", "kg", false, 3, null, null, "8",
-                null, null, null, image);
+                null, null, null, image, null, null);
 
         stateService.saveState(userId, state(List.of(day("mo", legacy)), List.of()));
 

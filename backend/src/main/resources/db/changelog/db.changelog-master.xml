@@ -19,5 +19,6 @@
     <include file="changes/004-password-reset-token.sql" relativeToChangelogFile="true"/>
     <include file="changes/005-exercise-image-list.sql" relativeToChangelogFile="true"/>
     <include file="changes/006-session-value-reps.sql" relativeToChangelogFile="true"/>
+    <include file="changes/007-intervals.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
