@@ -16,6 +16,7 @@ interface HeaderProps {
   onAddPlan?: () => void;
   userEmail: string;
   onReopenIntro: () => void;
+  onOpenWhatsNew: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
 }
@@ -31,6 +32,7 @@ export function Header({
   onAddPlan,
   userEmail,
   onReopenIntro,
+  onOpenWhatsNew,
   onChangePassword,
   onLogout,
 }: HeaderProps) {
@@ -43,6 +45,7 @@ export function Header({
           <UserMenu
             email={userEmail}
             onReopenIntro={onReopenIntro}
+            onOpenWhatsNew={onOpenWhatsNew}
             onChangePassword={onChangePassword}
             onLogout={onLogout}
           />

@@ -43,6 +43,23 @@ Die Versionsnummer folgt `vMAJOR.MINOR.PATCH`:
 - **Minor** (`v1.4.2` → `v1.5.0`): neue Funktion in einem bestehenden Feature
 - **Patch** (`v1.4.2` → `v1.4.3`): Bugfixes und sehr kleine Änderungen
 
+### Neuigkeiten schreiben
+
+Die Release-Notes erscheinen in der App unter "Neuigkeiten" — beim nächsten Öffnen von selbst, und jederzeit über das Benutzermenü. Geschrieben wird für die Leute, die die App benutzen:
+
+- Den Text für die App **oben** in die Release-Notes schreiben. Verstanden werden Überschriften (`## Neu`), Listen (`- …`), Absätze und **fett** (`**…**`); alles andere erscheint als normaler Text
+- Was GitHub mit "Generate release notes" anhängt (ab `## What's Changed` bzw. `**Full Changelog**`), blendet die App aus — das darf für dich als Entwicklerliste stehen bleiben
+- Steht oben nichts, zeigt die App für dieses Release nichts an. Für reine Bugfix-Releases ist das meist richtig
+- Die Notes werden beim Deployment übernommen. Später auf GitHub geändert, erscheinen sie erst mit dem nächsten Release in der App
+
+```markdown
+## Neu
+- **Neuigkeiten**: Was sich geändert hat, siehst du jetzt direkt in der App
+
+## What's Changed
+* feat: what's new from the release notes by @EmmaBerdi in #7
+```
+
 Ein manueller Cache-Versionsschritt wie früher entfällt — der Service Worker aktualisiert sich beim nächsten Start der App automatisch, sobald ein neuer Build online ist. Einmal die App schliessen (im App-Umschalter nach oben wischen) und neu öffnen reicht.
 
 ---

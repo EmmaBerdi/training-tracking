@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Header } from './components/Header/Header';
 import { Footer } from './components/Footer/Footer';
 import { DayView } from './components/DayView/DayView';
@@ -11,6 +11,7 @@ import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetai
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
 import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
 import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
+import { WhatsNewSheet } from './components/WhatsNewSheet/WhatsNewSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
 import { Tour, type TourStep } from './components/Tour/Tour';
@@ -35,6 +36,14 @@ import {
   today,
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
+import {
+  currentVersion,
+  lastSeenVersion,
+  loadReleases,
+  markSeen,
+  recentReleases,
+  unseenReleases,
+} from './utils/whatsNew';
 import { currentStep, exerciseReps, plansForType, sortByType } from './state/planOps';
 import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
@@ -99,6 +108,9 @@ function TrainingApp({
 
   const closeIntro = () => {
     markOnboarded(userEmail);
+    // A new account starts out current: the news is about changes it never knew the old way.
+    const version = currentVersion();
+    if (version) markSeen(userEmail, version);
     setIntroDone(true);
     setIntroStage(null);
   };
@@ -107,6 +119,25 @@ function TrainingApp({
     const { from, to } = monthRange(month);
     setVisibleRange(from, to);
   }, [month, setVisibleRange]);
+
+  // Once per app start, after the introduction if there is one: the releases not seen yet.
+  const whatsNewChecked = useRef(false);
+  const appReady = t.ready && sessions.ready;
+  useEffect(() => {
+    const version = currentVersion();
+    if (!appReady || intro !== null || !version || whatsNewChecked.current) return;
+    whatsNewChecked.current = true;
+    void loadReleases().then((releases) => {
+      const unseen = unseenReleases(releases, lastSeenVersion(userEmail), version);
+      markSeen(userEmail, version);
+      if (unseen.length) setSheet((s) => s ?? { type: 'whatsNew', releases: unseen });
+    });
+  }, [appReady, intro, userEmail]);
+
+  const openWhatsNew = () =>
+    void loadReleases().then((releases) =>
+      setSheet({ type: 'whatsNew', releases: recentReleases(releases, currentVersion()) }),
+    );
 
   if (!t.ready) return null;
 
@@ -276,6 +307,7 @@ function TrainingApp({
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
         userEmail={userEmail}
         onReopenIntro={() => setIntroStage('welcome')}
+        onOpenWhatsNew={openWhatsNew}
         onChangePassword={() => setSheet({ type: 'changePassword' })}
         onLogout={() => onLogout()}
       />
@@ -518,6 +550,10 @@ function TrainingApp({
               }
               onClose={closeSheet}
             />
+          )}
+
+          {sheet.type === 'whatsNew' && (
+            <WhatsNewSheet releases={sheet.releases} onClose={closeSheet} />
           )}
         </Sheet>
       )}

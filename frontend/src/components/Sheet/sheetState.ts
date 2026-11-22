@@ -1,4 +1,5 @@
 import type { Day, ExerciseType, PlannedSession, RecurringRule, Side } from '../../types';
+import type { Release } from '../../utils/whatsNew';
 
 /** Which sheet is open, and the subject it was opened for. */
 export type SheetState =
@@ -15,4 +16,5 @@ export type SheetState =
    */
   | { type: 'editSeries'; rule: RecurringRule; from: string }
   | { type: 'changePassword' }
+  | { type: 'whatsNew'; releases: Release[] }
   | null;
