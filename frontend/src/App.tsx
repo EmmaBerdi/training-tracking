@@ -420,7 +420,7 @@ function TrainingApp({
       />
 
       {sheet && (
-        <Sheet onClose={closeSheet}>
+        <Sheet onClose={closeSheet} centered={sheet.type === 'whatsNew'}>
           {sheet.type === 'info' &&
             (() => {
               const exercise = t.findExercise(sheet.exId);
