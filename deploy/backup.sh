@@ -3,7 +3,7 @@
 # is the backup: accounts, plans, logged workouts, the calendar and the exercise photos.
 #
 #   crontab -e
-#   30 3 * * * /home/pi/Training_tracking/deploy/backup.sh >> /home/pi/backup.log 2>&1
+#   30 3 * * * /home/berdi-websites/training-tracking/deploy/backup.sh >> /home/berdi-websites/backup.log 2>&1
 set -eu
 
 REPO_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
