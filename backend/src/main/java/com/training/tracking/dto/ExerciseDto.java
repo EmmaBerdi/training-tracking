@@ -15,7 +15,7 @@ import java.util.List;
 public record ExerciseDto(
         @NotBlank @Size(max = 32) String id,
         @NotNull @Size(max = 255) String name,
-        @NotNull @Pattern(regexp = "kg|band|sek|bw|cm|m|min|kcal", message = "must be a known exercise type")
+        @NotNull @Pattern(regexp = "kg|band|sek|bw|cm|m|min|kcal|interval", message = "must be a known exercise type")
         String type,
         boolean uni,
         @Min(0) @Max(99) Integer sets,
@@ -37,7 +37,9 @@ public record ExerciseDto(
          */
         @Size(max = MAX_STEPS) List<@Valid @NotNull ExerciseStepDto> steps,
         /** Index into {@link #steps} of the step the exercise is at; null without steps. */
-        @Min(0) Integer step
+        @Min(0) Integer step,
+        /** The interval timer this exercise runs; must be one of the caller's. */
+        Long timerId
 ) {
 
     public static final int MAX_IMAGES = 10;

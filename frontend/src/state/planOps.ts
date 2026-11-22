@@ -45,9 +45,11 @@ export function currentStep(x: Exercise): ProgressionStep | undefined {
 
 /**
  * The sides an exercise is logged on, with their set counts; a side without sets is left out. The
- * current step's set count replaces the plan's on every side the plan trains.
+ * current step's set count replaces the plan's on every side the plan trains. An interval exercise
+ * logs no values, only its effort rating, so it has none.
  */
 export function exerciseTracks(x: Exercise): { side: Side; count: number }[] {
+  if (x.type === 'interval') return [];
   const stepSets = currentStep(x)?.sets;
   if (!x.uni) return [{ side: 'B', count: stepSets ?? x.sets }];
   return [
@@ -63,8 +65,18 @@ export function exerciseReps(x: Exercise): string {
   return currentStep(x)?.reps || x.reps;
 }
 
-/** Sets × reps as currently planned, "3 × 8" or "3/2 × 8" for left/right. */
+/**
+ * How many rounds an interval exercise runs its timer for: its set count, or the current step's. A
+ * left/right exercise (only ever from an import) counts its larger side.
+ */
+export function intervalRounds(x: Exercise): number {
+  const planned = x.uni ? Math.max(x.setsL, x.setsR) : x.sets;
+  return currentStep(x)?.sets ?? planned;
+}
+
+/** Sets × reps as currently planned, "3 × 8" or "3/2 × 8" for left/right; rounds for intervals. */
 export function exerciseSpec(x: Exercise): string {
+  if (x.type === 'interval') return `${intervalRounds(x)} Runden`;
   // Looked up by side: exerciseTracks leaves out an untrained side, which would shift R into L.
   const count = (side: Side) => exerciseTracks(x).find((t) => t.side === side)?.count ?? 0;
   const sets = x.uni ? `${count('L')}/${count('R')}` : `${count('B')}`;
@@ -196,8 +208,8 @@ export type ExerciseSetsField = 'sets' | 'setsL' | 'setsR';
 
 function convertUni(x: Exercise, uni: boolean): Exercise {
   if (x.uni === uni) return x;
-  const { id, name, type, reps, note, desc, imageIds, steps, step } = x;
-  const base = { id, name, type, reps, note, desc, imageIds, steps, step };
+  const { id, name, type, reps, note, desc, imageIds, steps, step, timerId } = x;
+  const base = { id, name, type, reps, note, desc, imageIds, steps, step, timerId };
   if (uni) {
     const fallback = (x as BilateralExercise).sets || 3;
     return { ...base, uni: true, setsL: fallback, setsR: fallback };
@@ -223,13 +235,52 @@ export function setExerciseUni(plan: Plan, ref: BlockRef, exId: string, uni: boo
   return withExercise(plan, ref, exId, (x) => convertUni(x, uni));
 }
 
+/**
+ * An interval exercise runs one timer for both sides, so it becomes bilateral; any other type has
+ * no timer, so the link is dropped on the way out.
+ */
 export function setExerciseType(
   plan: Plan,
   ref: BlockRef,
   exId: string,
   type: Exercise['type'],
 ): Plan {
-  return withExercise(plan, ref, exId, (x) => ({ ...x, type }));
+  return withExercise(plan, ref, exId, (x) => {
+    if (type === 'interval') return { ...convertUni(x, false), type };
+    return { ...x, type, timerId: undefined };
+  });
+}
+
+/** Undefined unlinks the timer. */
+export function setExerciseTimer(
+  plan: Plan,
+  ref: BlockRef,
+  exId: string,
+  timerId: number | undefined,
+): Plan {
+  return withExercise(plan, ref, exId, (x) => ({ ...x, timerId }));
+}
+
+/** How many exercises across all plans run this timer. */
+export function timerUses(plan: Plan, timerId: number): number {
+  return plan.days.flatMap(dayExercises).filter((x) => x.timerId === timerId).length;
+}
+
+/**
+ * Unlinks a deleted timer everywhere. The backend has already done the same to its rows, but the
+ * next save sends this plan, and a dead id in it would be refused.
+ */
+export function clearTimer(plan: Plan, timerId: number): Plan {
+  return {
+    ...plan,
+    days: plan.days.map((d) => ({
+      ...d,
+      blocks: d.blocks.map((b) => ({
+        ...b,
+        ex: b.ex.map((x) => (x.timerId === timerId ? { ...x, timerId: undefined } : x)),
+      })),
+    })),
+  };
 }
 
 export function setExerciseText(

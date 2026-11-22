@@ -1,4 +1,4 @@
-import type { BlockKind, BlockRef, Exercise, ExerciseType, Rating } from '../types';
+import type { BlockKind, BlockRef, Exercise, ExerciseType, IntervalTimer, Rating } from '../types';
 import type { ExerciseSetsField, ExerciseTextField, StepField } from '../state/planOps';
 import type { StepSuggestion } from '../state/progression';
 
@@ -17,6 +17,7 @@ export interface ExerciseActions {
   moveExercise: (ref: BlockRef, exId: string, dir: -1 | 1) => void;
   setUni: (ref: BlockRef, exId: string, uni: boolean) => void;
   setType: (ref: BlockRef, exId: string, type: ExerciseType) => void;
+  setTimer: (ref: BlockRef, exId: string, timerId: number | undefined) => void;
   setText: (ref: BlockRef, exId: string, field: ExerciseTextField, value: string) => void;
   setSets: (ref: BlockRef, exId: string, field: ExerciseSetsField, value: number) => void;
   addStep: (ref: BlockRef, exId: string) => void;
@@ -43,6 +44,14 @@ export interface ProgressActions {
   rate: (exId: string, rating: Rating | null) => void;
   suggestNext: (x: Exercise) => StepSuggestion | null;
   setStep: (ref: BlockRef, exId: string, index: number) => void;
+}
+
+/** The user's interval timers: picked in the editor, run from the log. */
+export interface TimerActions {
+  timers: IntervalTimer[];
+  /** Opens the timer page; given an exercise, straight on a new timer that gets linked to it. */
+  manage: (link?: { ref: BlockRef; exId: string }) => void;
+  run: (x: Exercise) => void;
 }
 
 export interface WarmupActions {

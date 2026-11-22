@@ -2,13 +2,15 @@ import { useState } from 'react';
 import type { BlockRef, Exercise, ExerciseType } from '../../types';
 import { EXERCISE_TYPES, MAX_IMAGES, MAX_STEPS, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
-import type { ExerciseActions } from '../actions';
+import { timerSummary } from '../../state/timerOps';
+import type { ExerciseActions, TimerActions } from '../actions';
 import styles from './ExerciseEditor.module.scss';
 
 interface ExerciseEditorProps {
   exercise: Exercise;
   blockRef: BlockRef;
   actions: ExerciseActions;
+  timerActions: TimerActions;
 }
 
 /** One attached photo with its remove button; its own component so each loads its own picture. */
@@ -37,7 +39,11 @@ function Thumb({ imageId, onRemove }: { imageId: string; onRemove: () => void })
  * The planned progression: one row per step, the current one marked. Empty sets and reps keep the
  * plan's, which the placeholders show.
  */
-function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
+function Steps({
+  exercise: x,
+  blockRef,
+  actions,
+}: Pick<ExerciseEditorProps, 'exercise' | 'blockRef' | 'actions'>) {
   const steps = x.steps ?? [];
   const at = x.step ?? 0;
   const planSets = x.uni ? `${x.setsL || 0}/${x.setsR || 0}` : String(x.sets);
@@ -111,8 +117,47 @@ function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
   );
 }
 
-export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
+/** The picker's "new timer" entry: not a timer id, it opens the form for one. */
+const NEW_TIMER = 'new';
+
+/** Which timer an interval exercise runs, in the slots reps and sides take for other types. */
+function TimerPicker({ exercise: x, blockRef, actions, timerActions }: ExerciseEditorProps) {
+  const { timers, manage } = timerActions;
+  return (
+    <div className={styles.field}>
+      <label htmlFor={`timer-${x.id}`}>Timer</label>
+      <select
+        id={`timer-${x.id}`}
+        value={x.timerId ?? ''}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value === NEW_TIMER) manage({ ref: blockRef, exId: x.id });
+          else actions.setTimer(blockRef, x.id, value ? Number(value) : undefined);
+        }}
+      >
+        <option value="">Kein Timer</option>
+        {timers.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name} · {timerSummary(t)}
+          </option>
+        ))}
+        <option value={NEW_TIMER}>Neuer Timer …</option>
+      </select>
+      <button type="button" className={styles.linkButton} onClick={() => manage()}>
+        Timer verwalten
+      </button>
+    </div>
+  );
+}
+
+export function ExerciseEditor({
+  exercise: x,
+  blockRef,
+  actions,
+  timerActions,
+}: ExerciseEditorProps) {
   const [uploading, setUploading] = useState(false);
+  const interval = x.type === 'interval';
   const imageIds = x.imageIds ?? [];
   const room = MAX_IMAGES - imageIds.length;
 
@@ -152,26 +197,37 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
             ))}
           </select>
         </div>
-        <div className={styles.field}>
-          <label htmlFor={`reps-${x.id}`}>Wiederholungen</label>
-          <input
-            id={`reps-${x.id}`}
-            value={x.reps}
-            onChange={(e) => actions.setText(blockRef, x.id, 'reps', e.target.value)}
+        {interval ? (
+          <TimerPicker
+            exercise={x}
+            blockRef={blockRef}
+            actions={actions}
+            timerActions={timerActions}
           />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`uni-${x.id}`}>Seiten</label>
-          <select
-            id={`uni-${x.id}`}
-            value={x.uni ? '1' : '0'}
-            onChange={(e) => actions.setUni(blockRef, x.id, e.target.value === '1')}
-          >
-            <option value="0">Beidseitig</option>
-            <option value="1">Links / rechts</option>
-          </select>
-        </div>
-        {x.uni ? (
+        ) : (
+          <>
+            <div className={styles.field}>
+              <label htmlFor={`reps-${x.id}`}>Wiederholungen</label>
+              <input
+                id={`reps-${x.id}`}
+                value={x.reps}
+                onChange={(e) => actions.setText(blockRef, x.id, 'reps', e.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor={`uni-${x.id}`}>Seiten</label>
+              <select
+                id={`uni-${x.id}`}
+                value={x.uni ? '1' : '0'}
+                onChange={(e) => actions.setUni(blockRef, x.id, e.target.value === '1')}
+              >
+                <option value="0">Beidseitig</option>
+                <option value="1">Links / rechts</option>
+              </select>
+            </div>
+          </>
+        )}
+        {x.uni && !interval ? (
           <div className={styles.field}>
             <label>Sätze L / R</label>
             <div className={styles.setsRow}>
@@ -193,12 +249,12 @@ export function ExerciseEditor({ exercise: x, blockRef, actions }: ExerciseEdito
           </div>
         ) : (
           <div className={styles.field}>
-            <label htmlFor={`sets-${x.id}`}>Sätze</label>
+            <label htmlFor={`sets-${x.id}`}>{interval ? 'Runden' : 'Sätze'}</label>
             <input
               id={`sets-${x.id}`}
               type="number"
               inputMode="numeric"
-              value={x.sets || 1}
+              value={(!x.uni && x.sets) || 1}
               onChange={(e) => actions.setSets(blockRef, x.id, 'sets', Number(e.target.value))}
             />
           </div>

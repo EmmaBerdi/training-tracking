@@ -24,6 +24,8 @@ interface TabsProps {
   onNextMonth?: () => void;
   /** Trailing "new plan" button, shown while editing plans. */
   onAddPlan?: () => void;
+  /** Trailing button to the timer page, next to "new plan". */
+  onOpenTimers?: () => void;
 }
 
 export function Tabs({
@@ -33,6 +35,7 @@ export function Tabs({
   onPrevMonth,
   onNextMonth,
   onAddPlan,
+  onOpenTimers,
 }: TabsProps) {
   const activeRef = useRef<HTMLButtonElement>(null);
 
@@ -75,6 +78,13 @@ export function Tabs({
         <button type="button" className={`${styles.tab} ${styles.add}`} onClick={onAddPlan}>
           <b>+</b>
           <span>Plan</span>
+        </button>
+      )}
+
+      {onOpenTimers && (
+        <button type="button" className={`${styles.tab} ${styles.add}`} onClick={onOpenTimers}>
+          <b>◷</b>
+          <span>Timer</span>
         </button>
       )}
 

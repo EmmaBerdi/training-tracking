@@ -1,4 +1,5 @@
 import type { BlockKind, Effort, ExerciseType, Mode, Side, View } from '../types';
+import type { PhaseKind } from '../state/timerOps';
 
 /**
  * How each exercise type is labelled. The keys are the single source of truth for
@@ -13,6 +14,7 @@ export const UNIT: Record<ExerciseType, string> = {
   m: 'm',
   min: 'Min',
   kcal: 'kcal',
+  interval: 'Intervall',
 };
 
 export const EXERCISE_TYPES = Object.keys(UNIT) as ExerciseType[];
@@ -43,6 +45,8 @@ export const QUICK: Record<ExerciseType, (number | string)[]> = {
   min: [15, 20, 25, 30],
   kcal: [10, 15, 20, 25, 30, 40, 50],
   band: ['gelb', 'rot', 'grün', 'blau', 'schwarz'],
+  // An interval exercise logs no values, only how hard it felt.
+  interval: [],
 };
 
 /**
@@ -85,6 +89,16 @@ export const NAV: Record<NavTarget, { icon: string; label: string }> = {
   edit: { icon: '◎', label: 'Plan' },
   calendar: { icon: '▦', label: 'Kalender' },
   stats: { icon: '▥', label: 'Statistik' },
+};
+
+/** The longest phase a timer accepts, in seconds; mirrors the CHECKs on `interval_timer`. */
+export const TIMER_MAX_SEC = 3600;
+
+/** What the run screen calls each phase of a timer. */
+export const PHASE_LABEL: Record<PhaseKind, string> = {
+  prepare: 'Vorbereiten',
+  work: 'Arbeit',
+  rest: 'Pause',
 };
 
 /** Photos one exercise can carry; mirrors `ExerciseDto.MAX_IMAGES` on the backend. */

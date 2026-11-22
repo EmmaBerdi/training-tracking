@@ -11,7 +11,13 @@ import type {
 import { DayHeader } from '../DayHeader/DayHeader';
 import { WarmupSection } from '../WarmupSection/WarmupSection';
 import { BlockSection } from '../BlockSection/BlockSection';
-import type { BlockActions, ExerciseActions, ProgressActions, WarmupActions } from '../actions';
+import type {
+  BlockActions,
+  ExerciseActions,
+  ProgressActions,
+  TimerActions,
+  WarmupActions,
+} from '../actions';
 import styles from './DayView.module.scss';
 
 interface DayViewProps {
@@ -33,6 +39,7 @@ interface DayViewProps {
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
   actions: ExerciseActions;
   progress: ProgressActions;
+  timerActions: TimerActions;
   blockActions: BlockActions;
   onEditPlan: () => void;
   /** Opens the session behind this view; absent in edit mode, where no session is being shown. */
@@ -62,6 +69,7 @@ export function DayView({
   onOpenEntry,
   actions,
   progress,
+  timerActions,
   blockActions,
   onEditPlan,
   onOpenSession,
@@ -116,6 +124,7 @@ export function DayView({
           onOpenEntry={onOpenEntry}
           actions={actions}
           progress={progress}
+          timerActions={timerActions}
           blockActions={blockActions}
         />
       ))}

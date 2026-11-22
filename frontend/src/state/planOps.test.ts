@@ -340,3 +340,55 @@ describe('progression steps', () => {
     expect(planOps.findExercise(p, 'a')).toMatchObject({ steps, step: 1 });
   });
 });
+
+describe('interval exercises', () => {
+  const uniExercise = (id: string): UnilateralExercise => ({
+    id,
+    name: id,
+    type: 'kg',
+    uni: true,
+    setsL: 2,
+    setsR: 3,
+    reps: '8',
+  });
+
+  it('become bilateral when switched to interval, keeping the larger side as rounds', () => {
+    let p = plan(day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [uniExercise('a')] }] }));
+    p = planOps.setExerciseType(p, FIRST_BLOCK, 'a', 'interval');
+    expect(planOps.findExercise(p, 'a')).toMatchObject({ type: 'interval', uni: false, sets: 3 });
+  });
+
+  it('log no values, and are planned in rounds — the current step’s when it sets them', () => {
+    const x = exercise('a', { type: 'interval', sets: 8 });
+    expect(planOps.exerciseTracks(x)).toEqual([]);
+    expect(planOps.exerciseSpec(x)).toBe('8 Runden');
+    const stepped = { ...x, steps: [{ name: 'W1' }, { name: 'W2', sets: 10 }], step: 1 };
+    expect(planOps.intervalRounds(stepped)).toBe(10);
+  });
+
+  it('link a timer, and lose it when switched to another type', () => {
+    let p = plan(day('mo'));
+    p = planOps.setExerciseType(p, FIRST_BLOCK, 'a', 'interval');
+    p = planOps.setExerciseTimer(p, FIRST_BLOCK, 'a', 7);
+    expect(planOps.findExercise(p, 'a')?.timerId).toBe(7);
+
+    p = planOps.setExerciseUni(p, FIRST_BLOCK, 'a', true);
+    expect(planOps.findExercise(p, 'a')?.timerId).toBe(7);
+
+    p = planOps.setExerciseType(p, FIRST_BLOCK, 'a', 'kg');
+    expect(planOps.findExercise(p, 'a')?.timerId).toBeUndefined();
+  });
+
+  it('count and clear the uses of a timer across every plan', () => {
+    const linked = (id: string, timerId: number) => exercise(id, { type: 'interval', timerId });
+    let p = plan(
+      day('mo', { blocks: [{ kind: 'core', name: 'B', ex: [linked('a', 7), linked('b', 8)] }] }),
+      day('di', { blocks: [{ kind: 'core', name: 'B', ex: [linked('c', 7)] }] }),
+    );
+    expect(planOps.timerUses(p, 7)).toBe(2);
+
+    p = planOps.clearTimer(p, 7);
+    expect(planOps.timerUses(p, 7)).toBe(0);
+    expect(planOps.findExercise(p, 'b')?.timerId).toBe(8);
+  });
+});

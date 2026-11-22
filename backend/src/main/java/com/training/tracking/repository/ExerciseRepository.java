@@ -28,4 +28,9 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
             + "(SELECT e.id FROM exercise e JOIN block b ON b.id = e.block_id WHERE b.user_id = :userId)",
             nativeQuery = true)
     void deleteStepsByUserId(@Param("userId") Long userId);
+
+    /** Unlinks a timer about to be deleted; the FK's ON DELETE SET NULL does the same in Postgres. */
+    @Modifying
+    @Query("UPDATE Exercise e SET e.timerId = NULL WHERE e.timerId = :timerId")
+    void clearTimer(@Param("timerId") Long timerId);
 }

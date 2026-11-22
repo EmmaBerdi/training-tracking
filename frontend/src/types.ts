@@ -1,4 +1,4 @@
-export type ExerciseType = 'kg' | 'band' | 'sek' | 'bw' | 'cm' | 'm' | 'min' | 'kcal';
+export type ExerciseType = 'kg' | 'band' | 'sek' | 'bw' | 'cm' | 'm' | 'min' | 'kcal' | 'interval';
 
 export type BlockKind = 'huefte' | 'skill' | 'kraft' | 'explosiv' | 'core' | 'ausdauer';
 
@@ -31,6 +31,8 @@ interface ExerciseBase {
   steps?: ProgressionStep[];
   /** Index into `steps` of the step the exercise is at; 0 when unset. */
   step?: number;
+  /** The interval timer an `interval` exercise runs, by its backend id. */
+  timerId?: number;
 }
 
 export interface BilateralExercise extends ExerciseBase {
@@ -86,6 +88,18 @@ export interface Rating {
   effort: Effort;
   step?: string;
 }
+
+/** One round of an interval exercise: prepare once, then work and rest. The exercise sets the rounds. */
+export interface IntervalTimer {
+  id: number;
+  name: string;
+  prepareSec: number;
+  workSec: number;
+  restSec: number;
+}
+
+/** Everything needed to create or replace a timer; the id is assigned by the backend. */
+export type IntervalTimerInput = Omit<IntervalTimer, 'id'>;
 
 export interface AppState {
   plan: Plan;

@@ -40,9 +40,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -73,6 +75,7 @@ public class StateService {
     private final SessionValueRepository sessionValueRepository;
     private final SessionRatingRepository sessionRatingRepository;
     private final ExerciseImageService exerciseImageService;
+    private final IntervalTimerService intervalTimerService;
     private final ScheduleRefs scheduleRefs;
 
     public StateService(DayRepository dayRepository,
@@ -84,6 +87,7 @@ public class StateService {
                          SessionValueRepository sessionValueRepository,
                          SessionRatingRepository sessionRatingRepository,
                          ExerciseImageService exerciseImageService,
+                         IntervalTimerService intervalTimerService,
                          ScheduleRefs scheduleRefs) {
         this.dayRepository = dayRepository;
         this.blockRepository = blockRepository;
@@ -94,6 +98,7 @@ public class StateService {
         this.sessionValueRepository = sessionValueRepository;
         this.sessionRatingRepository = sessionRatingRepository;
         this.exerciseImageService = exerciseImageService;
+        this.intervalTimerService = intervalTimerService;
         this.scheduleRefs = scheduleRefs;
     }
 
@@ -208,7 +213,7 @@ public class StateService {
         return new ExerciseDto(e.getClientId(), e.getName(), e.getType(), e.isUni(),
                 e.getSets(), e.getSetsL(), e.getSetsR(), e.getReps(), e.getNote(), e.getDescription(),
                 images.isEmpty() ? null : images, images.isEmpty() ? null : images.get(0),
-                steps.isEmpty() ? null : steps, steps.isEmpty() ? null : e.getCurrentStep());
+                steps.isEmpty() ? null : steps, steps.isEmpty() ? null : e.getCurrentStep(), e.getTimerId());
     }
 
     @Transactional
@@ -221,6 +226,8 @@ public class StateService {
         dayDtos.stream().map(DayDto::sessionTypeId).distinct()
                 .forEach(typeId -> scheduleRefs.sessionType(userId, typeId));
         exerciseImageService.requireOwnership(userId, referencedImageIds(dayDtos));
+        intervalTimerService.requireOwnership(userId, submittedExercises(dayDtos)
+                .map(ExerciseDto::timerId).filter(Objects::nonNull).collect(Collectors.toSet()));
         // Read before the wipe: a client that predates reps sends none, and an installed PWA can run
         // that old code until its next reload. Its save would otherwise erase every rep count.
         Map<String, Short> carriedReps = logDtos.stream().anyMatch(l -> l.reps() == null)
@@ -425,6 +432,7 @@ public class StateService {
                 entity.setCurrentStep(stored.current());
             }
         }
+        entity.setTimerId(ex.timerId());
         entity.setPosition(position);
         return entity;
     }
