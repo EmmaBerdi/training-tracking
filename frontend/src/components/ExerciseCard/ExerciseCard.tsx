@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Exercise, ExerciseType, Rating, Side } from '../../types';
-import { EFFORTS, EFFORT_LABEL, UNIT } from '../../data/constants';
+import { EFFORTS, EFFORT_LABEL, TEXTY, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
 import { currentStep, exerciseSpec, exerciseTracks } from '../../state/planOps';
 import type { StepSuggestion } from '../../state/progression';
@@ -105,6 +105,11 @@ export function ExerciseCard({
       {step && (
         <div className={styles.step}>
           <span className={styles.stepName}>{step.name}</span>
+          {step.value && (
+            <span className={styles.stepValue}>
+              {TEXTY[x.type] ? step.value : `${step.value} ${UNIT[x.type]}`}
+            </span>
+          )}
           {step.text && <span className={styles.stepText}>{step.text}</span>}
           <span className={styles.stepCount}>
             Stufe {(x.step ?? 0) + 1}/{stepCount}

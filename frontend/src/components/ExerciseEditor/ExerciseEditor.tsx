@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BlockRef, Exercise, ExerciseType } from '../../types';
-import { EXERCISE_TYPES, MAX_IMAGES, MAX_STEPS, UNIT } from '../../data/constants';
+import { EXERCISE_TYPES, MAX_IMAGES, MAX_STEPS, TEXTY, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
 import type { ExerciseActions } from '../actions';
 import styles from './ExerciseEditor.module.scss';
@@ -35,7 +35,7 @@ function Thumb({ imageId, onRemove }: { imageId: string; onRemove: () => void })
 
 /**
  * The planned progression: one row per step, the current one marked. Empty sets and reps keep the
- * plan's, which the placeholders show.
+ * plan's, which the placeholders show; an empty target value leaves entries to what was logged.
  */
 function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
   const steps = x.steps ?? [];
@@ -86,14 +86,27 @@ function Steps({ exercise: x, blockRef, actions }: ExerciseEditorProps) {
           >
             ×
           </button>
-          <input
-            className={styles.stepText}
-            aria-label="Hinweis zu dieser Stufe"
-            placeholder="Hinweis, z. B. Seil als Kniehebelauf"
-            maxLength={500}
-            value={s.text ?? ''}
-            onChange={(e) => actions.setStepField(blockRef, x.id, i, 'text', e.target.value)}
-          />
+          <div className={styles.stepExtra}>
+            <input
+              className={styles.stepValue}
+              aria-label={`Zielwert dieser Stufe in ${UNIT[x.type]}`}
+              placeholder={UNIT[x.type]}
+              maxLength={64}
+              type={TEXTY[x.type] ? 'text' : 'number'}
+              inputMode={TEXTY[x.type] ? undefined : 'decimal'}
+              step={TEXTY[x.type] ? undefined : 'any'}
+              value={s.value ?? ''}
+              onChange={(e) => actions.setStepField(blockRef, x.id, i, 'value', e.target.value)}
+            />
+            <input
+              className={styles.stepText}
+              aria-label="Hinweis zu dieser Stufe"
+              placeholder="Hinweis, z. B. Seil als Kniehebelauf"
+              maxLength={500}
+              value={s.text ?? ''}
+              onChange={(e) => actions.setStepField(blockRef, x.id, i, 'text', e.target.value)}
+            />
+          </div>
         </div>
       ))}
       {steps.length < MAX_STEPS && (
