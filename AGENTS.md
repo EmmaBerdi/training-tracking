@@ -44,6 +44,13 @@ anything project-specific below. This includes, but is not limited to:
 
 ## Commands
 
+Agents: write every path in a shell command as an absolute path, and never start a command with
+`cd <dir>;` or `cd <dir> &&` or put it inside a `( … )` subshell. The user's
+`blockReadsOutsideWorkingDirectories` setting can't check relative paths that depend on a `cd`, or
+paths built from shell variables, so each such command stops for approval. For reading files, use
+the Read/Grep tools. For directory-bound tools, use their dir flag instead of `cd`:
+`npm --prefix <abs>/frontend run lint`, `<abs>/backend/mvnw -q -f <abs>/backend/pom.xml test`.
+
 Frontend (run from `frontend/`):
 
 ```bash
