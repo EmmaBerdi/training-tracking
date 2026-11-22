@@ -21,5 +21,7 @@
     <include file="changes/006-session-value-reps.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-intervals.sql" relativeToChangelogFile="true"/>
     <include file="changes/008-step-target.sql" relativeToChangelogFile="true"/>
+    <include file="changes/009-interval-timer.sql" relativeToChangelogFile="true"/>
+    <include file="changes/010-interval-timer-steps.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

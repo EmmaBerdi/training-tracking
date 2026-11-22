@@ -74,7 +74,7 @@ class StateServiceTest {
 
     private static ExerciseDto exercise(String id, String name, String... imageIds) {
         return new ExerciseDto(id, name, "kg", false, 3, null, null, "8", "Notiz", "Anleitung",
-                imageIds.length == 0 ? null : List.of(imageIds), null, null, null);
+                imageIds.length == 0 ? null : List.of(imageIds), null, null, null, null);
     }
 
     private DayDto day(String id, ExerciseDto... exercises) {
@@ -288,7 +288,7 @@ class StateServiceTest {
 
     private static ExerciseDto intervals(List<ExerciseStepDto> steps, Integer step) {
         return new ExerciseDto("ex1", "Rudern", "kcal", false, 3, null, null, "1",
-                "90 s Pause", null, null, null, steps, step);
+                "90 s Pause", null, null, null, steps, step, null);
     }
 
     private static final List<ExerciseStepDto> STEPS = List.of(
@@ -394,7 +394,7 @@ class StateServiceTest {
     void acceptsTheSinglePictureOfAnOlderClient() {
         String image = storeImage(userId, Instant.now()).getId().toString();
         ExerciseDto legacy = new ExerciseDto("ex1", "Sprungkasten", "kg", false, 3, null, null, "8",
-                null, null, null, image, null, null);
+                null, null, null, image, null, null, null);
 
         stateService.saveState(userId, state(List.of(day("mo", legacy)), List.of()));
 

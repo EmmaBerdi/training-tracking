@@ -26,6 +26,10 @@
      side of an exercise each, and the left one doubles as the colour of a single series. */
   --chart-left: #3a89d6;
   --chart-right: #c08820;
+  /* The run screen's background per phase: go, stop, get ready. */
+  --timer-work: var(--explosiv);
+  --timer-rest: var(--kraft);
+  --timer-prepare: var(--huefte);
   /* The content column on wide screens; header and footer line their content up with it. */
   --content-max: 760px;
   --num: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;

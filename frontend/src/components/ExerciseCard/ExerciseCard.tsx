@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import type { Exercise, ExerciseType, Rating, Side } from '../../types';
+import type { Exercise, ExerciseType, IntervalTimer, Rating, Side } from '../../types';
 import { EFFORTS, EFFORT_LABEL, TEXTY, UNIT } from '../../data/constants';
 import { useExerciseImage } from '../../hooks/useExerciseImage';
 import { currentStep, exerciseSpec, exerciseTracks } from '../../state/planOps';
 import type { StepSuggestion } from '../../state/progression';
+import { timerSummary } from '../../state/timerOps';
 import { formatSet } from '../../utils/format';
 import { ExerciseTrack } from '../ExerciseTrack/ExerciseTrack';
 import styles from './ExerciseCard.module.scss';
@@ -21,6 +22,8 @@ interface ExerciseCardProps {
   onRate: (rating: Rating | null) => void;
   suggestion: StepSuggestion | null;
   onSetStep: (index: number) => void;
+  timers: IntervalTimer[];
+  onRunTimer: () => void;
 }
 
 const SIDE_PREFIX: Record<Side, string> = { B: '', L: 'L ', R: 'R ' };
@@ -57,6 +60,8 @@ export function ExerciseCard({
   onRate,
   suggestion,
   onSetStep,
+  timers,
+  onRunTimer,
 }: ExerciseCardProps) {
   // Only for this visit: once today's workout is rated, the suggestion goes away by itself.
   const [kept, setKept] = useState(false);
@@ -66,13 +71,16 @@ export function ExerciseCard({
   // The card has room for one picture; the info sheet behind it shows them all.
   const firstImage = x.imageIds?.[0];
   const thumb = useExerciseImage(firstImage);
+  const interval = x.type === 'interval';
+  const timer = interval ? timers.find((t) => t.id === x.timerId) : undefined;
+  const unit = interval ? (timer ? timerSummary(timer) : 'kein Timer') : UNIT[x.type];
 
   return (
     <div className={styles.exercise}>
       <div className={styles.head}>
         <div className={styles.heading}>
           <div className={styles.name}>{x.name}</div>
-          <div className={styles.spec}>{`${exerciseSpec(x)}  ·  ${UNIT[x.type]}`}</div>
+          <div className={styles.spec}>{`${exerciseSpec(x)}  ·  ${unit}`}</div>
           {last && <div className={styles.last}>{`zuletzt  ${last}`}</div>}
         </div>
         {firstImage ? (
@@ -159,7 +167,17 @@ export function ExerciseCard({
         />
       ))}
 
-      {(stepCount > 0 || rating) && (
+      {interval &&
+        (timer ? (
+          <button type="button" className={styles.runTimer} onClick={onRunTimer}>
+            ▶ Timer starten
+          </button>
+        ) : (
+          <div className={styles.noTimer}>Im Plan einen Timer für diese Übung wählen.</div>
+        ))}
+
+      {/* An interval exercise logs nothing else, so how hard it felt is always asked. */}
+      {(stepCount > 0 || rating || interval) && (
         <div className={styles.effort} role="group" aria-label={`Belastung ${x.name}`}>
           <span className={styles.effortLabel}>Belastung</span>
           {EFFORTS.map((effort) => {

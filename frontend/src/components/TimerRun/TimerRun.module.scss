@@ -1,0 +1,152 @@
+/* Above sheets, toasts and the tour: nothing else belongs on screen while a timer runs. */
+.run {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  background: var(--panel);
+  color: var(--ink);
+  transition: background 0.25s;
+
+  /* Dark text reads on the yellow and the green; the red needs the light ink. */
+  &[data-phase='prepare'] {
+    background: var(--timer-prepare);
+    color: var(--bg);
+  }
+
+  &[data-phase='work'] {
+    background: var(--timer-work);
+    color: var(--bg);
+  }
+
+  &[data-phase='rest'] {
+    background: var(--timer-rest);
+    color: var(--ink);
+  }
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.timerName {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.topButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.iconButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 22px;
+  line-height: 1;
+  opacity: 0.85;
+
+  &:active {
+    opacity: 1;
+  }
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.phase {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.count {
+  font-family: var(--num);
+  font-variant-numeric: tabular-nums;
+  font-size: min(34vw, 200px);
+  font-weight: 700;
+  line-height: 1;
+  margin: 8px 0;
+}
+
+.round {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.step {
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.bottom {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  opacity: 0.85;
+  margin-bottom: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.primary {
+  flex: 1;
+  max-width: 260px;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 18px;
+  font-weight: 700;
+
+  /* Inverted on the light phase colours, so the main button always stands out from the screen. */
+  [data-phase='prepare'] &,
+  [data-phase='work'] & {
+    background: var(--bg);
+    color: var(--ink);
+  }
+}
+
+.secondary {
+  flex: 1;
+  max-width: 260px;
+  padding: 17px;
+  border-radius: 14px;
+  border: 1px solid currentColor;
+  font-size: 18px;
+  font-weight: 600;
+}

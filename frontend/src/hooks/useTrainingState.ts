@@ -144,6 +144,15 @@ export function useTrainingState(notify: (message: string) => void, selection: S
       updatePlan((p) => planOps.setExerciseType(p, ref, exId, type)),
     [updatePlan],
   );
+  const setExerciseTimer = useCallback(
+    (ref: BlockRef, exId: string, timerId: number | undefined) =>
+      updatePlan((p) => planOps.setExerciseTimer(p, ref, exId, timerId)),
+    [updatePlan],
+  );
+  const clearTimer = useCallback(
+    (timerId: number) => updatePlan((p) => planOps.clearTimer(p, timerId)),
+    [updatePlan],
+  );
   const setExerciseText = useCallback(
     (ref: BlockRef, exId: string, field: ExerciseTextField, value: string) =>
       updatePlan((p) => planOps.setExerciseText(p, ref, exId, field, value)),
@@ -310,6 +319,8 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     moveExercise,
     setExerciseUni,
     setExerciseType,
+    setExerciseTimer,
+    clearTimer,
     setExerciseText,
     setExerciseSets,
     addExerciseStep,

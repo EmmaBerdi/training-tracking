@@ -83,6 +83,13 @@ public class Exercise {
     @Column(name = "current_step")
     private Integer currentStep;
 
+    /**
+     * The interval timer this exercise runs, by id rather than as an association: timers outlive
+     * the delete-and-recreate of {@code PUT /api/state}, like {@link #imageIds}.
+     */
+    @Column(name = "timer_id")
+    private Long timerId;
+
     @Column(nullable = false)
     private int position;
 
@@ -130,6 +137,9 @@ public class Exercise {
 
     public Integer getCurrentStep() { return currentStep; }
     public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
+
+    public Long getTimerId() { return timerId; }
+    public void setTimerId(Long timerId) { this.timerId = timerId; }
 
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }

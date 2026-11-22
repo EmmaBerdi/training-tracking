@@ -20,13 +20,17 @@ import { Toast } from './components/Toast/Toast';
 import { AuthScreen } from './components/AuthScreen/AuthScreen';
 import { PlainSession } from './components/PlainSession/PlainSession';
 import { StatsView } from './components/StatsView/StatsView';
+import { TimersSheet } from './components/TimersSheet/TimersSheet';
+import { TimerRun } from './components/TimerRun/TimerRun';
 import type { SheetState } from './components/Sheet/sheetState';
+import type { TimerActions } from './components/actions';
 import { useTrainingState } from './hooks/useTrainingState';
 import { usePlannedSessions } from './hooks/usePlannedSessions';
+import { useTimers } from './hooks/useTimers';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './auth/useAuth';
 import type { TabItem } from './components/Tabs/Tabs';
-import type { ExerciseType, Mode, PlannedSession, Side, View } from './types';
+import type { ExerciseType, IntervalTimer, Mode, PlannedSession, Side, View } from './types';
 import {
   addMonths,
   formatMonthLabel,
@@ -44,7 +48,14 @@ import {
   recentReleases,
   unseenReleases,
 } from './utils/whatsNew';
-import { currentStep, exerciseReps, plansForType, sortByType } from './state/planOps';
+import {
+  currentStep,
+  exerciseReps,
+  intervalRounds,
+  plansForType,
+  sortByType,
+  timerUses,
+} from './state/planOps';
 import { toDays } from './state/planImport';
 import { startsWorkout } from './state/logOps';
 import { NAV } from './data/constants';
@@ -67,7 +78,18 @@ function TrainingApp({
 }) {
   const toast = useToast();
   const sessions = usePlannedSessions(toast.show);
+  const timers = useTimers(toast.show);
   const [sheet, setSheet] = useState<SheetState>(null);
+  /**
+   * The timer on screen, if one is running. `sessionId` is the planned session a finished run ticks
+   * off, like a first logged value does; a test run from the timer page has none.
+   */
+  const [timerRun, setTimerRun] = useState<{
+    timer: IntervalTimer;
+    rounds: number;
+    title: string;
+    sessionId?: number;
+  } | null>(null);
   const [view, setView] = useState<View>('training');
   const [month, setMonth] = useState(() => new Date());
   const [mode, setMode] = useState<Mode>('log');
@@ -204,6 +226,7 @@ function TrainingApp({
     moveExercise: t.moveExercise,
     setUni: t.setExerciseUni,
     setType: t.setExerciseType,
+    setTimer: t.setExerciseTimer,
     setText: t.setExerciseText,
     setSets: t.setExerciseSets,
     addStep: t.addExerciseStep,
@@ -234,6 +257,22 @@ function TrainingApp({
     deleteWarmupItem: t.deleteWarmupItem,
     moveWarmupItem: t.moveWarmupItem,
     setWarmupText: t.setWarmupText,
+  };
+
+  const timerActions: TimerActions = {
+    timers: timers.timers,
+    manage: (link) => setSheet({ type: 'timers', link }),
+    run: (x) => {
+      const timer = timers.timers.find((tm) => tm.id === x.timerId);
+      if (!timer) return;
+      const session = mode === 'log' ? activeSession : undefined;
+      setTimerRun({
+        timer,
+        rounds: intervalRounds(x),
+        title: x.name,
+        sessionId: session?.status === 'planned' ? session.id : undefined,
+      });
+    },
   };
 
   const closeSheet = () => setSheet(null);
@@ -305,6 +344,7 @@ function TrainingApp({
         onPrevMonth={() => setMonth(addMonths(month, -1))}
         onNextMonth={() => setMonth(addMonths(month, 1))}
         onAddPlan={mode === 'edit' ? () => setSheet({ type: 'newPlan' }) : undefined}
+        onOpenTimers={mode === 'edit' ? () => setSheet({ type: 'timers' }) : undefined}
         userEmail={userEmail}
         onReopenIntro={() => setIntroStage('welcome')}
         onOpenWhatsNew={openWhatsNew}
@@ -344,6 +384,7 @@ function TrainingApp({
             onOpenEntry={openEntry}
             actions={exerciseActions}
             progress={progressActions}
+            timerActions={timerActions}
             blockActions={blockActions}
             onEditPlan={() => t.day && setSheet({ type: 'editPlan', day: t.day })}
             onOpenSession={
@@ -543,6 +584,29 @@ function TrainingApp({
             />
           )}
 
+          {sheet.type === 'timers' && (
+            <TimersSheet
+              timers={timers.timers}
+              usesOf={(timerId) => timerUses(t.plan, timerId)}
+              startWithNew={!!sheet.link}
+              onCreate={async (input) => {
+                const created = await timers.addTimer(input);
+                if (created && sheet.link) {
+                  t.setExerciseTimer(sheet.link.ref, sheet.link.exId, created.id);
+                  closeSheet();
+                }
+                return created;
+              }}
+              onSave={timers.saveTimer}
+              onDelete={async (id) => {
+                if (!(await timers.removeTimer(id))) return false;
+                t.clearTimer(id);
+                return true;
+              }}
+              onTest={(timer) => setTimerRun({ timer, rounds: 2, title: 'Test' })}
+            />
+          )}
+
           {sheet.type === 'changePassword' && (
             <ChangePasswordSheet
               onChanged={() =>
@@ -577,6 +641,18 @@ function TrainingApp({
             if (empty) setView('calendar');
             else handleModeChange('log');
           }}
+        />
+      )}
+
+      {timerRun && (
+        <TimerRun
+          timer={timerRun.timer}
+          rounds={timerRun.rounds}
+          title={timerRun.title}
+          onFinish={() => {
+            if (timerRun.sessionId != null) void sessions.markStatus(timerRun.sessionId, 'done');
+          }}
+          onClose={() => setTimerRun(null)}
         />
       )}
 

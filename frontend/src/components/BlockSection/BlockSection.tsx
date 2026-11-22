@@ -3,7 +3,7 @@ import { BLOCK_KINDS, BLOCK_KIND_LABEL } from '../../data/constants';
 import { blockAccent } from '../../utils/cssVar';
 import { ExerciseCard } from '../ExerciseCard/ExerciseCard';
 import { ExerciseEditor } from '../ExerciseEditor/ExerciseEditor';
-import type { BlockActions, ExerciseActions, ProgressActions } from '../actions';
+import type { BlockActions, ExerciseActions, ProgressActions, TimerActions } from '../actions';
 import styles from './BlockSection.module.scss';
 
 interface BlockSectionProps {
@@ -20,6 +20,7 @@ interface BlockSectionProps {
   onOpenEntry: (exId: string, side: Side, i: number, name: string, type: ExerciseType) => void;
   actions: ExerciseActions;
   progress: ProgressActions;
+  timerActions: TimerActions;
   blockActions: BlockActions;
 }
 
@@ -37,6 +38,7 @@ export function BlockSection({
   onOpenEntry,
   actions,
   progress,
+  timerActions,
   blockActions,
 }: BlockSectionProps) {
   return (
@@ -107,7 +109,13 @@ export function BlockSection({
       <div className={editing ? undefined : styles.exercises}>
         {block.ex.map((x) =>
           editing ? (
-            <ExerciseEditor key={x.id} exercise={x} blockRef={blockRef} actions={actions} />
+            <ExerciseEditor
+              key={x.id}
+              exercise={x}
+              blockRef={blockRef}
+              actions={actions}
+              timerActions={timerActions}
+            />
           ) : (
             <ExerciseCard
               key={x.id}
@@ -122,6 +130,8 @@ export function BlockSection({
               onRate={(rating) => progress.rate(x.id, rating)}
               suggestion={progress.suggestNext(x)}
               onSetStep={(index) => progress.setStep(blockRef, x.id, index)}
+              timers={timerActions.timers}
+              onRunTimer={() => timerActions.run(x)}
             />
           ),
         )}

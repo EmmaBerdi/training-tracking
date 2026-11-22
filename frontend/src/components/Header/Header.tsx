@@ -14,6 +14,8 @@ interface HeaderProps {
   onNextMonth: () => void;
   /** Only while editing plans — in log mode the strip follows the calendar, not the plan list. */
   onAddPlan?: () => void;
+  /** The timer page, offered next to "+ Plan" for the same reason. */
+  onOpenTimers?: () => void;
   userEmail: string;
   onReopenIntro: () => void;
   onOpenWhatsNew: () => void;
@@ -30,6 +32,7 @@ export function Header({
   onPrevMonth,
   onNextMonth,
   onAddPlan,
+  onOpenTimers,
   userEmail,
   onReopenIntro,
   onOpenWhatsNew,
@@ -59,6 +62,7 @@ export function Header({
           onPrevMonth={onPrevMonth}
           onNextMonth={onNextMonth}
           onAddPlan={onAddPlan}
+          onOpenTimers={onOpenTimers}
         />
       )}
     </header>
