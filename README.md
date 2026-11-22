@@ -10,6 +10,7 @@ Personal training PWA, in German: a calendar for planning sessions and a diary f
 - **Logging** — open a scheduled session, tap a set, enter the value (and, for kg and band exercises, optionally the reps done); the previous value for that set is shown alongside. The first logged value marks the session as done.
 - **Statistics** — per plan and exercise: best set and average over time, volume and estimated max where reps were logged, personal records, left/right comparison; plus planned against done per week. Ranges from 4 weeks to everything; side by side on tablet and laptop.
 - **Onboarding** — a fresh account opens on a short welcome (what the app is for, in three points) and a spotlight tour through the real screens; both are skippable and can be replayed from the user menu.
+- **Neuigkeiten** — after a release, the app opens once on what changed, taken from the GitHub release notes; the last few releases stay available in the user menu, next to the running version.
 
 How the pieces relate: an **activity type** says *what kind* of session it is; a **planned session** (or a **series** generating them) says *when*; a **plan** says *which exercises*, and is only offered for sessions of its own type.
 
@@ -38,7 +39,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
 | `backend/` | Spring Boot REST API + Liquibase-managed Postgres schema — see [`docs/BACKEND.md`](docs/BACKEND.md) |
 | `docker-compose.yml` | Local stack: Postgres + backend + frontend |
 | `deploy/` | Raspberry Pi deployment: compose stack, nginx reverse proxy, Cloudflare tunnel, backup script, auto-deploy timer |
-| `.github/workflows/ci.yml` | Lint, tests and build on every pull request into `main` (which auto-deploys to the Pi) |
+| `.github/workflows/ci.yml` | Lint, tests and build on every pull request into `main` (releases from `main` auto-deploy to the Pi) |
 | `docs/SETUP.md` | Feature-branch workflow, install on iPhone, backups (German) |
 | `docs/BACKEND.md` | Running and configuring the backend + database |
 | `docs/DEPLOY-PI.md` | Self-hosting the whole stack on a Raspberry Pi behind a Cloudflare tunnel |
@@ -57,7 +58,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
    npm run dev
    ```
    The dev server runs on `http://localhost:5500` (matches the backend's default CORS allowlist). `npm run build` produces a static `frontend/dist/` you can serve anywhere.
-3. Deploying: [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) — the Pi rebuilds itself on every merge to `main`. Installing on an iPhone: [`docs/SETUP.md`](docs/SETUP.md).
+3. Deploying: [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md) — the Pi rebuilds itself on every published release (`vX.Y.Z` tag). Installing on an iPhone: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Checks
 

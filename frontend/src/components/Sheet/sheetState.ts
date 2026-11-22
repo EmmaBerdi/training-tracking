@@ -1,4 +1,5 @@
 import type { BlockRef, Day, ExerciseType, PlannedSession, RecurringRule, Side } from '../../types';
+import type { Release } from '../../utils/whatsNew';
 
 /** Which sheet is open, and the subject it was opened for. */
 export type SheetState =
@@ -17,4 +18,5 @@ export type SheetState =
   | { type: 'changePassword' }
   /** With `link`, opened from an exercise's picker: a new timer goes straight onto that exercise. */
   | { type: 'timers'; link?: { ref: BlockRef; exId: string } }
+  | { type: 'whatsNew'; releases: Release[] }
   | null;

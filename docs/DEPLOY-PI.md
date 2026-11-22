@@ -12,7 +12,7 @@ The pieces, all in `deploy/`:
 | `deploy/nginx.pi.conf` | Serves the built frontend, proxies `/api` to the backend |
 | `deploy/.env.example` | Template for the secrets and hostname; copy to `deploy/.env` |
 | `deploy/backup.sh` | `pg_dump` (nightly and before every deploy), keeps the last 14 |
-| `deploy/auto-deploy.sh` | Pulls `main` and rebuilds when it has moved |
+| `deploy/auto-deploy.sh` | Checks out the newest release tag and rebuilds when there is a new one |
 | `deploy/training-deploy.service`, `.timer` | systemd units that run `auto-deploy.sh` every 2 minutes |
 
 Everything is on one origin, so there is no CORS to configure and no mixed content to worry about:
@@ -149,22 +149,38 @@ Pi's public IPv6 address. Change it in `deploy/.env` if 8090 is taken too.
 
 ## Step 7 — Automatic deploys
 
-Every push to `main` goes live on its own. Work happens on feature branches; a pull request into
-`main` has to pass `.github/workflows/ci.yml` (lint, unit tests, build, backend tests) before it
-can be merged, and the merge is the deploy. That gate only holds with branch protection on `main`:
-in the repository, **Settings → Branches → Add branch ruleset**, target `main`, and enable
-*Require a pull request before merging*, *Require status checks to pass* (add `frontend` and
-`backend`) and *Block force pushes*.
+Every published release goes live on its own; merges to `main` alone don't. Work happens on
+feature branches; a pull request into `main` has to pass `.github/workflows/ci.yml` (lint, unit
+tests, build, backend tests) before it can be merged. That gate only holds with branch protection
+on `main`: in the repository, **Settings → Branches → Add branch ruleset**, target `main`, and
+enable *Require a pull request before merging*, *Require status checks to pass* (add `frontend`
+and `backend`) and *Block force pushes*.
+
+Shipping is a GitHub release with a semantic version tag on `main`:
+
+| Bump | When | Example |
+|---|---|---|
+| Major | A big new feature | `v1.4.2` → `v2.0.0` |
+| Minor | New functionality in an existing feature | `v1.4.2` → `v1.5.0` |
+| Patch | Bug fixes and very small changes | `v1.4.2` → `v1.4.3` |
+
+```bash
+gh release create v1.5.0 --target main --generate-notes   # or Releases → Draft a new release
+```
 
 On the Pi, a systemd timer runs `deploy/auto-deploy.sh` every 2 minutes. It does one `git fetch`;
-only when `origin/main` has moved does it back up the database, fast-forward the checkout and
-rebuild. The units assume user `berdi-websites` and the repo at
-`/home/berdi-websites/training-tracking` — edit `deploy/training-deploy.service` first if yours
-differ.
+only when the newest `vX.Y.Z` tag differs from the one in `deploy/.deployed-version` does it back
+up the database, check out the tag and rebuild, passing the version into the frontend build (shown
+at the bottom of the user menu). Before the build it also saves the GitHub release notes (public
+API, no token) as `frontend/public/whats-new.json`, which the app shows as "Neuigkeiten"; if
+GitHub is unreachable the deploy goes ahead without them. Pre-release tags like `v2.0.0-rc1` are
+ignored. The units assume
+user `berdi-websites` and the repo at `/home/berdi-websites/training-tracking` — edit
+`deploy/training-deploy.service` first if yours differ.
 
 ```bash
 cd ~/training-tracking
-git switch main && git status            # must be on main with a clean working tree
+git status                               # must be a clean working tree
 sudo cp deploy/training-deploy.service deploy/training-deploy.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now training-deploy.timer
@@ -178,18 +194,20 @@ journalctl -u training-deploy -f              # deploy output, incl. build error
 sudo systemctl start training-deploy           # check now instead of waiting
 ```
 
-If a build fails, the old containers keep running and the checkout already sits on the new
-commit, so the timer won't retry it — fix forward with another merge, or rerun the `up -d --build`
-below by hand. The merge itself refuses (`--ff-only`) if someone edited files on the Pi; `git
-status` there shows what.
+If a build fails, the old containers keep running and the tag is already recorded as deployed, so
+the timer won't retry it — fix forward with a patch release, or rerun the `up -d --build` below by
+hand. The script refuses to deploy at all if someone edited files on the Pi; `git status` there
+shows what.
+
+To roll back, publish the fix as a new patch release; the timer only ever moves to the newest tag.
 
 The service worker picks up the new frontend the next time you fully close and reopen the app.
 
 ### Updating by hand
 
 ```bash
-cd ~/training-tracking && git pull
-docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
+cd ~/training-tracking && git fetch --tags && git checkout v1.5.0
+APP_VERSION=1.5.0 docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
 ```
 
 ## When something doesn't work
