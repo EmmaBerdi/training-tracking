@@ -32,10 +32,38 @@
   margin-bottom: 12px;
 }
 
-.grid {
+/* Short enough for its numbers, so the prepare field doesn't stretch across the whole sheet. */
+.seconds {
+  max-width: 120px;
+}
+
+/** One interval per row: its number, work, rest and remove; the head labels the columns once. */
+.stepHead,
+.stepRow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0 8px;
+  grid-template-columns: 56px 1fr 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepRow {
+  margin-bottom: 6px;
+}
+
+.stepNumber {
+  font-family: var(--num);
+  color: var(--mute);
+  text-align: center;
+}
+
+.stepRemove {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 18px;
+  line-height: 1;
 }
 
 .row {

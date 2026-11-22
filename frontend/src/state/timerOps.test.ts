@@ -6,27 +6,56 @@ import {
   formatClock,
   phaseAt,
   phaseStarts,
+  roundSeconds,
   timerSummary,
   totalSeconds,
 } from './timerOps';
 
-const TABATA: IntervalTimer = { id: 1, name: 'Tabata', prepareSec: 10, workSec: 20, restSec: 10 };
+/** A timer of one interval per round. */
+function single(prepareSec: number, workSec: number, restSec: number): IntervalTimer {
+  return { id: 1, name: 'Tabata', prepareSec, steps: [{ workSec, restSec }] };
+}
+
+const TABATA = single(10, 20, 10);
 
 describe('buildSchedule', () => {
   it('prepares once, then works and rests each round, with no rest after the last', () => {
     expect(buildSchedule(TABATA, 3)).toEqual([
-      { kind: 'prepare', seconds: 10, round: 0 },
-      { kind: 'work', seconds: 20, round: 1 },
-      { kind: 'rest', seconds: 10, round: 1 },
-      { kind: 'work', seconds: 20, round: 2 },
-      { kind: 'rest', seconds: 10, round: 2 },
-      { kind: 'work', seconds: 20, round: 3 },
+      { kind: 'prepare', seconds: 10, round: 0, step: 0 },
+      { kind: 'work', seconds: 20, round: 1, step: 1 },
+      { kind: 'rest', seconds: 10, round: 1, step: 1 },
+      { kind: 'work', seconds: 20, round: 2, step: 1 },
+      { kind: 'rest', seconds: 10, round: 2, step: 1 },
+      { kind: 'work', seconds: 20, round: 3, step: 1 },
     ]);
   });
 
+  it('runs every interval of a round in order, resting after each but the very last', () => {
+    const ski: IntervalTimer = {
+      id: 2,
+      name: 'Ski',
+      prepareSec: 0,
+      steps: [
+        { workSec: 40, restSec: 10 },
+        { workSec: 60, restSec: 10 },
+      ],
+    };
+    expect(roundSeconds(ski)).toBe(120);
+    expect(buildSchedule(ski, 2).map((p) => `${p.kind} ${p.seconds} ${p.round}.${p.step}`)).toEqual(
+      [
+        'work 40 1.1',
+        'rest 10 1.1',
+        'work 60 1.2',
+        'rest 10 1.2',
+        'work 40 2.1',
+        'rest 10 2.1',
+        'work 60 2.2',
+      ],
+    );
+  });
+
   it('leaves out phases of zero length', () => {
-    const noBreaks = { ...TABATA, prepareSec: 0, restSec: 0 };
-    expect(buildSchedule(noBreaks, 2).map((p) => p.kind)).toEqual(['work', 'work']);
+    expect(buildSchedule(single(0, 20, 0), 2).map((p) => p.kind)).toEqual(['work', 'work']);
   });
 
   it('adds up a Tabata of eight rounds to four minutes plus preparing, less the last rest', () => {
@@ -55,8 +84,7 @@ describe('phaseAt', () => {
 });
 
 describe('cuesFrom', () => {
-  const short: IntervalTimer = { ...TABATA, prepareSec: 5, workSec: 4, restSec: 2 };
-  const schedule = buildSchedule(short, 2); // prepare 0–5, work 5–9, rest 9–11, work 11–15
+  const schedule = buildSchedule(single(5, 4, 2), 2); // prepare 0–5, work 5–9, rest 9–11, work 11–15
 
   it('beeps into work and rest, counts down each phase, and finishes at the end', () => {
     expect(cuesFrom(schedule, 0)).toEqual([
@@ -91,8 +119,16 @@ describe('formatting', () => {
     expect(formatClock(240)).toBe('4:00');
   });
 
-  it('summarises work and rest, or work alone', () => {
-    expect(timerSummary(TABATA)).toBe('20s / 10s');
-    expect(timerSummary({ ...TABATA, restSec: 0 })).toBe('20s');
+  it('summarises work and rest per interval, or work alone', () => {
+    expect(timerSummary(TABATA)).toBe('20/10 s');
+    expect(
+      timerSummary({
+        ...TABATA,
+        steps: [
+          { workSec: 40, restSec: 10 },
+          { workSec: 60, restSec: 0 },
+        ],
+      }),
+    ).toBe('40/10 · 60 s');
   });
 });

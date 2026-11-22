@@ -94,6 +94,9 @@ export const NAV: Record<NavTarget, { icon: string; label: string }> = {
 /** The longest phase a timer accepts, in seconds; mirrors the CHECKs on `interval_timer`. */
 export const TIMER_MAX_SEC = 3600;
 
+/** Intervals one timer's round can hold; mirrors `IntervalTimerRequest.MAX_STEPS` on the backend. */
+export const TIMER_MAX_STEPS = 20;
+
 /** What the run screen calls each phase of a timer. */
 export const PHASE_LABEL: Record<PhaseKind, string> = {
   prepare: 'Vorbereiten',

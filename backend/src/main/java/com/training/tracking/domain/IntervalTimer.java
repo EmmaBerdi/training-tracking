@@ -1,13 +1,24 @@
 package com.training.tracking.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.BatchSize;
 
-/** One round of an interval exercise: prepare once, then work and rest; the exercise sets the rounds. */
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * One round of an interval exercise: prepare once, then its intervals in order, each work and rest.
+ * The exercise sets how many rounds.
+ */
 @Entity
 @Table(name = "interval_timer")
 public class IntervalTimer {
@@ -25,11 +36,12 @@ public class IntervalTimer {
     @Column(name = "prepare_sec", nullable = false)
     private int prepareSec;
 
-    @Column(name = "work_sec", nullable = false)
-    private int workSec;
-
-    @Column(name = "rest_sec", nullable = false)
-    private int restSec;
+    /** Batched so listing the timers doesn't query once per timer. */
+    @ElementCollection
+    @CollectionTable(name = "interval_timer_step", joinColumns = @JoinColumn(name = "timer_id"))
+    @OrderColumn(name = "position")
+    @BatchSize(size = 100)
+    private List<TimerStep> steps = new ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -43,9 +55,6 @@ public class IntervalTimer {
     public int getPrepareSec() { return prepareSec; }
     public void setPrepareSec(int prepareSec) { this.prepareSec = prepareSec; }
 
-    public int getWorkSec() { return workSec; }
-    public void setWorkSec(int workSec) { this.workSec = workSec; }
-
-    public int getRestSec() { return restSec; }
-    public void setRestSec(int restSec) { this.restSec = restSec; }
+    public List<TimerStep> getSteps() { return steps; }
+    public void setSteps(List<TimerStep> steps) { this.steps = steps; }
 }

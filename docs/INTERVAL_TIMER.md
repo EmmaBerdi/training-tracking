@@ -10,7 +10,7 @@ it whenever one changes.
 | 1 | Timers are stored on the **backend**, per user. |
 | 2 | Timers are created on their own **timer page**, reached from **Plan mode** (header button next to „+ Plan“, and „Timer verwalten…“ in the exercise editor). |
 | 3 | A new exercise type **`interval`** („Intervall“) in the existing type dropdown. Choosing it shows a timer picker in the exercise editor. |
-| 4 | A timer describes **one set**: prepare, work, rest. The **number of rounds** is set per exercise (the exercise's `sets` field, labelled „Runden“ for this type). |
+| 4 | A timer describes **one round**: prepare once, then a list of **intervals** (rows), each work + rest, run in order — e.g. 40/10 then 60/10. The **number of rounds** is set per exercise (the exercise's `sets` field, labelled „Runden“ for this type). |
 | 5 | Interval exercises log **no values per set**, only the **effort rating** (leicht / mittel / schwer), with the same chips as everywhere else — always shown for this type. |
 | 6 | **Beeps only**, no voice. |
 | 7 | Interval exercises are bilateral; the uni toggle is hidden for this type. |
@@ -26,6 +26,13 @@ it whenever one changes.
 - `exercise.timer_id` FK → `interval_timer(id) ON DELETE SET NULL`. Storing the server id is fine
   here: timers are never recreated, unlike the plan rows `PUT /api/state` rebuilds.
 - New `<include>` in `db.changelog-master.xml`; no deployed changeset is edited.
+
+### Backend — `010-interval-timer-steps.sql`
+
+- Table `interval_timer_step` (`timer_id`, `position`, `work_sec` 1–3600, `rest_sec` 0–3600), the
+  intervals of a round in order; at most 20 per timer (`IntervalTimerRequest.MAX_STEPS`).
+- Each existing timer's `work_sec`/`rest_sec` becomes its first interval, then those columns are
+  dropped. A separate changeset rather than an edit of 009, which had already run on a local DB.
 
 ### Backend — code
 
@@ -52,8 +59,10 @@ it whenever one changes.
 
 ## UI
 
-- **Timer page** (Plan mode): list with name and summary („20s / 10s“), „+ Timer“, tap to edit in a
-  `Sheet` with steppers and a „Testen“ button.
+- **Timer page** (Plan mode): list with name and summary („40/10 · 60/10 s“), „+ Timer“, tap to
+  edit in a `Sheet`: prepare, one row per interval (work, rest, ×), „+ Intervall“ (copies the last
+  row), and a „Testen“ button. The run screen shows „Intervall a / b“ under the round when a timer
+  has more than one.
 - **Exercise editor**: for `interval`, a timer select (your timers + „Neuer Timer…“) and „Runden“
   instead of „Sätze“.
 - **Log**: an interval exercise card shows the timer summary and rounds, a „▶ Timer starten“

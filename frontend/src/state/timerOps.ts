@@ -3,11 +3,15 @@ import type { Cue } from '../utils/sound';
 
 export type PhaseKind = 'prepare' | 'work' | 'rest';
 
-/** One stretch of a timer run; `round` counts from 1 and is 0 while preparing. */
+/**
+ * One stretch of a timer run. `round` and `step` (the interval within the round) count from 1; both
+ * are 0 while preparing.
+ */
 export interface Phase {
   kind: PhaseKind;
   seconds: number;
   round: number;
+  step: number;
 }
 
 /** Where a run stands: the phase under way and the time left in it. Past the end, `done`. */
@@ -16,20 +20,29 @@ export type Position =
   | { done: true; index: number; remainingMs: 0 };
 
 /**
- * A run of `rounds` rounds: prepare once, then work and rest each round. No rest after the last
- * round — the run is over — and zero-length phases are left out, so a timer without rest is just
- * back-to-back work.
+ * A run of `rounds` rounds: prepare once, then each round the timer's intervals in order, work and
+ * rest. No rest after the very last interval — the run is over — and zero-length phases are left
+ * out, so an interval without rest goes straight into the next one.
  */
 export function buildSchedule(timer: IntervalTimer, rounds: number): Phase[] {
   const phases: Phase[] = [];
-  if (timer.prepareSec > 0) phases.push({ kind: 'prepare', seconds: timer.prepareSec, round: 0 });
+  if (timer.prepareSec > 0) {
+    phases.push({ kind: 'prepare', seconds: timer.prepareSec, round: 0, step: 0 });
+  }
   for (let round = 1; round <= rounds; round++) {
-    if (timer.workSec > 0) phases.push({ kind: 'work', seconds: timer.workSec, round });
-    if (round < rounds && timer.restSec > 0) {
-      phases.push({ kind: 'rest', seconds: timer.restSec, round });
-    }
+    timer.steps.forEach((s, i) => {
+      const step = i + 1;
+      if (s.workSec > 0) phases.push({ kind: 'work', seconds: s.workSec, round, step });
+      const last = round === rounds && step === timer.steps.length;
+      if (!last && s.restSec > 0) phases.push({ kind: 'rest', seconds: s.restSec, round, step });
+    });
   }
   return phases;
+}
+
+/** How long one round takes, every interval with its rest. */
+export function roundSeconds(timer: Pick<IntervalTimer, 'steps'>): number {
+  return timer.steps.reduce((sum, s) => sum + s.workSec + s.restSec, 0);
 }
 
 export function totalSeconds(schedule: Phase[]): number {
@@ -84,7 +97,10 @@ export function formatClock(totalSec: number): string {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
-/** "20s / 10s", or just "40s" without rest. */
+/** Work/rest per interval in seconds: "20/10 s", "40/10 · 60/10 s"; "40" alone without rest. */
 export function timerSummary(timer: IntervalTimer): string {
-  return timer.restSec > 0 ? `${timer.workSec}s / ${timer.restSec}s` : `${timer.workSec}s`;
+  const parts = timer.steps.map((s) =>
+    s.restSec > 0 ? `${s.workSec}/${s.restSec}` : `${s.workSec}`,
+  );
+  return `${parts.join(' · ')} s`;
 }

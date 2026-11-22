@@ -21,6 +21,7 @@ export function TimerRun({ timer, rounds, title, onFinish, onClose }: TimerRunPr
   const { schedule, position, finished } = run;
   const phase = schedule[position.index];
   const next = finished ? undefined : schedule[position.index + 1];
+  const steps = timer.steps.length;
   const secondsLeft = Math.ceil(position.remainingMs / 1000);
 
   const close = () => {
@@ -70,6 +71,9 @@ export function TimerRun({ timer, rounds, title, onFinish, onClose }: TimerRunPr
         <div className={styles.count}>{finished ? '✓' : formatClock(secondsLeft)}</div>
         <div className={styles.round}>
           {phase.round > 0 ? `Runde ${phase.round} / ${rounds}` : `${rounds} Runden`}
+          {phase.step > 0 && steps > 1 && (
+            <div className={styles.step}>{`Intervall ${phase.step} / ${steps}`}</div>
+          )}
         </div>
       </div>
 

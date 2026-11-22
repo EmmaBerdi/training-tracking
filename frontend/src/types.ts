@@ -91,13 +91,21 @@ export interface Rating {
   step?: string;
 }
 
-/** One round of an interval exercise: prepare once, then work and rest. The exercise sets the rounds. */
+/** One interval of a timer's round: work, then rest. */
+export interface TimerStep {
+  workSec: number;
+  restSec: number;
+}
+
+/**
+ * One round of an interval exercise: prepare once, then its intervals in order. The exercise sets
+ * how many rounds.
+ */
 export interface IntervalTimer {
   id: number;
   name: string;
   prepareSec: number;
-  workSec: number;
-  restSec: number;
+  steps: TimerStep[];
 }
 
 /** Everything needed to create or replace a timer; the id is assigned by the backend. */

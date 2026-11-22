@@ -9,6 +9,7 @@ import com.training.tracking.dto.IntervalTimerDto;
 import com.training.tracking.dto.IntervalTimerRequest;
 import com.training.tracking.dto.PlanDto;
 import com.training.tracking.dto.StateDto;
+import com.training.tracking.dto.TimerStepDto;
 import com.training.tracking.repository.SessionTypeRepository;
 import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +62,7 @@ class IntervalTimerServiceTest {
     }
 
     private static IntervalTimerRequest tabata() {
-        return new IntervalTimerRequest("Tabata", 10, 20, 10);
+        return new IntervalTimerRequest("Tabata", 10, List.of(new TimerStepDto(20, 10)));
     }
 
     private StateDto planWith(Long timerId) {
@@ -87,9 +88,12 @@ class IntervalTimerServiceTest {
         IntervalTimerDto created = timerService.createTimer(userId, tabata());
         assertThat(timerService.listTimers(userId)).containsExactly(created);
 
+        List<TimerStepDto> pyramid = List.of(new TimerStepDto(40, 10), new TimerStepDto(60, 10),
+                new TimerStepDto(40, 0));
         IntervalTimerDto updated = timerService.updateTimer(userId, created.id(),
-                new IntervalTimerRequest("  Bike 40/20 ", 5, 40, 20));
-        assertThat(updated).isEqualTo(new IntervalTimerDto(created.id(), "Bike 40/20", 5, 40, 20));
+                new IntervalTimerRequest("  Ski 40/60/40 ", 5, pyramid));
+        assertThat(updated).isEqualTo(new IntervalTimerDto(created.id(), "Ski 40/60/40", 5, pyramid));
+        // The intervals come back in the order they were given.
         assertThat(timerService.listTimers(userId)).containsExactly(updated);
 
         timerService.deleteTimer(userId, created.id());

@@ -1,8 +1,10 @@
 package com.training.tracking.service;
 
 import com.training.tracking.domain.IntervalTimer;
+import com.training.tracking.domain.TimerStep;
 import com.training.tracking.dto.IntervalTimerDto;
 import com.training.tracking.dto.IntervalTimerRequest;
+import com.training.tracking.dto.TimerStepDto;
 import com.training.tracking.repository.ExerciseRepository;
 import com.training.tracking.repository.IntervalTimerRepository;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -78,12 +81,13 @@ public class IntervalTimerService {
     private static void apply(IntervalTimer timer, IntervalTimerRequest request) {
         timer.setName(request.name().strip());
         timer.setPrepareSec(request.prepareSec());
-        timer.setWorkSec(request.workSec());
-        timer.setRestSec(request.restSec());
+        timer.setSteps(new ArrayList<>(request.steps().stream()
+                .map(s -> new TimerStep(s.workSec(), s.restSec()))
+                .toList()));
     }
 
     private static IntervalTimerDto toDto(IntervalTimer timer) {
-        return new IntervalTimerDto(timer.getId(), timer.getName(), timer.getPrepareSec(), timer.getWorkSec(),
-                timer.getRestSec());
+        return new IntervalTimerDto(timer.getId(), timer.getName(), timer.getPrepareSec(),
+                timer.getSteps().stream().map(s -> new TimerStepDto(s.getWorkSec(), s.getRestSec())).toList());
     }
 }

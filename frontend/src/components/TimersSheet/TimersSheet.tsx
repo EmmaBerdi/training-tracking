@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { IntervalTimer, IntervalTimerInput } from '../../types';
-import { TIMER_MAX_SEC } from '../../data/constants';
-import { formatClock, timerSummary } from '../../state/timerOps';
+import type { IntervalTimer, IntervalTimerInput, TimerStep } from '../../types';
+import { TIMER_MAX_SEC, TIMER_MAX_STEPS } from '../../data/constants';
+import { formatClock, roundSeconds, timerSummary } from '../../state/timerOps';
 import styles from './TimersSheet.module.scss';
 
 interface TimersSheetProps {
@@ -17,7 +17,11 @@ interface TimersSheetProps {
   onTest: (timer: IntervalTimer) => void;
 }
 
-const NEW_TIMER: IntervalTimerInput = { name: '', prepareSec: 10, workSec: 20, restSec: 10 };
+const NEW_TIMER: IntervalTimerInput = {
+  name: '',
+  prepareSec: 10,
+  steps: [{ workSec: 20, restSec: 10 }],
+};
 
 /** Who is being edited: nobody (the list), a new timer, or an existing one. */
 type Editing = null | 'new' | IntervalTimer;
@@ -97,10 +101,18 @@ interface TimerFormProps {
 function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFormProps) {
   const [input, setInput] = useState<IntervalTimerInput>(timer ?? NEW_TIMER);
   const [busy, setBusy] = useState(false);
-  const complete = input.name.trim() !== '' && input.workSec >= 1;
+  const complete = input.name.trim() !== '' && input.steps.every((s) => s.workSec >= 1);
 
-  const setSec = (field: 'prepareSec' | 'workSec' | 'restSec', value: string) =>
-    setInput((prev) => ({ ...prev, [field]: clampSec(value) }));
+  const setStep = (index: number, field: keyof TimerStep, value: string) =>
+    setInput((prev) => ({
+      ...prev,
+      steps: prev.steps.map((s, i) => (i === index ? { ...s, [field]: clampSec(value) } : s)),
+    }));
+  // A new interval repeats the last one, the usual starting point for a ladder or a pyramid.
+  const addStep = () =>
+    setInput((prev) => ({ ...prev, steps: [...prev.steps, prev.steps[prev.steps.length - 1]] }));
+  const removeStep = (index: number) =>
+    setInput((prev) => ({ ...prev, steps: prev.steps.filter((_, i) => i !== index) }));
 
   const submit = async () => {
     if (!complete || busy) return;
@@ -113,8 +125,8 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
     <>
       <h2 className={styles.title}>{timer ? 'Timer bearbeiten' : 'Neuer Timer'}</h2>
       <div className={styles.sub}>
-        Eine Runde dauert {formatClock(input.workSec + input.restSec)}; vorbereitet wird einmal zu
-        Beginn.
+        Eine Runde läuft die Intervalle der Reihe nach durch und dauert{' '}
+        {formatClock(roundSeconds(input))}; vorbereitet wird einmal zu Beginn.
       </div>
 
       <div className={styles.field}>
@@ -128,43 +140,63 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
         />
       </div>
 
-      <div className={styles.grid}>
-        <div className={styles.field}>
-          <label htmlFor="timer-work">Arbeit (s)</label>
-          <input
-            id="timer-work"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={TIMER_MAX_SEC}
-            value={input.workSec}
-            onChange={(e) => setSec('workSec', e.target.value)}
-          />
+      <div className={styles.field}>
+        <label htmlFor="timer-prepare">Vorbereiten (s)</label>
+        <input
+          id="timer-prepare"
+          className={styles.seconds}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={TIMER_MAX_SEC}
+          value={input.prepareSec}
+          onChange={(e) => setInput((prev) => ({ ...prev, prepareSec: clampSec(e.target.value) }))}
+        />
+      </div>
+
+      <div className={styles.field}>
+        <div className={styles.stepHead}>
+          <label>Intervall</label>
+          <label>Arbeit (s)</label>
+          <label>Pause (s)</label>
         </div>
-        <div className={styles.field}>
-          <label htmlFor="timer-rest">Pause (s)</label>
-          <input
-            id="timer-rest"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={TIMER_MAX_SEC}
-            value={input.restSec}
-            onChange={(e) => setSec('restSec', e.target.value)}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="timer-prepare">Vorbereiten (s)</label>
-          <input
-            id="timer-prepare"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={TIMER_MAX_SEC}
-            value={input.prepareSec}
-            onChange={(e) => setSec('prepareSec', e.target.value)}
-          />
-        </div>
+        {input.steps.map((s, i) => (
+          <div key={i} className={styles.stepRow}>
+            <span className={styles.stepNumber}>{i + 1}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              aria-label={`Arbeit in Intervall ${i + 1}, Sekunden`}
+              min={1}
+              max={TIMER_MAX_SEC}
+              value={s.workSec}
+              onChange={(e) => setStep(i, 'workSec', e.target.value)}
+            />
+            <input
+              type="number"
+              inputMode="numeric"
+              aria-label={`Pause nach Intervall ${i + 1}, Sekunden`}
+              min={0}
+              max={TIMER_MAX_SEC}
+              value={s.restSec}
+              onChange={(e) => setStep(i, 'restSec', e.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.stepRemove}
+              aria-label={`Intervall ${i + 1} entfernen`}
+              disabled={input.steps.length === 1}
+              onClick={() => removeStep(i)}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {input.steps.length < TIMER_MAX_STEPS && (
+          <button type="button" className={styles.addButton} onClick={addStep}>
+            + Intervall
+          </button>
+        )}
       </div>
 
       <button
