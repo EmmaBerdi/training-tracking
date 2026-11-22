@@ -73,6 +73,9 @@ export function UserMenu({ email, onReopenIntro, onChangePassword, onLogout }: U
           <button type="button" role="menuitem" className={styles.item} onClick={run(onLogout)}>
             Abmelden
           </button>
+          {import.meta.env.VITE_APP_VERSION && (
+            <div className={styles.version}>Version {import.meta.env.VITE_APP_VERSION}</div>
+          )}
         </div>
       )}
     </div>

@@ -8,6 +8,9 @@ COPY . .
 # "/api". Left unset the bundle falls back to window.API_BASE, as the GitHub Pages build does.
 ARG VITE_API_BASE
 ENV VITE_API_BASE=$VITE_API_BASE
+# The release being built, passed in because the build context has no .git to read it from.
+ARG VITE_APP_VERSION
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
 RUN npm run build
 
 FROM nginx:1.27-alpine

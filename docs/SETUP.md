@@ -2,7 +2,7 @@
 
 Persönliche Trainings-App. Läuft als PWA auf dem iPhone, ohne App Store und ohne Apple-Developer-Konto. Die App selbst installiert sich offline, braucht zum Laden und Speichern der Daten aber eine Verbindung zum Backend — siehe zuerst [`docs/BACKEND.md`](BACKEND.md).
 
-Die ganze App — Datenbank, Backend und Frontend — läuft auf einem Raspberry Pi und ist über deine eigene Subdomain per HTTPS erreichbar. Wie du den Pi einrichtest, steht in [`docs/DEPLOY-PI.md`](DEPLOY-PI.md). Danach baut sich der Pi bei jedem Merge nach `main` selbst neu — du musst nichts lokal bauen oder hochladen.
+Die ganze App — Datenbank, Backend und Frontend — läuft auf einem Raspberry Pi und ist über deine eigene Subdomain per HTTPS erreichbar. Wie du den Pi einrichtest, steht in [`docs/DEPLOY-PI.md`](DEPLOY-PI.md). Danach baut sich der Pi bei jedem neuen Release selbst neu — du musst nichts lokal bauen oder hochladen.
 
 ### Ist das Repository öffentlich?
 
@@ -34,7 +34,14 @@ Am Code selbst änderst du so:
 1. Einen Feature-Branch anlegen: `git switch -c feat/name` — direkt auf `main` pushen ist gesperrt
 2. Ändern, committen, `git push -u origin feat/name`
 3. Auf GitHub einen Pull Request nach `main` öffnen. Die Checks im Reiter **Checks** (Lint, Tests, Build) müssen grün sein, sonst lässt sich nicht mergen
-4. **Merge** — das ist das Deployment. Spätestens nach 2 Minuten merkt der Pi den neuen Stand, sichert die Datenbank und baut neu (je nach Änderung eine bis einige Minuten)
+4. **Merge** — damit ist die Änderung auf `main`, aber noch nicht auf dem Pi. Mehrere Merges können so gesammelt in ein Release gehen
+5. **Release** — das ist das Deployment. Auf GitHub unter **Releases → Draft a new release** einen neuen Tag auf `main` anlegen (oder `gh release create v1.5.0 --target main --generate-notes`). Spätestens nach 2 Minuten merkt der Pi den neuen Tag, sichert die Datenbank und baut neu (je nach Änderung eine bis einige Minuten). Die laufende Version steht unten im Benutzermenü
+
+Die Versionsnummer folgt `vMAJOR.MINOR.PATCH`:
+
+- **Major** (`v1.4.2` → `v2.0.0`): ein grosses neues Feature
+- **Minor** (`v1.4.2` → `v1.5.0`): neue Funktion in einem bestehenden Feature
+- **Patch** (`v1.4.2` → `v1.4.3`): Bugfixes und sehr kleine Änderungen
 
 Ein manueller Cache-Versionsschritt wie früher entfällt — der Service Worker aktualisiert sich beim nächsten Start der App automatisch, sobald ein neuer Build online ist. Einmal die App schliessen (im App-Umschalter nach oben wischen) und neu öffnen reicht.
 

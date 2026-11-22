@@ -58,6 +58,8 @@ services:
       args:
         # Same origin as the page, so the client never needs to know the hostname it is served from.
         VITE_API_BASE: /api
+        # Set by deploy/auto-deploy.sh from the release tag; a build by hand shows "dev".
+        VITE_APP_VERSION: ${APP_VERSION:-dev}
     restart: unless-stopped
     ports:
       - '127.0.0.1:${HOST_PORT:-8090}:80'
