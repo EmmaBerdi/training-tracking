@@ -9,4 +9,7 @@ public record PasswordResetConfirmRequest(
         @NotBlank @Pattern(regexp = "\\d{6}") String code,
         @NotBlank @Size(min = 8, max = 255) String newPassword
 ) {
+    public PasswordResetConfirmRequest {
+        email = Emails.normalize(email);
+    }
 }

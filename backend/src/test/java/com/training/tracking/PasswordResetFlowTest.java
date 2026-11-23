@@ -22,9 +22,11 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +71,26 @@ class PasswordResetFlowTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, login(email, "old-password").getStatusCode());
         assertEquals(HttpStatus.OK, login(email, "new-password").getStatusCode());
+    }
+
+    // Raw maps, not the request records, so the server is the one normalising the address.
+    @Test
+    void resetWorksWhateverTheCasingOfTheAddress() {
+        register("reset-casing@example.com", "old-password");
+
+        ResponseEntity<String> requestRes = restTemplate.postForEntity("/api/auth/password-reset/request",
+                Map.of("email", " Reset-Casing@Example.com"), String.class);
+        assertEquals(HttpStatus.ACCEPTED, requestRes.getStatusCode());
+        String code = lastMailedCode(1);
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertArrayEquals(new String[] {"reset-casing@example.com"}, captor.getValue().getTo());
+
+        ResponseEntity<String> confirmRes = restTemplate.postForEntity("/api/auth/password-reset/confirm",
+                Map.of("email", "RESET-CASING@example.com ", "code", code, "newPassword", "new-password"),
+                String.class);
+        assertEquals(HttpStatus.NO_CONTENT, confirmRes.getStatusCode());
+        assertEquals(HttpStatus.OK, login("reset-casing@example.com", "new-password").getStatusCode());
     }
 
     @Test

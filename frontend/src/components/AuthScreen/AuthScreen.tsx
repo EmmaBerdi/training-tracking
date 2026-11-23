@@ -85,6 +85,7 @@ export function AuthScreen() {
           type="email"
           placeholder="E-Mail"
           autoComplete="email"
+          autoCapitalize="none"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
