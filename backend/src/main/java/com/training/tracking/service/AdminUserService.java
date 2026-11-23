@@ -3,8 +3,8 @@ package com.training.tracking.service;
 import com.training.tracking.domain.Invitation;
 import com.training.tracking.domain.User;
 import com.training.tracking.dto.admin.AdminUserDto;
-import com.training.tracking.dto.admin.CreateUserRequest;
-import com.training.tracking.dto.admin.InviteResponse;
+import com.training.tracking.dto.admin.InvitationResponse;
+import com.training.tracking.dto.admin.InviteUserRequest;
 import com.training.tracking.dto.auth.Emails;
 import com.training.tracking.repository.InvitationRepository;
 import com.training.tracking.repository.RefreshTokenRepository;
@@ -14,12 +14,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -35,54 +37,61 @@ public class AdminUserService {
     private final InvitationService invitationService;
     private final StateService stateService;
     private final EntityManager entityManager;
+    private final TransactionTemplate transactionTemplate;
 
     public AdminUserService(UserRepository userRepository,
                             InvitationRepository invitationRepository,
                             RefreshTokenRepository refreshTokenRepository,
                             InvitationService invitationService,
                             StateService stateService,
-                            EntityManager entityManager) {
+                            EntityManager entityManager,
+                            TransactionTemplate transactionTemplate) {
         this.userRepository = userRepository;
         this.invitationRepository = invitationRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.invitationService = invitationService;
         this.stateService = stateService;
         this.entityManager = entityManager;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Transactional(readOnly = true)
     public List<AdminUserDto> list() {
         List<User> users = userRepository.findAll(Sort.by("createdAt", "id"));
+        List<Long> invitedIds = users.stream()
+                .filter(user -> User.STATUS_INVITED.equals(user.getStatus()))
+                .map(User::getId)
+                .toList();
         // Every invitation lives equally long, so the newest one is the one expiring last.
-        Map<Long, Instant> invitationExpiry = invitationRepository
-                .findAllByUserIdIn(users.stream().map(User::getId).toList()).stream()
+        Map<Long, Instant> invitationExpiry = invitationRepository.findAllByUserIdIn(invitedIds).stream()
                 .collect(Collectors.toMap(Invitation::getUserId, Invitation::getExpiresAt,
                         (a, b) -> a.isAfter(b) ? a : b));
         return users.stream().map(user -> toDto(user, invitationExpiry.get(user.getId()))).toList();
     }
 
-    @Transactional
-    public InviteResponse invite(CreateUserRequest request) {
-        if (userRepository.existsByNormalizedEmail(request.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "email already registered");
-        }
-        User user = new User();
-        user.setEmail(request.email());
-        user.setDisplayName(StringUtils.hasText(request.displayName()) ? request.displayName().trim() : null);
-        user.setStatus(User.STATUS_INVITED);
-        user.setCreatedAt(Instant.now());
-        userRepository.save(user);
-        return sendInvitation(user);
+    public InvitationResponse invite(InviteUserRequest request) {
+        return sendInvitation(() -> {
+            if (userRepository.existsByNormalizedEmail(request.email())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "email already registered");
+            }
+            User user = new User();
+            user.setEmail(request.email());
+            user.setDisplayName(StringUtils.hasText(request.displayName()) ? request.displayName().trim() : null);
+            user.setStatus(User.STATUS_INVITED);
+            user.setCreatedAt(Instant.now());
+            return userRepository.save(user);
+        });
     }
 
     /** A fresh link for an account still waiting; the earlier ones stop working. */
-    @Transactional
-    public InviteResponse resendInvitation(Long userId) {
-        User user = find(userId);
-        if (!User.STATUS_INVITED.equals(user.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "account is not invited");
-        }
-        return sendInvitation(user);
+    public InvitationResponse resendInvitation(Long userId) {
+        return sendInvitation(() -> {
+            User user = find(userId);
+            if (!User.STATUS_INVITED.equals(user.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "account is not invited");
+            }
+            return user;
+        });
     }
 
     /**
@@ -131,7 +140,8 @@ public class AdminUserService {
     /**
      * Children before parents, explicit rather than left to ON DELETE CASCADE, like StateService's
      * wipe: in Postgres a cascade from "user" can reach session_type before the rows that RESTRICT
-     * it, and the H2 test schema has no cascades at all.
+     * it, and the H2 test schema has no cascades at all. A new table holding a user's rows has to be
+     * added here, or deleting an account that has some fails on the foreign key.
      */
     private void deleteAccountData(Long userId) {
         bulkDelete("DELETE FROM PlannedSession p WHERE p.userId = :userId", userId);
@@ -157,9 +167,20 @@ public class AdminUserService {
         entityManager.createQuery(jpql).setParameter("userId", userId).executeUpdate();
     }
 
-    private InviteResponse sendInvitation(User user) {
-        InvitationService.Issued issued = invitationService.issue(user);
-        return new InviteResponse(toDto(user, issued.expiresAt()), issued.mailed() ? null : issued.link());
+    /**
+     * Stores the account's new invitation in its own transaction and mails it after the commit (see
+     * {@link InvitationService#issue}).
+     */
+    private InvitationResponse sendInvitation(Supplier<User> invitedAccount) {
+        record Pending(User user, InvitationService.Issued issued) {
+        }
+        Pending pending = transactionTemplate.execute(status -> {
+            User user = invitedAccount.get();
+            return new Pending(user, invitationService.issue(user));
+        });
+        boolean mailed = invitationService.mail(pending.issued());
+        return new InvitationResponse(toDto(pending.user(), pending.issued().expiresAt()),
+                mailed ? null : pending.issued().link());
     }
 
     private User find(Long userId) {

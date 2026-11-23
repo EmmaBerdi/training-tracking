@@ -1,8 +1,9 @@
 package com.training.tracking.web;
 
 import com.training.tracking.dto.admin.AdminUserDto;
-import com.training.tracking.dto.admin.CreateUserRequest;
-import com.training.tracking.dto.admin.InviteResponse;
+import com.training.tracking.dto.admin.DeleteUserRequest;
+import com.training.tracking.dto.admin.InvitationResponse;
+import com.training.tracking.dto.admin.InviteUserRequest;
 import com.training.tracking.security.UserPrincipal;
 import com.training.tracking.service.AdminUserService;
 import jakarta.validation.Valid;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,11 +23,11 @@ import java.util.List;
 /** Account management. Only admins get past SecurityConfig to here (see AdminAccess). */
 @RestController
 @RequestMapping("/api/admin/users")
-public class AdminController {
+public class AdminUserController {
 
     private final AdminUserService adminUserService;
 
-    public AdminController(AdminUserService adminUserService) {
+    public AdminUserController(AdminUserService adminUserService) {
         this.adminUserService = adminUserService;
     }
 
@@ -37,12 +37,12 @@ public class AdminController {
     }
 
     @PostMapping
-    public ResponseEntity<InviteResponse> invite(@Valid @RequestBody CreateUserRequest request) {
+    public ResponseEntity<InvitationResponse> invite(@Valid @RequestBody InviteUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminUserService.invite(request));
     }
 
     @PostMapping("/{id}/invitation")
-    public InviteResponse resendInvitation(@PathVariable Long id) {
+    public InvitationResponse resendInvitation(@PathVariable Long id) {
         return adminUserService.resendInvitation(id);
     }
 
@@ -59,8 +59,8 @@ public class AdminController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserPrincipal principal,
                                        @PathVariable Long id,
-                                       @RequestParam String confirmEmail) {
-        adminUserService.delete(principal.id(), id, confirmEmail);
+                                       @Valid @RequestBody DeleteUserRequest request) {
+        adminUserService.delete(principal.id(), id, request.confirmEmail());
         return ResponseEntity.noContent().build();
     }
 }

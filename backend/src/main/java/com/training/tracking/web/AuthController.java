@@ -70,7 +70,7 @@ public class AuthController {
     }
 
     @PostMapping("/invitation/lookup")
-    public InvitationDto lookUpInvitation(@Valid @RequestBody InvitationTokenRequest request) {
+    public InvitationDto lookupInvitation(@Valid @RequestBody InvitationTokenRequest request) {
         return invitationService.lookup(request.token());
     }
 

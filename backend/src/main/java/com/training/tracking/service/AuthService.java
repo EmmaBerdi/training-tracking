@@ -53,7 +53,11 @@ public class AuthService {
         User user = userRepository.findByNormalizedEmail(request.email())
                 .orElseThrow(AuthService::invalidCredentials);
         // The same answer as a wrong password, so the response doesn't reveal the account's state.
-        if (!user.isActive() || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // The password is checked first so a deactivated account takes as long as an active one; an
+        // invited one has no hash to check, and answers as fast as an unknown address.
+        boolean passwordMatches = user.getPasswordHash() != null
+                && passwordEncoder.matches(request.password(), user.getPasswordHash());
+        if (!passwordMatches || !user.isActive()) {
             throw invalidCredentials();
         }
         user.setLastLoginAt(Instant.now());

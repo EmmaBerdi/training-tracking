@@ -27,12 +27,15 @@ public class InvitationMailer {
         this.logLink = logLink;
     }
 
-    /** @return whether the mail was handed to the mail server */
+    /**
+     * @return whether the link reached someone: handed to the mail server, or logged for local
+     *         development, where the log is where the developer looks for it
+     */
     public boolean send(String email, String link, Duration validFor) {
         // Local development only, like app.password-reset.log-code: the link claims the account.
         if (!mailer.isConfigured() && logLink) {
             log.warn("No mail host configured; invitation link for {}: {}", email, link);
-            return false;
+            return true;
         }
         return mailer.send(email, new MailContent(
                 "Training: Einladung",

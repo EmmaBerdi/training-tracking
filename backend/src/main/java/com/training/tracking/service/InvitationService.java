@@ -28,10 +28,10 @@ import java.util.Base64;
 @Service
 public class InvitationService {
 
-    static final Duration INVITATION_TTL = Duration.ofDays(7);
+    static final Duration VALID_FOR = Duration.ofDays(7);
 
-    /** @param mailed false when the admin has to pass {@code link} on by hand */
-    record Issued(String link, boolean mailed, Instant expiresAt) {
+    /** A link that is stored but not mailed yet. */
+    record Issued(Long invitationId, String email, String link, Instant expiresAt) {
     }
 
     private final InvitationRepository invitationRepository;
@@ -59,7 +59,11 @@ public class InvitationService {
         this.publicUrl = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
     }
 
-    /** Issues a fresh link for an invited account, which retires every earlier one, and mails it. */
+    /**
+     * Stores a fresh link for an invited account, which retires every earlier one. Runs in the
+     * caller's transaction; {@link #mail} it only once that has committed, so a mailed link always
+     * works and a slow mail server holds no database connection.
+     */
     Issued issue(User user) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
@@ -69,28 +73,47 @@ public class InvitationService {
         Invitation invitation = new Invitation();
         invitation.setUserId(user.getId());
         invitation.setTokenHash(jwtService.hashToken(token));
-        invitation.setExpiresAt(now.plus(INVITATION_TTL));
+        invitation.setExpiresAt(now.plus(VALID_FOR));
         invitation.setCreatedAt(now);
         invitationRepository.save(invitation);
 
-        String link = publicUrl + "/?invite=" + token;
-        return new Issued(link, mailer.send(user.getEmail(), link, INVITATION_TTL), invitation.getExpiresAt());
+        // A fragment rather than a query parameter: the browser never sends it, so the token stays
+        // out of the access logs of nginx and Cloudflare.
+        String link = publicUrl + "/#invite=" + token;
+        return new Issued(invitation.getId(), user.getEmail(), link, invitation.getExpiresAt());
+    }
+
+    /** @return false when the admin has to pass the link on by hand */
+    boolean mail(Issued issued) {
+        return mailer.send(issued.email(), issued.link(), VALID_FOR);
+    }
+
+    /** Takes back a link that never reached anyone, so the account counts as having none open. */
+    void withdraw(Issued issued) {
+        invitationRepository.deleteById(issued.invitationId());
+    }
+
+    /** Whether the account's newest link would still be accepted. */
+    boolean hasOpenInvitation(Long userId) {
+        return invitationRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(userId)
+                .filter(InvitationService::isOpen)
+                .isPresent();
     }
 
     @Transactional(readOnly = true)
     public InvitationDto lookup(String token) {
-        User user = acceptable(token).user();
+        User user = findOpen(token).user();
         return new InvitationDto(user.getEmail(), user.getDisplayName());
     }
 
     @Transactional
     public AuthResponse accept(AcceptInvitationRequest request) {
-        Acceptable acceptable = acceptable(request.token());
+        OpenInvitation open = findOpen(request.token());
         Instant now = Instant.now();
-        acceptable.invitation().setUsedAt(now);
-        invitationRepository.save(acceptable.invitation());
+        open.invitation().setUsedAt(now);
+        invitationRepository.save(open.invitation());
 
-        User user = acceptable.user();
+        User user = open.user();
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setStatus(User.STATUS_ACTIVE);
         if (StringUtils.hasText(request.displayName())) {
@@ -101,11 +124,11 @@ public class InvitationService {
         return authService.issueTokens(user);
     }
 
-    private record Acceptable(Invitation invitation, User user) {
+    private record OpenInvitation(Invitation invitation, User user) {
     }
 
     /** One answer for every reason a link fails, so it can't be used to probe accounts. */
-    private Acceptable acceptable(String token) {
+    private OpenInvitation findOpen(String token) {
         Invitation invitation = invitationRepository.findByTokenHash(jwtService.hashToken(token))
                 .filter(InvitationService::isOpen)
                 .orElseThrow(InvitationService::invalidInvitation);
@@ -118,7 +141,7 @@ public class InvitationService {
         User user = userRepository.findById(invitation.getUserId())
                 .filter(u -> User.STATUS_INVITED.equals(u.getStatus()))
                 .orElseThrow(InvitationService::invalidInvitation);
-        return new Acceptable(invitation, user);
+        return new OpenInvitation(invitation, user);
     }
 
     private static boolean isOpen(Invitation invitation) {

@@ -169,17 +169,18 @@ An account is `invited`, `active` or `deactivated` (`user.status`). Only an `act
 refresh or ask for a reset code; the others get the same `401` as a wrong password.
 
 Admins (`user.is_admin`) create accounts by email. The accounts in `ADMIN_EMAILS` become admins on
-startup; an address there without an account yet is created as an invited admin, and a fresh
-invitation is mailed on every start until it is accepted. Taking an address off the list doesn't
-take the flag away.
+startup; an address there without an account yet is created as an invited admin and mailed an
+invitation. Until it is accepted, a start sends a new one only when the last link expired or
+couldn't be mailed, so a restart never retires a link that is still in the inbox. Taking an
+address off the list doesn't take the flag away.
 
 | Call (admin bearer token) | Answer |
 |---|---|
 | `GET /api/admin/users` | every account: email, display name, status, admin, created, last login, invitation expiry |
-| `POST /api/admin/users {email, displayName?}` | `201 {user, inviteUrl}`, or `409` for a known address |
+| `POST /api/admin/users {email, displayName?}` | `201 {user, invitationUrl}`, or `409` for a known address |
 | `POST /api/admin/users/{id}/invitation` | a fresh invitation, `409` unless the account is invited |
 | `POST /api/admin/users/{id}/deactivate` / `reactivate` | the account, `409` from the wrong state or on your own account |
-| `DELETE /api/admin/users/{id}?confirmEmail=…` | `204`; `400` unless `confirmEmail` repeats the address, `409` on your own account |
+| `DELETE /api/admin/users/{id} {confirmEmail}` | `204`; `400` unless `confirmEmail` repeats the address, `409` on your own account |
 
 `/api/admin/**` is checked against the database on every call (`AdminAccess`), not against the
 access token, so taking the flag away or deactivating an admin takes effect at once: anonymous
@@ -187,12 +188,17 @@ callers get `401`, everyone else who isn't an active admin `403`. The answers ca
 only — never plans, logs or pictures. Deactivating revokes the account's refresh tokens (an access
 token already issued stays valid until it expires); deleting removes the account and all its data,
 child tables first rather than by `ON DELETE CASCADE`, which in Postgres can reach `session_type`
-before the rows that `RESTRICT` it.
+before the rows that `RESTRICT` it. The address to confirm a delete goes in the body, so it stays
+out of access logs.
 
 An invitation is a 32-byte random token, stored as a SHA-256 hash in `invitation` and valid for 7
 days. Only an account's newest invitation is honoured, so sending another retires the earlier
-link. `inviteUrl` (`APP_PUBLIC_URL/?invite=<token>`) is in the answer only when the mail couldn't be
-sent: the hash can't be turned back into a link, so that is the one moment it can be shown.
+link. The link is `APP_PUBLIC_URL/#invite=<token>`: a fragment, which the browser never sends to
+the server, so opening it leaves no token in the nginx or Cloudflare logs. The invitation is
+committed before it is mailed, so a mailed link always works. `invitationUrl` is in the answer only
+when the mail couldn't be sent: the hash can't be turned back into a link, so that is the one moment
+it can be shown. Locally, with `INVITATION_LOG_LINK` on and no mail host, the link is in the backend
+log instead.
 
 | Call (anonymous) | Answer |
 |---|---|

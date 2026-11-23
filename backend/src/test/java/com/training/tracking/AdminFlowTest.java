@@ -13,8 +13,9 @@ import com.training.tracking.dto.SessionTypeDto;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.dto.TimerStepDto;
 import com.training.tracking.dto.admin.AdminUserDto;
-import com.training.tracking.dto.admin.CreateUserRequest;
-import com.training.tracking.dto.admin.InviteResponse;
+import com.training.tracking.dto.admin.DeleteUserRequest;
+import com.training.tracking.dto.admin.InvitationResponse;
+import com.training.tracking.dto.admin.InviteUserRequest;
 import com.training.tracking.dto.auth.AcceptInvitationRequest;
 import com.training.tracking.dto.auth.AuthResponse;
 import com.training.tracking.dto.auth.InvitationDto;
@@ -69,7 +70,7 @@ import static org.mockito.Mockito.when;
         properties = "spring.mail.host=localhost")
 class AdminFlowTest {
 
-    private static final Pattern INVITE_TOKEN = Pattern.compile("[?&]invite=([A-Za-z0-9_-]+)");
+    private static final Pattern INVITE_TOKEN = Pattern.compile("[#&]invite=([A-Za-z0-9_-]+)");
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -109,7 +110,7 @@ class AdminFlowTest {
 
         AuthResponse member = session(createAccount("plain", false));
         assertThat(get("/api/admin/users", member).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(post("/api/admin/users", new CreateUserRequest("sneaky@example.com", null), member)
+        assertThat(post("/api/admin/users", new InviteUserRequest("sneaky@example.com", null), member)
                 .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(userRepository.existsByNormalizedEmail("sneaky@example.com")).isFalse();
 
@@ -127,10 +128,10 @@ class AdminFlowTest {
     void anInvitationIsAcceptedOnceAndOnlyThenTheAccountCanLogIn() {
         AuthResponse admin = session(createAccount("admin-invite", true));
 
-        ResponseEntity<InviteResponse> invited = post("/api/admin/users",
-                Map.of("email", " New.Person@Example.com ", "displayName", "Neu"), admin, InviteResponse.class);
+        ResponseEntity<InvitationResponse> invited = post("/api/admin/users",
+                Map.of("email", " New.Person@Example.com ", "displayName", "Neu"), admin, InvitationResponse.class);
         assertThat(invited.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(invited.getBody().inviteUrl()).isNull();
+        assertThat(invited.getBody().invitationUrl()).isNull();
         AdminUserDto user = invited.getBody().user();
         assertThat(user.email()).isEqualTo("new.person@example.com");
         assertThat(user.status()).isEqualTo(User.STATUS_INVITED);
@@ -138,7 +139,7 @@ class AdminFlowTest {
         String token = lastMailedToken();
 
         // Same address again is a conflict, whatever its casing.
-        assertThat(post("/api/admin/users", new CreateUserRequest("NEW.person@example.com", null), admin)
+        assertThat(post("/api/admin/users", new InviteUserRequest("NEW.person@example.com", null), admin)
                 .getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 
         // Until accepted the account can neither log in nor ask for a reset code.
@@ -174,8 +175,8 @@ class AdminFlowTest {
     @Test
     void resendingRetiresTheEarlierLink() {
         AuthResponse admin = session(createAccount("admin-resend", true));
-        Long id = post("/api/admin/users", new CreateUserRequest("resend@example.com", null), admin,
-                InviteResponse.class).getBody().user().id();
+        Long id = post("/api/admin/users", new InviteUserRequest("resend@example.com", null), admin,
+                InvitationResponse.class).getBody().user().id();
         String first = lastMailedToken();
 
         assertThat(post("/api/admin/users/" + id + "/invitation", null, admin).getStatusCode())
@@ -190,8 +191,8 @@ class AdminFlowTest {
     @Test
     void anExpiredOrUnknownLinkIsRejected() {
         AuthResponse admin = session(createAccount("admin-expired", true));
-        Long id = post("/api/admin/users", new CreateUserRequest("expired@example.com", null), admin,
-                InviteResponse.class).getBody().user().id();
+        Long id = post("/api/admin/users", new InviteUserRequest("expired@example.com", null), admin,
+                InvitationResponse.class).getBody().user().id();
         String token = lastMailedToken();
 
         Invitation invitation = invitationRepository.findFirstByUserIdOrderByCreatedAtDescIdDesc(id).orElseThrow();
@@ -212,11 +213,11 @@ class AdminFlowTest {
         AuthResponse admin = session(createAccount("admin-nomail", true));
         doThrow(new MailSendException("down")).when(mailSender).send(any(MimeMessage.class));
 
-        InviteResponse invited = post("/api/admin/users", new CreateUserRequest("nomail@example.com", null),
-                admin, InviteResponse.class).getBody();
-        assertThat(invited.inviteUrl()).startsWith("http://localhost:5500/?invite=");
+        InvitationResponse invited = post("/api/admin/users", new InviteUserRequest("nomail@example.com", null),
+                admin, InvitationResponse.class).getBody();
+        assertThat(invited.invitationUrl()).startsWith("http://localhost:5500/#invite=");
 
-        Matcher matcher = INVITE_TOKEN.matcher(invited.inviteUrl());
+        Matcher matcher = INVITE_TOKEN.matcher(invited.invitationUrl());
         assertThat(matcher.find()).isTrue();
         assertThat(accept(matcher.group(1), "chosen-password", null).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -328,17 +329,17 @@ class AdminFlowTest {
     }
 
     private ResponseEntity<String> delete(Long id, String confirmEmail, AuthResponse as) {
-        return exchange(HttpMethod.DELETE, "/api/admin/users/" + id + "?confirmEmail={email}", null, as,
-                String.class, confirmEmail);
+        return exchange(HttpMethod.DELETE, "/api/admin/users/" + id, new DeleteUserRequest(confirmEmail), as,
+                String.class);
     }
 
     private <T> ResponseEntity<T> exchange(HttpMethod method, String path, Object body, AuthResponse as,
-                                           Class<T> type, Object... uriVariables) {
+                                           Class<T> type) {
         HttpHeaders headers = new HttpHeaders();
         if (as != null) {
             headers.setBearerAuth(as.accessToken());
         }
-        return restTemplate.exchange(path, method, new HttpEntity<>(body, headers), type, uriVariables);
+        return restTemplate.exchange(path, method, new HttpEntity<>(body, headers), type);
     }
 
     /** The token in the plain-text part of the newest invitation mail so far. */
