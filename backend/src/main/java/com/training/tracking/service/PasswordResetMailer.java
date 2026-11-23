@@ -48,7 +48,7 @@ public class PasswordResetMailer {
                 "Training: Passwort zurücksetzen",
                 "Passwort zurücksetzen",
                 List.of("Hallo,", "dein Code zum Zurücksetzen des Passworts lautet:"),
-                request.code(),
+                new MailContent.Code(request.code()),
                 "Gültig für %d Minuten.".formatted(request.validFor().toMinutes()),
                 "Du hast das nicht angefordert? Dann ignoriere diese E-Mail einfach — dein Passwort "
                         + "bleibt unverändert."));

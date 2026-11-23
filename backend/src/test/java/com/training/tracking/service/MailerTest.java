@@ -25,7 +25,7 @@ class MailerTest {
 
     private static final MailContent CONTENT = new MailContent(
             "Training: Test", "Überschrift", List.of("Hallo,", "<b>nicht fett</b> & {{code}}"),
-            "123456", "Gültig für 15 Minuten.", "Kleingedrucktes");
+            new MailContent.Code("123456"), "Gültig für 15 Minuten.", "Kleingedrucktes");
 
     private final JavaMailSender sender = mock(JavaMailSender.class);
 
@@ -33,7 +33,7 @@ class MailerTest {
     void sendsHtmlWithPlainTextAlternativeFromTheNamedSender() throws Exception {
         when(sender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
 
-        mailer("smtp.example.com", "NOREPLY Berdi racing").send("user@example.com", CONTENT);
+        assertTrue(mailer("smtp.example.com", "NOREPLY Berdi racing").send("user@example.com", CONTENT));
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(sender).send(captor.capture());
@@ -67,6 +67,22 @@ class MailerTest {
     }
 
     @Test
+    void aButtonLinksToItsAddressAndSpellsItOutInBothParts() {
+        MailLayout layout = new MailLayout("");
+        MailContent invitation = new MailContent("Training: Einladung", "Eingeladen", List.of("Hallo,"),
+                new MailContent.Button("Passwort setzen", "https://example.com/?invite=a&b"),
+                "Gültig für 7 Tage.", "Kleingedrucktes");
+
+        String html = layout.html(invitation);
+        assertTrue(html.contains("<a href=\"https://example.com/?invite=a&amp;b\""));
+        assertTrue(html.contains(">Passwort setzen</a>"));
+        assertFalse(html.contains("letter-spacing:10px"));
+
+        String text = layout.text(invitation);
+        assertTrue(text.contains("Passwort setzen:\nhttps://example.com/?invite=a&b"));
+    }
+
+    @Test
     void withoutAContactTheFooterNamesNone() {
         MailLayout layout = new MailLayout("");
 
@@ -90,7 +106,7 @@ class MailerTest {
         Mailer mailer = mailer("", "");
 
         assertFalse(mailer.isConfigured());
-        mailer.send("user@example.com", CONTENT);
+        assertFalse(mailer.send("user@example.com", CONTENT));
         verify(sender, never()).send(any(MimeMessage.class));
     }
 

@@ -31,13 +31,16 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 | `DB_PASSWORD` | `training` | Database password |
 | `SERVER_PORT` | `8080` | Port the API listens on |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5500,http://127.0.0.1:5500` | Comma-separated origins allowed to call the API from a browser |
-| `MAIL_HOST` | *(empty)* | SMTP host for password reset codes; empty means no mail is sent |
+| `MAIL_HOST` | *(empty)* | SMTP host for password reset codes and invitations; empty means no mail is sent |
 | `MAIL_PORT` | `587` | SMTP port (STARTTLS) |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | *(empty)* | SMTP login |
-| `MAIL_FROM` | *(empty)* | Sender address of the reset mail |
+| `MAIL_FROM` | *(empty)* | Sender address of the reset and invitation mails |
 | `MAIL_FROM_NAME` | *(empty)* | Sender name shown in the inbox; empty sends from the bare address |
 | `MAIL_CONTACT` | *(empty)* | Address for questions, named in every mail's footer; empty leaves the line out |
 | `PASSWORD_RESET_LOG_CODE` | `false` | Logs the reset code when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
+| `INVITATION_LOG_LINK` | `false` | Logs the invitation link when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
+| `APP_PUBLIC_URL` | `http://localhost:5500` | Where the app is opened in a browser; invitation links point here |
+| `ADMIN_EMAILS` | *(empty)* | Comma-separated addresses made admins on startup — see [Accounts and admins](#accounts-and-admins) |
 | `RATE_LIMIT_CLIENT_IP_HEADER` | *(empty)* | Header holding the real client address for the auth rate limit; empty uses the socket address. Set only behind a proxy that always overwrites it — the Pi deploy uses `CF-Connecting-IP` |
 | `IMAGES_MAX_COUNT` | `200` | Exercise photos one user may store |
 | `IMAGES_MAX_TOTAL_SIZE` | `100MB` | Total size of the exercise photos one user may store |
@@ -153,11 +156,57 @@ password or code is hashed. Over the limit the answer is `429` with a `Retry-Aft
 | `POST /api/auth/login` | 10 per 15 minutes |
 | `POST /api/auth/register` | 5 per hour |
 | `POST /api/auth/password-reset/request` and `/confirm` | 10 per hour, together |
+| `POST /api/auth/invitation/lookup` and `/accept` | 10 per hour, together |
 
 Every attempt counts, successful or not. Refresh and logout aren't limited, so an ordinary session
 is never locked out. The counts live in memory, so a restart resets them. The limits are under
 `app.rate-limit` in `application.yml`; see `RATE_LIMIT_CLIENT_IP_HEADER` above for running behind a
 proxy.
+
+## Accounts and admins
+
+An account is `invited`, `active` or `deactivated` (`user.status`). Only an `active` one can log in,
+refresh or ask for a reset code; the others get the same `401` as a wrong password.
+
+Admins (`user.is_admin`) create accounts by email. The accounts in `ADMIN_EMAILS` become admins on
+startup; an address there without an account yet is created as an invited admin and mailed an
+invitation. Until it is accepted, a start sends a new one only when the last link expired or
+couldn't be mailed, so a restart never retires a link that is still in the inbox. Taking an
+address off the list doesn't take the flag away.
+
+| Call (admin bearer token) | Answer |
+|---|---|
+| `GET /api/admin/users` | every account: email, display name, status, admin, created, last login, invitation expiry |
+| `POST /api/admin/users {email, displayName?}` | `201 {user, invitationUrl}`, or `409` for a known address |
+| `POST /api/admin/users/{id}/invitation` | a fresh invitation, `409` unless the account is invited |
+| `POST /api/admin/users/{id}/deactivate` / `reactivate` | the account, `409` from the wrong state or on your own account |
+| `DELETE /api/admin/users/{id} {confirmEmail}` | `204`; `400` unless `confirmEmail` repeats the address, `409` on your own account |
+
+`/api/admin/**` is checked against the database on every call (`AdminAccess`), not against the
+access token, so taking the flag away or deactivating an admin takes effect at once: anonymous
+callers get `401`, everyone else who isn't an active admin `403`. The answers carry account metadata
+only — never plans, logs or pictures. Deactivating revokes the account's refresh tokens (an access
+token already issued stays valid until it expires); deleting removes the account and all its data,
+child tables first rather than by `ON DELETE CASCADE`, which in Postgres can reach `session_type`
+before the rows that `RESTRICT` it. The address to confirm a delete goes in the body, so it stays
+out of access logs.
+
+An invitation is a 32-byte random token, stored as a SHA-256 hash in `invitation` and valid for 7
+days. Only an account's newest invitation is honoured, so sending another retires the earlier
+link. The link is `APP_PUBLIC_URL/#invite=<token>`: a fragment, which the browser never sends to
+the server, so opening it leaves no token in the nginx or Cloudflare logs. The invitation is
+committed before it is mailed, so a mailed link always works. `invitationUrl` is in the answer only
+when the mail couldn't be sent: the hash can't be turned back into a link, so that is the one moment
+it can be shown. Locally, with `INVITATION_LOG_LINK` on and no mail host, the link is in the backend
+log instead.
+
+| Call (anonymous) | Answer |
+|---|---|
+| `POST /api/auth/invitation/lookup {token}` | `{email, displayName}` for the accept screen |
+| `POST /api/auth/invitation/accept {token, password, displayName?}` | `200` with tokens like a login; the account is `active` |
+
+Both answer `400` for any unknown, used, expired or retired link. The token goes in the body, not
+the path, so it stays out of access logs.
 
 ## Exercise setup photos
 

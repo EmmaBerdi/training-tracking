@@ -52,6 +52,12 @@ public class SecurityConfig {
     @Value("${app.rate-limit.password-reset.window}")
     private Duration passwordResetWindow;
 
+    @Value("${app.rate-limit.invitation.max-attempts}")
+    private int invitationMaxAttempts;
+
+    @Value("${app.rate-limit.invitation.window}")
+    private Duration invitationWindow;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -72,13 +78,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtService jwtService,
-                                                   AuthRateLimiter rateLimiter) throws Exception {
+                                                   AuthRateLimiter rateLimiter,
+                                                   AdminAccess adminAccess) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/error").permitAll()
+                        .requestMatchers("/api/admin/**").access(adminAccess)
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(this::unauthorized))
                 .addFilterBefore(authRateLimitFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class)
@@ -86,14 +94,20 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Both reset steps share one limit, so asking for fresh codes doesn't buy more guesses. */
+    /**
+     * Both reset steps share one limit, so asking for fresh codes doesn't buy more guesses; the two
+     * invitation steps likewise.
+     */
     private AuthRateLimitFilter authRateLimitFilter(AuthRateLimiter rateLimiter) {
         Limit passwordReset = new Limit("password-reset", passwordResetMaxAttempts, passwordResetWindow);
+        Limit invitation = new Limit("invitation", invitationMaxAttempts, invitationWindow);
         Map<String, Limit> limitsByPath = Map.of(
                 "/api/auth/login", new Limit("login", loginMaxAttempts, loginWindow),
                 "/api/auth/register", new Limit("register", registerMaxAttempts, registerWindow),
                 "/api/auth/password-reset/request", passwordReset,
-                "/api/auth/password-reset/confirm", passwordReset);
+                "/api/auth/password-reset/confirm", passwordReset,
+                "/api/auth/invitation/lookup", invitation,
+                "/api/auth/invitation/accept", invitation);
         return new AuthRateLimitFilter(rateLimiter, limitsByPath, clientIpHeader);
     }
 

@@ -1,12 +1,16 @@
 package com.training.tracking.web;
 
+import com.training.tracking.dto.auth.AcceptInvitationRequest;
 import com.training.tracking.dto.auth.AuthResponse;
+import com.training.tracking.dto.auth.InvitationDto;
+import com.training.tracking.dto.auth.InvitationTokenRequest;
 import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetConfirmRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
 import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.service.AuthService;
+import com.training.tracking.service.InvitationService;
 import com.training.tracking.service.PasswordService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +25,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordService passwordService;
+    private final InvitationService invitationService;
 
-    public AuthController(AuthService authService, PasswordService passwordService) {
+    public AuthController(AuthService authService,
+                          PasswordService passwordService,
+                          InvitationService invitationService) {
         this.authService = authService;
         this.passwordService = passwordService;
+        this.invitationService = invitationService;
     }
 
     @PostMapping("/register")
@@ -59,5 +67,15 @@ public class AuthController {
     public ResponseEntity<Void> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
         passwordService.confirmReset(request.email(), request.code(), request.newPassword());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/invitation/lookup")
+    public InvitationDto lookupInvitation(@Valid @RequestBody InvitationTokenRequest request) {
+        return invitationService.lookup(request.token());
+    }
+
+    @PostMapping("/invitation/accept")
+    public AuthResponse acceptInvitation(@Valid @RequestBody AcceptInvitationRequest request) {
+        return invitationService.accept(request);
     }
 }

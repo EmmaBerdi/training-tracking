@@ -273,9 +273,10 @@ public class StateService {
 
     /**
      * Clears this user's plan and logs, children before parents. The order is explicit rather than
-     * delegated to ON DELETE CASCADE so it holds whatever created the schema.
+     * delegated to ON DELETE CASCADE so it holds whatever created the schema. Also the plan-and-logs
+     * part of deleting an account (AdminUserService).
      */
-    private void wipe(Long userId) {
+    void wipe(Long userId) {
         sessionRatingRepository.deleteAllByUserId(userId);
         sessionValueRepository.deleteAllByUserId(userId);
         sessionWarmupRepository.deleteAllByUserId(userId);

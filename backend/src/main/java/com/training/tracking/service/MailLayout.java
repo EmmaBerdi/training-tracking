@@ -28,15 +28,15 @@ public class MailLayout {
             "Antworten an diese Adresse werden nicht gelesen.");
 
     private final String template;
+    private final String codeTemplate;
+    private final String buttonTemplate;
     private final String contact;
 
     public MailLayout(@Value("${app.mail.contact:}") String contact) {
         this.contact = contact;
-        try {
-            template = new ClassPathResource("mail/layout.html").getContentAsString(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        template = load("mail/layout.html");
+        codeTemplate = load("mail/code.html");
+        buttonTemplate = load("mail/button.html");
     }
 
     public String html(MailContent content) {
@@ -46,24 +46,20 @@ public class MailLayout {
                 "paragraphs", content.paragraphs().stream()
                         .map(p -> "<p style=\"margin:0 0 16px;\">" + escape(p) + "</p>")
                         .collect(Collectors.joining("\n")),
-                "code", escape(content.code()),
+                "highlight", htmlHighlight(content.highlight()),
                 "validity", escape(content.validity()),
                 "note", escape(content.note()),
                 "footer", htmlFooter());
-        // One pass, so a value that happens to contain {{…}} is never substituted again.
-        return PLACEHOLDER.matcher(template).replaceAll(match -> {
-            String value = values.get(match.group(1));
-            if (value == null) {
-                throw new IllegalStateException("mail/layout.html has no value for " + match.group());
-            }
-            return Matcher.quoteReplacement(value);
-        });
+        return fill(template, values);
     }
 
     public String text(MailContent content) {
         StringBuilder text = new StringBuilder("TRAINING\n").append(content.heading()).append("\n\n");
         content.paragraphs().forEach(p -> text.append(p).append("\n\n"));
-        text.append("    ").append(content.code()).append("\n\n")
+        text.append(switch (content.highlight()) {
+            case MailContent.Code code -> "    " + code.value();
+            case MailContent.Button button -> button.label() + ":\n" + button.url();
+        }).append("\n\n")
                 .append(content.validity()).append("\n\n")
                 .append(content.note()).append("\n\n")
                 .append("--\n");
@@ -72,6 +68,33 @@ public class MailLayout {
             text.append("Bei Fragen schreib an ").append(contact).append(".\n");
         }
         return text.toString();
+    }
+
+    private String htmlHighlight(MailContent.Highlight highlight) {
+        return switch (highlight) {
+            case MailContent.Code code -> fill(codeTemplate, Map.of("code", escape(code.value())));
+            case MailContent.Button button -> fill(buttonTemplate,
+                    Map.of("label", escape(button.label()), "url", escape(button.url())));
+        };
+    }
+
+    /** One pass, so a value that happens to contain {{…}} is never substituted again. */
+    private static String fill(String template, Map<String, String> values) {
+        return PLACEHOLDER.matcher(template).replaceAll(match -> {
+            String value = values.get(match.group(1));
+            if (value == null) {
+                throw new IllegalStateException("mail template has no value for " + match.group());
+            }
+            return Matcher.quoteReplacement(value);
+        });
+    }
+
+    private static String load(String path) {
+        try {
+            return new ClassPathResource(path).getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private String htmlFooter() {

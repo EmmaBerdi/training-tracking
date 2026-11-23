@@ -52,11 +52,13 @@ public class Mailer {
     /**
      * Failures are logged, not thrown: callers answer anonymous requests, and an error would tell
      * the caller that the address belongs to an account.
+     *
+     * @return whether the mail server took the mail; an admin is then told to pass a link on by hand
      */
-    public void send(String to, MailContent content) {
+    public boolean send(String to, MailContent content) {
         if (!isConfigured()) {
             log.warn("No mail host configured; mail \"{}\" to {} was not delivered", content.subject(), to);
-            return;
+            return false;
         }
         JavaMailSender sender = mailSender.getIfAvailable();
         try {
@@ -80,8 +82,10 @@ public class Mailer {
             alternative.addBodyPart(part(layout.html(content), "html"));
             message.setContent(alternative);
             sender.send(message);
+            return true;
         } catch (MailException | MessagingException | UnsupportedEncodingException e) {
             log.error("Could not send mail \"{}\" to {}", content.subject(), to, e);
+            return false;
         }
     }
 
