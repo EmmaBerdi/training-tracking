@@ -2,9 +2,11 @@ package com.training.tracking.service;
 
 import com.training.tracking.domain.ExerciseImage;
 import com.training.tracking.repository.ExerciseImageRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -41,9 +43,15 @@ public class ExerciseImageService {
     private static final Duration UPLOAD_GRACE = Duration.ofHours(1);
 
     private final ExerciseImageRepository repository;
+    private final int maxCount;
+    private final DataSize maxTotalSize;
 
-    public ExerciseImageService(ExerciseImageRepository repository) {
+    public ExerciseImageService(ExerciseImageRepository repository,
+                                @Value("${app.images.max-count}") int maxCount,
+                                @Value("${app.images.max-total-size}") DataSize maxTotalSize) {
         this.repository = repository;
+        this.maxCount = maxCount;
+        this.maxTotalSize = maxTotalSize;
     }
 
     @Transactional
@@ -57,6 +65,7 @@ public class ExerciseImageService {
 
         byte[] bytes = read(file);
         Format format = probe(bytes);
+        requireQuota(userId, bytes.length);
 
         ExerciseImage image = new ExerciseImage();
         image.setId(UUID.randomUUID());
@@ -96,6 +105,28 @@ public class ExerciseImageService {
     /** Called after a plan save has re-inserted the exercises that hold the surviving references. */
     public void collectOrphans(Long userId) {
         repository.deleteUnreferenced(userId, Instant.now().minus(UPLOAD_GRACE));
+    }
+
+    /**
+     * Pictures not yet referenced by the plan count too, or a client that uploads and never saves
+     * could fill the disk. They are swept before refusing, so replacing old photos isn't blocked by
+     * pictures nothing points at any more. Two uploads at the same moment can both pass and end one
+     * picture over; a quota doesn't need to be exact.
+     */
+    private void requireQuota(Long userId, long incomingBytes) {
+        if (fitsQuota(userId, incomingBytes)) {
+            return;
+        }
+        collectOrphans(userId);
+        if (!fitsQuota(userId, incomingBytes)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "image quota reached: at most "
+                    + maxCount + " images and " + maxTotalSize.toMegabytes() + " MB per user");
+        }
+    }
+
+    private boolean fitsQuota(Long userId, long incomingBytes) {
+        return repository.countByUserId(userId) < maxCount
+                && repository.sumByteSizeByUserId(userId) + incomingBytes <= maxTotalSize.toBytes();
     }
 
     public static UUID parseId(String raw) {

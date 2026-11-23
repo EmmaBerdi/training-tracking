@@ -17,6 +17,11 @@ public interface ExerciseImageRepository extends JpaRepository<ExerciseImage, UU
     /** Always scoped by owner: an id alone must never be enough to read someone else's picture. */
     Optional<ExerciseImage> findByIdAndUserId(UUID id, Long userId);
 
+    long countByUserId(Long userId);
+
+    @Query("SELECT COALESCE(SUM(i.byteSize), 0L) FROM ExerciseImage i WHERE i.userId = :userId")
+    long sumByteSizeByUserId(@Param("userId") Long userId);
+
     @Query("SELECT i.id FROM ExerciseImage i WHERE i.userId = :userId AND i.id IN :ids")
     List<UUID> findOwnedIds(@Param("userId") Long userId, @Param("ids") Collection<UUID> ids);
 

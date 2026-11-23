@@ -9,9 +9,13 @@ export interface UploadedImage {
   height: number;
 }
 
+/** The user has as many pictures as the server keeps per account; more uploads won't succeed. */
+export class ImageQuotaError extends Error {}
+
 /**
  * Both calls return `null` on any failure, like the JSON `request` next door: the caller shows a
- * toast either way, and the reason is only useful in the console.
+ * toast either way, and the reason is only useful in the console. The one exception is a full
+ * quota, which the user can do something about, so the upload throws `ImageQuotaError` for it.
  */
 export async function uploadImage(blob: Blob): Promise<UploadedImage | null> {
   const body = new FormData();
@@ -20,9 +24,11 @@ export async function uploadImage(blob: Blob): Promise<UploadedImage | null> {
   try {
     // No Content-Type header: the browser has to set it itself to include the multipart boundary.
     const res = await authorizedFetch(PATH, { method: 'POST', body });
+    if (res.status === 409) throw new ImageQuotaError(`HTTP 409 on POST ${PATH}`);
     if (!res.ok) throw new Error(`HTTP ${res.status} on POST ${PATH}`);
     return (await res.json()) as UploadedImage;
   } catch (err) {
+    if (err instanceof ImageQuotaError) throw err;
     console.error(err);
     return null;
   }

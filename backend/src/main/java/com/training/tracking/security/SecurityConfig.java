@@ -1,5 +1,6 @@
 package com.training.tracking.security;
 
+import com.training.tracking.security.AuthRateLimitFilter.Limit;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +20,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -27,6 +30,27 @@ public class SecurityConfig {
 
     @Value("${app.cors.allowed-origins}")
     private String[] allowedOrigins;
+
+    @Value("${app.rate-limit.client-ip-header:}")
+    private String clientIpHeader;
+
+    @Value("${app.rate-limit.login.max-attempts}")
+    private int loginMaxAttempts;
+
+    @Value("${app.rate-limit.login.window}")
+    private Duration loginWindow;
+
+    @Value("${app.rate-limit.register.max-attempts}")
+    private int registerMaxAttempts;
+
+    @Value("${app.rate-limit.register.window}")
+    private Duration registerWindow;
+
+    @Value("${app.rate-limit.password-reset.max-attempts}")
+    private int passwordResetMaxAttempts;
+
+    @Value("${app.rate-limit.password-reset.window}")
+    private Duration passwordResetWindow;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,7 +70,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtService jwtService,
+                                                   AuthRateLimiter rateLimiter) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -55,8 +81,20 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(this::unauthorized))
+                .addFilterBefore(authRateLimitFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /** Both reset steps share one limit, so asking for fresh codes doesn't buy more guesses. */
+    private AuthRateLimitFilter authRateLimitFilter(AuthRateLimiter rateLimiter) {
+        Limit passwordReset = new Limit("password-reset", passwordResetMaxAttempts, passwordResetWindow);
+        Map<String, Limit> limitsByPath = Map.of(
+                "/api/auth/login", new Limit("login", loginMaxAttempts, loginWindow),
+                "/api/auth/register", new Limit("register", registerMaxAttempts, registerWindow),
+                "/api/auth/password-reset/request", passwordReset,
+                "/api/auth/password-reset/confirm", passwordReset);
+        return new AuthRateLimitFilter(rateLimiter, limitsByPath, clientIpHeader);
     }
 
     private void unauthorized(HttpServletRequest request,

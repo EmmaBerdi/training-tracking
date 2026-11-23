@@ -45,3 +45,24 @@ app:
     # Logs the reset code when no mail host is set. Local development only: a logged code is a
     # password to anyone who can read the logs.
     log-code: ${PASSWORD_RESET_LOG_CODE:false}
+  # Per client IP, on the anonymous /api/auth endpoints. Behind the Cloudflare tunnel every request
+  # arrives from cloudflared, so the Pi deploy sets the header to CF-Connecting-IP. Left empty, the
+  # socket address counts — never name a header that no proxy in front overwrites, or a client can
+  # pick a fresh key for every request.
+  rate-limit:
+    client-ip-header: ${RATE_LIMIT_CLIENT_IP_HEADER:}
+    login:
+      max-attempts: 10
+      window: PT15M
+    register:
+      max-attempts: 5
+      window: PT1H
+    # Shared by requesting a code and confirming it.
+    password-reset:
+      max-attempts: 10
+      window: PT1H
+  # Per user. Pictures not (yet) referenced by the plan count too; they are swept before an upload
+  # is refused.
+  images:
+    max-count: ${IMAGES_MAX_COUNT:200}
+    max-total-size: ${IMAGES_MAX_TOTAL_SIZE:100MB}

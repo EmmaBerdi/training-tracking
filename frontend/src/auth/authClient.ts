@@ -10,6 +10,8 @@ export interface AuthResult {
 
 export class AuthError extends Error {}
 
+const TOO_MANY_ATTEMPTS = 'Zu viele Versuche — bitte später erneut versuchen.';
+
 async function post(path: string, body: unknown): Promise<Response> {
   return fetch(`${apiBase()}${path}`, {
     method: 'POST',
@@ -22,6 +24,7 @@ async function parseOrThrow(res: Response, fallback: string): Promise<AuthResult
   if (res.ok) return (await res.json()) as AuthResult;
   if (res.status === 409) throw new AuthError('Diese E-Mail ist bereits registriert.');
   if (res.status === 401) throw new AuthError('E-Mail oder Passwort ist falsch.');
+  if (res.status === 429) throw new AuthError(TOO_MANY_ATTEMPTS);
   if (res.status === 400) {
     throw new AuthError('Bitte E-Mail und Passwort (mind. 8 Zeichen) prüfen.');
   }
@@ -60,6 +63,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const res = await post('/auth/password-reset/request', { email });
   if (res.ok) return;
   if (res.status === 400) throw new AuthError('Bitte eine gültige E-Mail eingeben.');
+  if (res.status === 429) throw new AuthError(TOO_MANY_ATTEMPTS);
   throw new AuthError('Anfrage fehlgeschlagen — Backend erreichbar?');
 }
 
@@ -71,5 +75,6 @@ export async function confirmPasswordReset(
   const res = await post('/auth/password-reset/confirm', { email, code, newPassword });
   if (res.ok) return;
   if (res.status === 400) throw new AuthError('Code ungültig oder abgelaufen.');
+  if (res.status === 429) throw new AuthError(TOO_MANY_ATTEMPTS);
   throw new AuthError('Zurücksetzen fehlgeschlagen — Backend erreichbar?');
 }
