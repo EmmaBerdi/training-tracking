@@ -4,6 +4,7 @@ import { emptyPlan, uid } from '../data/plan';
 import { loadState, saveState } from '../api/client';
 import { ImageQuotaError, uploadImage } from '../api/images';
 import { prepareImage } from '../utils/image';
+import { createSerialSaver } from '../utils/serialSaver';
 import type { ExerciseSetsField, ExerciseTextField, StepField } from '../state/planOps';
 import * as planOps from '../state/planOps';
 import * as logOps from '../state/logOps';
@@ -32,11 +33,9 @@ export function useTrainingState(notify: (message: string) => void, selection: S
   const [ready, setReady] = useState(false);
   const { date: selectedDate, dayId } = selection;
 
-  const persist = useCallback(
-    async (next: AppState) => {
-      const ok = await saveState(next);
-      if (!ok) notify('Speichern fehlgeschlagen');
-    },
+  // `notify` is stable, so one saver lives for the whole session.
+  const persist = useMemo(
+    () => createSerialSaver(saveState, () => notify('Speichern fehlgeschlagen')),
     [notify],
   );
 
@@ -59,7 +58,7 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     (updater: (p: AppState['plan']) => AppState['plan']) => {
       setState((prev) => {
         const next = { ...prev, plan: updater(prev.plan) };
-        void persist(next);
+        persist(next);
         return next;
       });
     },
@@ -70,7 +69,7 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     (updater: (l: AppState['logs']) => AppState['logs']) => {
       setState((prev) => {
         const next = { ...prev, logs: updater(prev.logs) };
-        void persist(next);
+        persist(next);
         return next;
       });
     },
