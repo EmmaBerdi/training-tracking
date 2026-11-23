@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppState, BlockKind, BlockRef, Day, Exercise, Rating, Side } from '../types';
 import { emptyPlan, uid } from '../data/plan';
 import { loadState, saveState } from '../api/client';
-import { uploadImage } from '../api/images';
+import { ImageQuotaError, uploadImage } from '../api/images';
 import { prepareImage } from '../utils/image';
 import type { ExerciseSetsField, ExerciseTextField, StepField } from '../state/planOps';
 import * as planOps from '../state/planOps';
@@ -193,17 +193,25 @@ export function useTrainingState(notify: (message: string) => void, selection: S
     async (ref: BlockRef, exId: string, files: File[]) => {
       const ids: string[] = [];
       let failed = 0;
+      let quotaReached = false;
       for (const file of files) {
         try {
           const uploaded = await uploadImage(await prepareImage(file));
           if (uploaded) ids.push(uploaded.id);
           else failed++;
         } catch (err) {
+          // Every further upload would be refused the same way, so stop sending photos.
+          if (err instanceof ImageQuotaError) {
+            quotaReached = true;
+            break;
+          }
           console.error(err);
           failed++;
         }
       }
-      if (failed) {
+      if (quotaReached) {
+        notify('Speicherlimit für Bilder erreicht — entferne alte Bilder, um neue hinzuzufügen');
+      } else if (failed) {
         notify(
           failed === 1
             ? 'Ein Bild konnte nicht hochgeladen werden'

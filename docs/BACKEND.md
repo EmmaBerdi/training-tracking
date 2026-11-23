@@ -36,6 +36,9 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | *(empty)* | SMTP login |
 | `MAIL_FROM` | *(empty)* | Sender address of the reset mail |
 | `PASSWORD_RESET_LOG_CODE` | `false` | Logs the reset code when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
+| `RATE_LIMIT_CLIENT_IP_HEADER` | *(empty)* | Header holding the real client address for the auth rate limit; empty uses the socket address. Set only behind a proxy that always overwrites it — the Pi deploy uses `CF-Connecting-IP` |
+| `IMAGES_MAX_COUNT` | `200` | Exercise photos one user may store |
+| `IMAGES_MAX_TOTAL_SIZE` | `100MB` | Total size of the exercise photos one user may store |
 
 ## Pointing the frontend at the backend
 
@@ -136,6 +139,22 @@ again with the new password; an access token already issued stays valid until it
 minutes by default). `/api/account` sits outside `/api/auth/**` on purpose: the latter is open to
 anonymous callers.
 
+### Rate limits
+
+Because `/api/auth/**` is open to anyone, its endpoints are throttled per client IP, before any
+password or code is hashed. Over the limit the answer is `429` with a `Retry-After` header.
+
+| Endpoints | Attempts per client |
+|---|---|
+| `POST /api/auth/login` | 10 per 15 minutes |
+| `POST /api/auth/register` | 5 per hour |
+| `POST /api/auth/password-reset/request` and `/confirm` | 10 per hour, together |
+
+Every attempt counts, successful or not. Refresh and logout aren't limited, so an ordinary session
+is never locked out. The counts live in memory, so a restart resets them. The limits are under
+`app.rate-limit` in `application.yml`; see `RATE_LIMIT_CLIENT_IP_HEADER` above for running behind a
+proxy.
+
 ## Exercise setup photos
 
 Up to ten pictures per exercise, in the order the user added them, on their own endpoints because
@@ -155,6 +174,11 @@ The bytes are a `bytea` column rather than a file on disk: no volume to provisio
 is inside the same backup as everything else. Uploads are capped at 2 MB, and the stored content
 type comes from what an `ImageIO` reader recognises in the bytes rather than from the client's
 header, so a renamed non-image is rejected outright.
+
+Each user may keep at most 200 pictures and 100 MB in total (`IMAGES_MAX_COUNT`,
+`IMAGES_MAX_TOTAL_SIZE`); an upload beyond that answers `409`. Pictures not referenced by the plan
+count too — otherwise a client that uploads and never saves could fill the disk — but before
+refusing, the upload sweeps the orphans the same way a plan save does.
 
 **Why images live in their own table.** `PUT /api/state` deletes and recreates every exercise row of
 a user on each save, and the frontend saves on every plan edit. Anything held on that row has to be
