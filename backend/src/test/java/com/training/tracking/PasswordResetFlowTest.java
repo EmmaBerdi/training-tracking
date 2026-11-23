@@ -8,6 +8,13 @@ import com.training.tracking.dto.auth.PasswordResetRequest;
 import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.repository.PasswordResetTokenRepository;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,21 +25,21 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Forgotten-password reset and change-password, through the real filter chain like AuthFlowTest. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -49,6 +56,11 @@ class PasswordResetFlowTest {
 
     @MockBean
     private JavaMailSender mailSender;
+
+    @BeforeEach
+    void mockSenderBuildsRealMessages() {
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
+    }
 
     @Test
     void resetEndsAllSessionsAndOnlyTheNewPasswordWorks() {
@@ -75,16 +87,17 @@ class PasswordResetFlowTest {
 
     // Raw maps, not the request records, so the server is the one normalising the address.
     @Test
-    void resetWorksWhateverTheCasingOfTheAddress() {
+    void resetWorksWhateverTheCasingOfTheAddress() throws MessagingException {
         register("reset-casing@example.com", "old-password");
 
         ResponseEntity<String> requestRes = restTemplate.postForEntity("/api/auth/password-reset/request",
                 Map.of("email", " Reset-Casing@Example.com"), String.class);
         assertEquals(HttpStatus.ACCEPTED, requestRes.getStatusCode());
         String code = lastMailedCode(1);
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
-        assertArrayEquals(new String[] {"reset-casing@example.com"}, captor.getValue().getTo());
+        assertEquals("reset-casing@example.com",
+                InternetAddress.toString(captor.getValue().getRecipients(Message.RecipientType.TO)));
 
         ResponseEntity<String> confirmRes = restTemplate.postForEntity("/api/auth/password-reset/confirm",
                 Map.of("email", "RESET-CASING@example.com ", "code", code, "newPassword", "new-password"),
@@ -96,7 +109,7 @@ class PasswordResetFlowTest {
     @Test
     void unknownEmailIsAcceptedButNothingIsSent() {
         assertEquals(HttpStatus.ACCEPTED, requestReset("nobody@example.com").getStatusCode());
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        verify(mailSender, after(500).never()).send(any(MimeMessage.class));
 
         assertEquals(HttpStatus.BAD_REQUEST,
                 confirm("nobody@example.com", "123456", "new-password").getStatusCode());
@@ -154,7 +167,7 @@ class PasswordResetFlowTest {
         for (int i = 0; i < 4; i++) {
             assertEquals(HttpStatus.ACCEPTED, requestReset(email).getStatusCode());
         }
-        verify(mailSender, times(3)).send(any(SimpleMailMessage.class));
+        verify(mailSender, after(500).times(3)).send(any(MimeMessage.class));
     }
 
     @Test
@@ -206,11 +219,20 @@ class PasswordResetFlowTest {
                 new HttpEntity<>(new ChangePasswordRequest(current, next), headers), String.class);
     }
 
-    /** The code in the newest of the {@code sent} mails so far. */
+    /**
+     * The code in the plain-text part of the newest of the {@code sent} mails so far, waiting for it
+     * since reset mails go out on another thread.
+     */
     private String lastMailedCode(int sent) {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender, times(sent)).send(captor.capture());
-        Matcher matcher = CODE.matcher(captor.getValue().getText());
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, timeout(5000).times(sent)).send(captor.capture());
+        String text;
+        try {
+            text = (String) ((MimeMultipart) captor.getValue().getContent()).getBodyPart(0).getContent();
+        } catch (IOException | MessagingException e) {
+            throw new AssertionError(e);
+        }
+        Matcher matcher = CODE.matcher(text);
         assertTrue(matcher.find(), "mail carries a six-digit code");
         return matcher.group(1);
     }

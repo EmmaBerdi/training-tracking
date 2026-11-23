@@ -72,10 +72,13 @@ export function AuthScreen() {
         </p>
       )}
       {mode === 'reset' && (
-        <p className={styles.sub}>
-          Falls zu {email} ein Konto existiert, ist ein 6-stelliger Code unterwegs. Er ist 15
-          Minuten gültig.
-        </p>
+        <>
+          <p className={styles.sub}>
+            Falls zu {email} ein Konto existiert, ist ein 6-stelliger Code unterwegs. Er ist 15
+            Minuten gültig.
+          </p>
+          <p className={styles.sub}>Keine E-Mail erhalten? Schau auch im Spam-Ordner nach.</p>
+        </>
       )}
       {notice && <p className={styles.sub}>{notice}</p>}
 
