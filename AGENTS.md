@@ -88,4 +88,6 @@ docker compose up --build
 - [ ] `npm run build` succeeds if TypeScript types or build config changed
 - [ ] `./mvnw test` passes for any backend change (especially anything touching `security/` or auth)
 - [ ] No secrets, tokens, or real personal training data added to the repo
+- [ ] Any manual step the change needs on the Pi (a new `deploy/.env` setting, a one-off command,
+      a check against production) is listed under the PR number in `docs/NEXT-RELEASE.md`
 - [ ] Changes match the scope of the request — nothing unrelated was refactored
