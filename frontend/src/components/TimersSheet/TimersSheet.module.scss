@@ -37,17 +37,33 @@
   max-width: 120px;
 }
 
-/** One interval per row: its number, work, rest and remove; the head labels the columns once. */
-.stepHead,
-.stepRow {
+/**
+ * One interval per block: its number, exercise and remove on top, its work and rest underneath —
+ * read the way the circuit is thought of, "High Knees, 40 on, 20 off".
+ */
+.step {
   display: grid;
-  grid-template-columns: 56px 1fr 1fr 36px;
+  grid-template-columns: 28px 1fr 1fr 36px;
   align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stepName,
+.stepTimes {
+  grid-column: 2 / 4;
+}
+
+.stepTimes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.stepRow {
-  margin-bottom: 6px;
+.stepTime {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .stepNumber {

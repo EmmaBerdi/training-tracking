@@ -62,7 +62,7 @@ class IntervalTimerServiceTest {
     }
 
     private static IntervalTimerRequest tabata() {
-        return new IntervalTimerRequest("Tabata", 10, List.of(new TimerStepDto(20, 10)));
+        return new IntervalTimerRequest("Tabata", 10, List.of(new TimerStepDto(20, 10, null)));
     }
 
     private StateDto planWith(Long timerId) {
@@ -88,8 +88,8 @@ class IntervalTimerServiceTest {
         IntervalTimerDto created = timerService.createTimer(userId, tabata());
         assertThat(timerService.listTimers(userId)).containsExactly(created);
 
-        List<TimerStepDto> pyramid = List.of(new TimerStepDto(40, 10), new TimerStepDto(60, 10),
-                new TimerStepDto(40, 0));
+        List<TimerStepDto> pyramid = List.of(new TimerStepDto(40, 10, null), new TimerStepDto(60, 10, null),
+                new TimerStepDto(40, 0, null));
         IntervalTimerDto updated = timerService.updateTimer(userId, created.id(),
                 new IntervalTimerRequest("  Ski 40/60/40 ", 5, pyramid));
         assertThat(updated).isEqualTo(new IntervalTimerDto(created.id(), "Ski 40/60/40", 5, pyramid));
@@ -98,6 +98,17 @@ class IntervalTimerServiceTest {
 
         timerService.deleteTimer(userId, created.id());
         assertThat(timerService.listTimers(userId)).isEmpty();
+    }
+
+    @Test
+    void namesEachIntervalAndTreatsABlankNameAsNone() {
+        IntervalTimerDto circuit = timerService.createTimer(userId, new IntervalTimerRequest("Zirkel", 10,
+                List.of(new TimerStepDto(40, 20, " High Knees "), new TimerStepDto(40, 20, "Battle Rope"),
+                        new TimerStepDto(40, 20, "  "))));
+
+        assertThat(circuit.steps()).extracting(TimerStepDto::name)
+                .containsExactly("High Knees", "Battle Rope", null);
+        assertThat(timerService.listTimers(userId)).containsExactly(circuit);
     }
 
     @Test

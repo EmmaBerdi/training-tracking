@@ -3,6 +3,7 @@ import type { IntervalTimer } from '../types';
 import {
   buildSchedule,
   cuesFrom,
+  exerciseAt,
   formatClock,
   phaseAt,
   phaseStarts,
@@ -108,6 +109,38 @@ describe('cuesFrom', () => {
   it('leaves out what has already sounded, but keeps a cue due right now', () => {
     expect(cuesFrom(schedule, 11).map((c) => c.atSec)).toEqual([11, 12, 13, 14, 15]);
     expect(cuesFrom(schedule, 11.5)[0]).toEqual({ cue: 'tick', atSec: 12 });
+  });
+});
+
+describe('exerciseAt', () => {
+  const circuit: IntervalTimer = {
+    id: 3,
+    name: 'Zirkel',
+    prepareSec: 10,
+    steps: [
+      { workSec: 40, restSec: 20, name: 'High Knees' },
+      { workSec: 40, restSec: 20, name: null },
+      { workSec: 40, restSec: 20, name: 'Rudern' },
+    ],
+  };
+  const schedule = buildSchedule(circuit, 2);
+  const at = (index: number) => exerciseAt(circuit, schedule, index);
+
+  it('names the interval under way during its work', () => {
+    expect(schedule[1].kind).toBe('work');
+    expect(at(1)).toEqual({ name: 'High Knees', upcoming: false });
+  });
+
+  it('names the next interval while preparing and resting, into the next round too', () => {
+    expect(at(0)).toEqual({ name: 'High Knees', upcoming: true });
+    expect(at(4)).toEqual({ name: 'Rudern', upcoming: true });
+    expect(schedule[6]).toMatchObject({ kind: 'rest', round: 1, step: 3 });
+    expect(at(6)).toEqual({ name: 'High Knees', upcoming: true });
+  });
+
+  it('has nothing to show for an unnamed interval', () => {
+    expect(at(2)).toBeNull();
+    expect(at(3)).toBeNull();
   });
 });
 

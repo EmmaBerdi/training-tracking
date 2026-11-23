@@ -2,7 +2,7 @@ import type { IntervalTimer } from '../../types';
 import { PHASE_LABEL } from '../../data/constants';
 import { useIntervalTimer } from '../../hooks/useIntervalTimer';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { formatClock } from '../../state/timerOps';
+import { exerciseAt, formatClock } from '../../state/timerOps';
 import styles from './TimerRun.module.scss';
 
 interface TimerRunProps {
@@ -21,6 +21,7 @@ export function TimerRun({ timer, rounds, title, onFinish, onClose }: TimerRunPr
   const { schedule, position, finished } = run;
   const phase = schedule[position.index];
   const next = finished ? undefined : schedule[position.index + 1];
+  const exercise = finished ? null : exerciseAt(timer, schedule, position.index);
   const steps = timer.steps.length;
   const secondsLeft = Math.ceil(position.remainingMs / 1000);
 
@@ -65,8 +66,13 @@ export function TimerRun({ timer, rounds, title, onFinish, onClose }: TimerRunPr
 
       <div className={styles.center}>
         {/* Announced as it changes; the countdown itself would be read out every second. */}
-        <div className={styles.phase} aria-live="polite">
-          {finished ? 'Fertig' : PHASE_LABEL[phase.kind]}
+        <div aria-live="polite">
+          <div className={styles.phase}>{finished ? 'Fertig' : PHASE_LABEL[phase.kind]}</div>
+          {exercise && (
+            <div className={styles.exercise}>
+              {exercise.upcoming ? `Gleich: ${exercise.name}` : exercise.name}
+            </div>
+          )}
         </div>
         <div className={styles.count}>{finished ? '✓' : formatClock(secondsLeft)}</div>
         <div className={styles.round}>

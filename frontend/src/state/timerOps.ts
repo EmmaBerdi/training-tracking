@@ -69,6 +69,22 @@ export function phaseAt(schedule: Phase[], elapsedMs: number): Position {
   return { done: true, index: schedule.length - 1, remainingMs: 0 };
 }
 
+/**
+ * The exercise to show for phase `index`: during work the interval's own, during prepare and rest
+ * the one coming up next, so there is time to get into position. Null when that interval has no
+ * name.
+ */
+export function exerciseAt(
+  timer: Pick<IntervalTimer, 'steps'>,
+  schedule: Phase[],
+  index: number,
+): { name: string; upcoming: boolean } | null {
+  const work = schedule.slice(index).find((p) => p.kind === 'work');
+  const name = work && timer.steps[work.step - 1]?.name;
+  if (!work || !name) return null;
+  return { name, upcoming: schedule[index].kind !== 'work' };
+}
+
 /** Ticks counted down before each phase ends. */
 const COUNTDOWN = 3;
 
