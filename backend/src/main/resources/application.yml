@@ -50,6 +50,8 @@ app:
     from: ${MAIL_FROM:}
     # Shown instead of the bare address in the inbox, e.g. "NOREPLY Berdi racing".
     from-name: ${MAIL_FROM_NAME:}
+    # Address for questions, named in every mail's footer; empty leaves the line out.
+    contact: ${MAIL_CONTACT:}
   password-reset:
     # Logs the reset code when no mail host is set. Local development only: a logged code is a
     # password to anyone who can read the logs.

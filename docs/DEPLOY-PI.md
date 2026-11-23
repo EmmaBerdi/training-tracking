@@ -260,10 +260,12 @@ record.
    MAIL_PASSWORD=<the SMTP token>
    MAIL_FROM=noreply@berdi-racing.com
    MAIL_FROM_NAME=NOREPLY Berdi racing
+   MAIL_CONTACT=<the address users can write to with questions>
    ```
 
    `MAIL_FROM` must be the address the token belongs to, or Proton rejects the mail.
-   `MAIL_FROM_NAME` is the name the inbox shows instead of the bare address.
+   `MAIL_FROM_NAME` is the name the inbox shows instead of the bare address. `MAIL_CONTACT` is
+   named in each mail's footer, since replies to `noreply@` go unread.
    `PASSWORD_RESET_LOG_CODE` stays unset in production. Then `chmod 600 deploy/.env`.
 5. Recreate the backend and confirm the values reached the container:
 

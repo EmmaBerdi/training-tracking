@@ -36,6 +36,7 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | *(empty)* | SMTP login |
 | `MAIL_FROM` | *(empty)* | Sender address of the reset mail |
 | `MAIL_FROM_NAME` | *(empty)* | Sender name shown in the inbox; empty sends from the bare address |
+| `MAIL_CONTACT` | *(empty)* | Address for questions, named in every mail's footer; empty leaves the line out |
 | `PASSWORD_RESET_LOG_CODE` | `false` | Logs the reset code when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
 | `RATE_LIMIT_CLIENT_IP_HEADER` | *(empty)* | Header holding the real client address for the auth rate limit; empty uses the socket address. Set only behind a proxy that always overwrites it — the Pi deploy uses `CF-Connecting-IP` |
 | `IMAGES_MAX_COUNT` | `200` | Exercise photos one user may store |

@@ -61,6 +61,17 @@ class MailerTest {
         assertTrue(html.contains("&lt;b&gt;nicht fett&lt;/b&gt; &amp; {{code}}"));
         assertFalse(html.contains("<b>"));
         assertTrue(html.contains("Überschrift"));
+
+        assertTrue(text.contains("Bei Fragen schreib an hilfe@example.com."));
+        assertTrue(html.contains("<a href=\"mailto:hilfe@example.com\""));
+    }
+
+    @Test
+    void withoutAContactTheFooterNamesNone() {
+        MailLayout layout = new MailLayout("");
+
+        assertFalse(layout.text(CONTENT).contains("Bei Fragen"));
+        assertFalse(layout.html(CONTENT).contains("mailto:"));
     }
 
     @Test
@@ -85,7 +96,7 @@ class MailerTest {
 
     private Mailer mailer(String host, String fromName) {
         var beans = new StaticListableBeanFactory(Map.of("mailSender", sender));
-        return new Mailer(beans.getBeanProvider(JavaMailSender.class), new MailLayout(),
+        return new Mailer(beans.getBeanProvider(JavaMailSender.class), new MailLayout("hilfe@example.com"),
                 host, "noreply@example.com", fromName);
     }
 }

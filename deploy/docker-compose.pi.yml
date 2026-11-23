@@ -47,6 +47,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      MAIL_CONTACT: ${MAIL_CONTACT:-}
       # Every request reaches the backend from cloudflared via nginx, so the auth rate limit keys on
       # the address Cloudflare reports. Safe only because nothing off the Pi reaches nginx except
       # through the tunnel, and Cloudflare overwrites this header on every request.

@@ -1,7 +1,9 @@
 package com.training.tracking.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
 
 import java.io.IOException;
@@ -26,8 +28,10 @@ public class MailLayout {
             "Antworten an diese Adresse werden nicht gelesen.");
 
     private final String template;
+    private final String contact;
 
-    public MailLayout() {
+    public MailLayout(@Value("${app.mail.contact:}") String contact) {
+        this.contact = contact;
         try {
             template = new ClassPathResource("mail/layout.html").getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
@@ -45,7 +49,7 @@ public class MailLayout {
                 "code", escape(content.code()),
                 "validity", escape(content.validity()),
                 "note", escape(content.note()),
-                "footer", FOOTER.stream().map(MailLayout::escape).collect(Collectors.joining("<br>")));
+                "footer", htmlFooter());
         // One pass, so a value that happens to contain {{…}} is never substituted again.
         return PLACEHOLDER.matcher(template).replaceAll(match -> {
             String value = values.get(match.group(1));
@@ -64,7 +68,20 @@ public class MailLayout {
                 .append(content.note()).append("\n\n")
                 .append("--\n");
         FOOTER.forEach(line -> text.append(line).append('\n'));
+        if (StringUtils.hasText(contact)) {
+            text.append("Bei Fragen schreib an ").append(contact).append(".\n");
+        }
         return text.toString();
+    }
+
+    private String htmlFooter() {
+        String footer = FOOTER.stream().map(MailLayout::escape).collect(Collectors.joining("<br>"));
+        if (!StringUtils.hasText(contact)) {
+            return footer;
+        }
+        String address = escape(contact);
+        return footer + "<br>Bei Fragen schreib an <a href=\"mailto:" + address
+                + "\" style=\"color:#f2c14e;\">" + address + "</a>.";
     }
 
     private static String escape(String value) {
