@@ -39,11 +39,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -52,11 +57,12 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Account management and invitations, through the real filter chain like AuthFlowTest. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -91,6 +97,11 @@ class AdminFlowTest {
 
     @MockBean
     private JavaMailSender mailSender;
+
+    @BeforeEach
+    void mockSenderBuildsRealMessages() {
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
+    }
 
     @Test
     void onlyActiveAdminsReachTheAdminApi() {
@@ -136,7 +147,8 @@ class AdminFlowTest {
         clearInvocations(mailSender);
         restTemplate.postForEntity("/api/auth/password-reset/request",
                 new PasswordResetRequest("new.person@example.com"), String.class);
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        // Reset mails go out asynchronously, so give a wrongly sent one the time to show up.
+        verify(mailSender, after(500).never()).send(any(MimeMessage.class));
 
         ResponseEntity<InvitationDto> lookup = restTemplate.postForEntity("/api/auth/invitation/lookup",
                 new InvitationTokenRequest(token), InvitationDto.class);
@@ -198,7 +210,7 @@ class AdminFlowTest {
     @Test
     void anUndeliveredInvitationHandsTheLinkToTheAdmin() {
         AuthResponse admin = session(createAccount("admin-nomail", true));
-        doThrow(new MailSendException("down")).when(mailSender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("down")).when(mailSender).send(any(MimeMessage.class));
 
         InviteResponse invited = post("/api/admin/users", new CreateUserRequest("nomail@example.com", null),
                 admin, InviteResponse.class).getBody();
@@ -329,11 +341,17 @@ class AdminFlowTest {
         return restTemplate.exchange(path, method, new HttpEntity<>(body, headers), type, uriVariables);
     }
 
-    /** The token in the newest invitation mail so far. */
+    /** The token in the plain-text part of the newest invitation mail so far. */
     private String lastMailedToken() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender, atLeastOnce()).send(captor.capture());
-        Matcher matcher = INVITE_TOKEN.matcher(captor.getValue().getText());
+        String text;
+        try {
+            text = (String) ((MimeMultipart) captor.getValue().getContent()).getBodyPart(0).getContent();
+        } catch (IOException | MessagingException e) {
+            throw new AssertionError(e);
+        }
+        Matcher matcher = INVITE_TOKEN.matcher(text);
         assertThat(matcher.find()).as("mail carries an invitation link").isTrue();
         return matcher.group(1);
     }

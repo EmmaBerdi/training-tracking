@@ -5,6 +5,7 @@ import com.training.tracking.domain.User;
 import com.training.tracking.repository.PasswordResetTokenRepository;
 import com.training.tracking.repository.RefreshTokenRepository;
 import com.training.tracking.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,27 +31,31 @@ public class PasswordService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final PasswordResetMailer mailer;
+    private final ApplicationEventPublisher events;
     private final SecureRandom random = new SecureRandom();
 
     public PasswordService(UserRepository userRepository,
                            PasswordResetTokenRepository resetTokenRepository,
                            RefreshTokenRepository refreshTokenRepository,
                            PasswordEncoder passwordEncoder,
-                           PasswordResetMailer mailer) {
+                           ApplicationEventPublisher events) {
         this.userRepository = userRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
-        this.mailer = mailer;
+        this.events = events;
     }
 
     /**
-     * Mails a fresh code if the address belongs to an account. Returns the same way whether it does
-     * or not, so the endpoint can't be used to find out which addresses are registered.
+     * Mails a fresh code if the address belongs to an account. Returns the same way, and in about
+     * the same time, whether it does or not, so the endpoint can't be used to find out which
+     * addresses are registered: the code is hashed on every path, and the mail goes out afterwards
+     * on another thread ({@link PasswordResetMailer}).
      */
     @Transactional
     public void requestReset(String email) {
+        String code = "%06d".formatted(random.nextInt(1_000_000));
+        String codeHash = passwordEncoder.encode(code);
         // An invited account sets its first password through the invitation, not a reset code.
         userRepository.findByNormalizedEmail(email).filter(User::isActive).ifPresent(user -> {
             Instant now = Instant.now();
@@ -60,16 +65,15 @@ public class PasswordService {
                 return;
             }
 
-            String code = "%06d".formatted(random.nextInt(1_000_000));
             PasswordResetToken token = new PasswordResetToken();
             token.setUserId(user.getId());
-            token.setCodeHash(passwordEncoder.encode(code));
+            token.setCodeHash(codeHash);
             token.setExpiresAt(now.plus(CODE_TTL));
             token.setAttempts(0);
             token.setCreatedAt(now);
             resetTokenRepository.save(token);
 
-            mailer.send(user.getEmail(), code, CODE_TTL);
+            events.publishEvent(new PasswordResetRequested(user.getEmail(), code, CODE_TTL));
         });
     }
 

@@ -46,6 +46,8 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      MAIL_CONTACT: ${MAIL_CONTACT:-}
       # Invitation links point at the app's public address.
       APP_PUBLIC_URL: https://${APP_HOSTNAME}
       # Made admins on startup; an address without an account gets an invitation mailed.
