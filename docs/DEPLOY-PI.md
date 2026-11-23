@@ -259,9 +259,11 @@ record.
    MAIL_USERNAME=noreply@berdi-racing.com
    MAIL_PASSWORD=<the SMTP token>
    MAIL_FROM=noreply@berdi-racing.com
+   MAIL_FROM_NAME=NOREPLY Berdi racing
    ```
 
    `MAIL_FROM` must be the address the token belongs to, or Proton rejects the mail.
+   `MAIL_FROM_NAME` is the name the inbox shows instead of the bare address.
    `PASSWORD_RESET_LOG_CODE` stays unset in production. Then `chmod 600 deploy/.env`.
 5. Recreate the backend and confirm the values reached the container:
 
@@ -272,7 +274,8 @@ record.
 
 6. Request a reset for a real account and check the mail's source (GMX: *Quelltext anzeigen*,
    Gmail: *Show original*): `Authentication-Results` should show `spf=pass`, `dkim=pass` and
-   `dmarc=pass`. GMX has filed the plain-text reset mail as spam even with all three passing.
+   `dmarc=pass`. GMX filed the earlier plain-text reset mail as spam; the HTML mail with a plain-text
+   alternative and a sender name is meant to fix that, so check GMX, Gmail and iCloud after a change.
 
 ## When something doesn't work
 
@@ -295,7 +298,7 @@ mismatch against an existing volume, or Liquibase refusing to start over a chang
 **No reset mail arrives**
 The reset endpoint answers the same whether or not the mail went out, so look in the backend log.
 `No mail host configured` means `MAIL_HOST` didn't reach the container — run the `env | grep`
-check from [Outgoing mail](#outgoing-mail). `Could not send password reset mail` comes with the
+check from [Outgoing mail](#outgoing-mail). `Could not send mail` comes with the
 SMTP error: `AuthenticationFailedException` is a wrong `MAIL_USERNAME` or token, a sender error is
 a `MAIL_FROM` that doesn't match the token's address. Also check the spam folder.
 
