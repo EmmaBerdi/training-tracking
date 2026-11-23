@@ -82,12 +82,19 @@ public class IntervalTimerService {
         timer.setName(request.name().strip());
         timer.setPrepareSec(request.prepareSec());
         timer.setSteps(new ArrayList<>(request.steps().stream()
-                .map(s -> new TimerStep(s.workSec(), s.restSec()))
+                .map(s -> new TimerStep(s.workSec(), s.restSec(), stepName(s.name())))
                 .toList()));
+    }
+
+    /** A blank name is no name, so the run screen falls back to the plain phase label. */
+    private static String stepName(String name) {
+        return name == null || name.isBlank() ? null : name.strip();
     }
 
     private static IntervalTimerDto toDto(IntervalTimer timer) {
         return new IntervalTimerDto(timer.getId(), timer.getName(), timer.getPrepareSec(),
-                timer.getSteps().stream().map(s -> new TimerStepDto(s.getWorkSec(), s.getRestSec())).toList());
+                timer.getSteps().stream()
+                        .map(s -> new TimerStepDto(s.getWorkSec(), s.getRestSec(), s.getName()))
+                        .toList());
     }
 }

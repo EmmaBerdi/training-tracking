@@ -79,6 +79,15 @@
   text-transform: uppercase;
 }
 
+/* Big enough to read from the floor mid-exercise; a long name wraps rather than overflows. */
+.exercise {
+  font-size: min(9vw, 44px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
 .count {
   font-family: var(--num);
   font-variant-numeric: tabular-nums;

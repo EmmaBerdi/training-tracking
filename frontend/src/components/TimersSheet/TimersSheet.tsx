@@ -103,21 +103,31 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
   const [busy, setBusy] = useState(false);
   const complete = input.name.trim() !== '' && input.steps.every((s) => s.workSec >= 1);
 
-  const setStep = (index: number, field: keyof TimerStep, value: string) =>
+  const setStep = (index: number, change: Partial<TimerStep>) =>
     setInput((prev) => ({
       ...prev,
-      steps: prev.steps.map((s, i) => (i === index ? { ...s, [field]: clampSec(value) } : s)),
+      steps: prev.steps.map((s, i) => (i === index ? { ...s, ...change } : s)),
     }));
-  // A new interval repeats the last one, the usual starting point for a ladder or a pyramid.
+  // A new interval repeats the last one's times, the usual starting point for a ladder or a
+  // pyramid, but not its name: in a circuit it is the next exercise.
   const addStep = () =>
-    setInput((prev) => ({ ...prev, steps: [...prev.steps, prev.steps[prev.steps.length - 1]] }));
+    setInput((prev) => {
+      const { workSec, restSec } = prev.steps[prev.steps.length - 1];
+      return { ...prev, steps: [...prev.steps, { workSec, restSec }] };
+    });
   const removeStep = (index: number) =>
     setInput((prev) => ({ ...prev, steps: prev.steps.filter((_, i) => i !== index) }));
+
+  const trimmed: IntervalTimerInput = {
+    ...input,
+    name: input.name.trim(),
+    steps: input.steps.map((s) => ({ ...s, name: s.name?.trim() || null })),
+  };
 
   const submit = async () => {
     if (!complete || busy) return;
     setBusy(true);
-    await onSubmit({ ...input, name: input.name.trim() });
+    await onSubmit(trimmed);
     setBusy(false);
   };
 
@@ -155,31 +165,17 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
       </div>
 
       <div className={styles.field}>
-        <div className={styles.stepHead}>
-          <label>Intervall</label>
-          <label>Arbeit (s)</label>
-          <label>Pause (s)</label>
-        </div>
+        <label>Intervalle</label>
         {input.steps.map((s, i) => (
-          <div key={i} className={styles.stepRow}>
+          <div key={i} className={styles.step}>
             <span className={styles.stepNumber}>{i + 1}</span>
             <input
-              type="number"
-              inputMode="numeric"
-              aria-label={`Arbeit in Intervall ${i + 1}, Sekunden`}
-              min={1}
-              max={TIMER_MAX_SEC}
-              value={s.workSec}
-              onChange={(e) => setStep(i, 'workSec', e.target.value)}
-            />
-            <input
-              type="number"
-              inputMode="numeric"
-              aria-label={`Pause nach Intervall ${i + 1}, Sekunden`}
-              min={0}
-              max={TIMER_MAX_SEC}
-              value={s.restSec}
-              onChange={(e) => setStep(i, 'restSec', e.target.value)}
+              className={styles.stepName}
+              maxLength={64}
+              aria-label={`Übung in Intervall ${i + 1}`}
+              placeholder="Übung (optional)"
+              value={s.name ?? ''}
+              onChange={(e) => setStep(i, { name: e.target.value })}
             />
             <button
               type="button"
@@ -190,6 +186,34 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
             >
               ×
             </button>
+            <div className={styles.stepTimes}>
+              <div className={styles.stepTime}>
+                <label htmlFor={`step-${i}-work`}>Arbeit (s)</label>
+                <input
+                  id={`step-${i}-work`}
+                  type="number"
+                  inputMode="numeric"
+                  aria-label={`Arbeit in Intervall ${i + 1}, Sekunden`}
+                  min={1}
+                  max={TIMER_MAX_SEC}
+                  value={s.workSec}
+                  onChange={(e) => setStep(i, { workSec: clampSec(e.target.value) })}
+                />
+              </div>
+              <div className={styles.stepTime}>
+                <label htmlFor={`step-${i}-rest`}>Pause (s)</label>
+                <input
+                  id={`step-${i}-rest`}
+                  type="number"
+                  inputMode="numeric"
+                  aria-label={`Pause nach Intervall ${i + 1}, Sekunden`}
+                  min={0}
+                  max={TIMER_MAX_SEC}
+                  value={s.restSec}
+                  onChange={(e) => setStep(i, { restSec: clampSec(e.target.value) })}
+                />
+              </div>
+            </div>
           </div>
         ))}
         {input.steps.length < TIMER_MAX_STEPS && (
@@ -212,7 +236,7 @@ function TimerForm({ timer, uses, onSubmit, onDelete, onTest, onBack }: TimerFor
         type="button"
         className={styles.ghost}
         disabled={!complete}
-        onClick={() => onTest({ id: timer?.id ?? 0, ...input, name: input.name.trim() })}
+        onClick={() => onTest({ id: timer?.id ?? 0, ...trimmed })}
       >
         Testen (2 Runden)
       </button>

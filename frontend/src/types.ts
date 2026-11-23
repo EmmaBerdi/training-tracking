@@ -95,6 +95,8 @@ export interface Rating {
 export interface TimerStep {
   workSec: number;
   restSec: number;
+  /** The exercise done during the work ("High Knees"); null or absent when unnamed. */
+  name?: string | null;
 }
 
 /**
