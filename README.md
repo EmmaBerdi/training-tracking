@@ -43,6 +43,7 @@ Status per user story, and what is still open, is tracked in [`docs/USER_STORIES
 | `docs/SETUP.md` | Feature-branch workflow, install on iPhone, backups (German) |
 | `docs/BACKEND.md` | Running and configuring the backend + database |
 | `docs/DEPLOY-PI.md` | Self-hosting the whole stack on a Raspberry Pi behind a Cloudflare tunnel |
+| `docs/NEXT-RELEASE.md` | Manual steps the next release needs on the Pi (new settings, checks); PRs add theirs |
 | `docs/USER_STORIES.md` | What the app should do, and how much of it is built |
 | `docs/PLAN_IMPORT.md` | The JSON format for importing plans, written so an AI can produce it |
 | `docs/Trainingsplan_v6.md` | The training plan the app was originally built around (German) |
