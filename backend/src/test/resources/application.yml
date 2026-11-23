@@ -20,6 +20,7 @@ app:
     refresh-token-ttl: P30D
   cors:
     allowed-origins: http://localhost:5500
+  public-url: http://localhost:5500
   # Every test request comes from 127.0.0.1 and the flow tests share one context, so the real limits
   # would trip across tests. AuthRateLimitFlowTest sets its own.
   rate-limit:
@@ -30,6 +31,9 @@ app:
       max-attempts: 1000
       window: PT1H
     password-reset:
+      max-attempts: 1000
+      window: PT1H
+    invitation:
       max-attempts: 1000
       window: PT1H
   images:

@@ -52,9 +52,12 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByNormalizedEmail(request.email())
                 .orElseThrow(AuthService::invalidCredentials);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // The same answer as a wrong password, so the response doesn't reveal the account's state.
+        if (!user.isActive() || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
         return issueTokens(user);
     }
 
@@ -63,7 +66,7 @@ public class AuthService {
         String hash = jwtService.hashToken(rawRefreshToken);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(AuthService::invalidRefreshToken);
-        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now())) {
+        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now()) || !stored.getUser().isActive()) {
             throw invalidRefreshToken();
         }
         stored.setRevoked(true);
@@ -80,7 +83,8 @@ public class AuthService {
         });
     }
 
-    private AuthResponse issueTokens(User user) {
+    /** Starts a session for an account that has just proven itself (login, refresh, accepted invitation). */
+    AuthResponse issueTokens(User user) {
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
         String rawRefreshToken = jwtService.generateOpaqueRefreshToken();
 
@@ -93,7 +97,7 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
 
         return new AuthResponse(accessToken, rawRefreshToken, jwtService.getAccessTokenTtlSeconds(),
-                user.getEmail(), user.getDisplayName());
+                user.getEmail(), user.getDisplayName(), user.isAdmin());
     }
 
     private static ResponseStatusException invalidCredentials() {

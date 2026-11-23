@@ -1,0 +1,8 @@
+package com.training.tracking.dto.admin;
+
+/**
+ * @param inviteUrl the link to pass on by hand, present only when it could not be mailed. The token
+ *                  is stored hashed, so this response is the only time it can be shown.
+ */
+public record InviteResponse(AdminUserDto user, String inviteUrl) {
+}

@@ -46,6 +46,10 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      # Invitation links point at the app's public address.
+      APP_PUBLIC_URL: https://${APP_HOSTNAME}
+      # Made admins on startup; an address without an account gets an invitation mailed.
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       # Every request reaches the backend from cloudflared via nginx, so the auth rate limit keys on
       # the address Cloudflare reports. Safe only because nothing off the Pi reaches nginx except
       # through the tunnel, and Cloudflare overwrites this header on every request.

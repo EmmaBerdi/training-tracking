@@ -45,6 +45,15 @@ app:
     # Logs the reset code when no mail host is set. Local development only: a logged code is a
     # password to anyone who can read the logs.
     log-code: ${PASSWORD_RESET_LOG_CODE:false}
+  invitation:
+    # The same for invitation links: local development only, a logged link claims the account.
+    log-link: ${INVITATION_LOG_LINK:false}
+  # Where the app is reached from a browser; invitation links point here.
+  public-url: ${APP_PUBLIC_URL:http://localhost:5500}
+  # Comma-separated. These accounts are made admins on startup (and created as invited accounts
+  # when they don't exist yet); see AdminBootstrap.
+  admin:
+    emails: ${ADMIN_EMAILS:}
   # Per client IP, on the anonymous /api/auth endpoints. Behind the Cloudflare tunnel every request
   # arrives from cloudflared, so the Pi deploy sets the header to CF-Connecting-IP. Left empty, the
   # socket address counts — never name a header that no proxy in front overwrites, or a client can
@@ -59,6 +68,10 @@ app:
       window: PT1H
     # Shared by requesting a code and confirming it.
     password-reset:
+      max-attempts: 10
+      window: PT1H
+    # Shared by looking an invitation up and accepting it.
+    invitation:
       max-attempts: 10
       window: PT1H
   # Per user. Pictures not (yet) referenced by the plan count too; they are swept before an upload
