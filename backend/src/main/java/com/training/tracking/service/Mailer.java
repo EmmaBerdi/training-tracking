@@ -71,6 +71,8 @@ public class Mailer {
             }
             helper.setTo(to);
             helper.setSubject(content.subject());
+            // RFC 3834: tells out-of-office and other auto-responders not to answer.
+            message.setHeader("Auto-Submitted", "auto-generated");
             // A bare multipart/alternative rather than MimeMessageHelper's mixed/related nesting:
             // there are no attachments or inline images to hold.
             MimeMultipart alternative = new MimeMultipart("alternative");

@@ -44,6 +44,7 @@ class MailerTest {
         assertEquals("noreply@example.com", from.getAddress());
         assertEquals("NOREPLY Berdi racing", from.getPersonal());
         assertEquals("Training: Test", message.getSubject());
+        assertEquals("auto-generated", message.getHeader("Auto-Submitted", null));
 
         MimeMultipart parts = (MimeMultipart) message.getContent();
         assertTrue(parts.getContentType().startsWith("multipart/alternative"));

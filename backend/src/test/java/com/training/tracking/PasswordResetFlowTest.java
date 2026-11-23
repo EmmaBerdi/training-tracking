@@ -36,8 +36,8 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,7 +109,7 @@ class PasswordResetFlowTest {
     @Test
     void unknownEmailIsAcceptedButNothingIsSent() {
         assertEquals(HttpStatus.ACCEPTED, requestReset("nobody@example.com").getStatusCode());
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verify(mailSender, after(500).never()).send(any(MimeMessage.class));
 
         assertEquals(HttpStatus.BAD_REQUEST,
                 confirm("nobody@example.com", "123456", "new-password").getStatusCode());
@@ -167,7 +167,7 @@ class PasswordResetFlowTest {
         for (int i = 0; i < 4; i++) {
             assertEquals(HttpStatus.ACCEPTED, requestReset(email).getStatusCode());
         }
-        verify(mailSender, times(3)).send(any(MimeMessage.class));
+        verify(mailSender, after(500).times(3)).send(any(MimeMessage.class));
     }
 
     @Test
@@ -219,10 +219,13 @@ class PasswordResetFlowTest {
                 new HttpEntity<>(new ChangePasswordRequest(current, next), headers), String.class);
     }
 
-    /** The code in the plain-text part of the newest of the {@code sent} mails so far. */
+    /**
+     * The code in the plain-text part of the newest of the {@code sent} mails so far, waiting for it
+     * since reset mails go out on another thread.
+     */
     private String lastMailedCode(int sent) {
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
-        verify(mailSender, times(sent)).send(captor.capture());
+        verify(mailSender, timeout(5000).times(sent)).send(captor.capture());
         String text;
         try {
             text = (String) ((MimeMultipart) captor.getValue().getContent()).getBodyPart(0).getContent();

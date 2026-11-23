@@ -132,7 +132,9 @@ Each plan in the payload names its `sessionTypeId`. A type that is neither a see
 
 A reset request for a known address stores a 6-digit code — BCrypt-hashed, valid 15 minutes —
 in `password_reset_token` and mails it; an unknown address gets the same `202` and nothing else,
-so the endpoint can't be used to probe which addresses are registered. Only a user's newest code
+so the endpoint can't be used to probe which addresses are registered. The answer also takes about
+as long either way: a code is hashed on every path, and the mail goes out only after the commit, on
+another thread (`PasswordResetMailer`), with 10-second SMTP timeouts. Only a user's newest code
 counts, it locks after 5 wrong guesses, and at most 3 codes are issued per account and hour.
 
 Both a reset and a change revoke every refresh token of the account, so each device has to log in
