@@ -9,4 +9,7 @@ public record RegisterRequest(
         @NotBlank @Size(min = 8, max = 255) String password,
         String displayName
 ) {
+    public RegisterRequest {
+        email = Emails.normalize(email);
+    }
 }

@@ -36,7 +36,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByNormalizedEmail(request.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "email already registered");
         }
         User user = new User();
@@ -50,7 +50,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByNormalizedEmail(request.email())
                 .orElseThrow(AuthService::invalidCredentials);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();

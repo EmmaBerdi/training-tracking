@@ -6,4 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public record PasswordResetRequest(
         @Email @NotBlank String email
 ) {
+    public PasswordResetRequest {
+        email = Emails.normalize(email);
+    }
 }

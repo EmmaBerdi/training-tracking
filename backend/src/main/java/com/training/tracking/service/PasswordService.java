@@ -51,7 +51,7 @@ public class PasswordService {
      */
     @Transactional
     public void requestReset(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+        userRepository.findByNormalizedEmail(email).ifPresent(user -> {
             Instant now = Instant.now();
             long recent = resetTokenRepository.countByUserIdAndCreatedAtAfter(
                     user.getId(), now.minus(Duration.ofHours(1)));
@@ -78,7 +78,7 @@ public class PasswordService {
      */
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public void confirmReset(String email, String code, String newPassword) {
-        User user = userRepository.findByEmail(email).orElseThrow(PasswordService::invalidCode);
+        User user = userRepository.findByNormalizedEmail(email).orElseThrow(PasswordService::invalidCode);
         // Only the newest code counts: requesting another one retires every earlier code.
         PasswordResetToken token = resetTokenRepository
                 .findFirstByUserIdOrderByCreatedAtDescIdDesc(user.getId())
