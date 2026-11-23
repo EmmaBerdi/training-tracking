@@ -93,7 +93,8 @@ dev-only string; leaving it in place on a host reachable from the internet would
 a token for any account.
 
 `MAIL_*` is optional: it is the SMTP account that sends password reset codes. Without it the app
-runs normally, but "Passwort vergessen?" never delivers a code.
+runs normally, but "Passwort vergessen?" never delivers a code. See [Outgoing mail](#outgoing-mail)
+for setting it up.
 
 ```bash
 docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
@@ -210,6 +211,63 @@ cd ~/training-tracking && git fetch --tags && git checkout v1.5.0
 APP_VERSION=1.5.0 docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d --build
 ```
 
+## Outgoing mail
+
+Reset codes go out through Proton Mail's SMTP submission, from `noreply@berdi-racing.com`. Proton
+SMTP needs a paid plan and an address on a custom domain; `@proton.me` addresses can't send this
+way.
+
+`berdi-racing.com` is shared with another app that also sends through Proton, so the domain's DNS
+records already exist in Cloudflare. They are domain-wide — changing any of them affects both
+apps:
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `@` | `protonmail-verification=…` |
+| MX | `@` | `mail.protonmail.ch` (10), `mailsec.protonmail.ch` (20) |
+| TXT | `@` | `v=spf1 include:_spf.protonmail.ch ~all` |
+| CNAME | `protonmail._domainkey`, `protonmail2._domainkey`, `protonmail3._domainkey` | the `…domains.proton.ch` targets Proton shows, **DNS only** (not proxied) |
+| TXT | `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:nick@berdi-racing.com` |
+
+A domain may have only one SPF record; another sender gets an extra `include:` in it, not a second
+record.
+
+### Setting it up
+
+1. In Proton, **Settings → Addresses**: create `noreply@berdi-racing.com`.
+2. **Settings → Proton Mail → IMAP/SMTP → SMTP tokens → Generate token**, for that address. Give
+   this app its own token rather than reusing the other app's, so either can be revoked alone.
+   Proton shows the token once.
+3. On the Pi, check outbound port 587 is open — certificate lines or a `250` mean it is:
+
+   ```bash
+   openssl s_client -starttls smtp -connect smtp.protonmail.ch:587 -crlf -quiet </dev/null
+   ```
+
+4. In `deploy/.env`, exactly these names — the backend ignores `SMTP_HOST`, `MAIL_USER` and the
+   like without complaint:
+
+   ```env
+   MAIL_HOST=smtp.protonmail.ch
+   MAIL_PORT=587
+   MAIL_USERNAME=noreply@berdi-racing.com
+   MAIL_PASSWORD=<the SMTP token>
+   MAIL_FROM=noreply@berdi-racing.com
+   ```
+
+   `MAIL_FROM` must be the address the token belongs to, or Proton rejects the mail.
+   `PASSWORD_RESET_LOG_CODE` stays unset in production. Then `chmod 600 deploy/.env`.
+5. Recreate the backend and confirm the values reached the container:
+
+   ```bash
+   docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env up -d backend
+   docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env exec backend env | grep -E 'MAIL_(HOST|PORT|USERNAME|FROM)'
+   ```
+
+6. Request a reset for a real account and check the mail's source (GMX: *Quelltext anzeigen*,
+   Gmail: *Show original*): `Authentication-Results` should show `spf=pass`, `dkim=pass` and
+   `dmarc=pass`. GMX has filed the plain-text reset mail as spam even with all three passing.
+
 ## When something doesn't work
 
 **`training.example.com` gives a Cloudflare error 1033 or 530**
@@ -227,6 +285,13 @@ mismatch against an existing volume, or Liquibase refusing to start over a chang
 **Uploading an exercise photo fails around 1 MB**
 `client_max_body_size` in `deploy/nginx.pi.conf` isn't being applied — confirm the file is mounted
 (`docker compose ... exec frontend cat /etc/nginx/conf.d/default.conf`).
+
+**No reset mail arrives**
+The reset endpoint answers the same whether or not the mail went out, so look in the backend log.
+`No mail host configured` means `MAIL_HOST` didn't reach the container — run the `env | grep`
+check from [Outgoing mail](#outgoing-mail). `Could not send password reset mail` comes with the
+SMTP error: `AuthenticationFailedException` is a wrong `MAIL_USERNAME` or token, a sender error is
+a `MAIL_FROM` that doesn't match the token's address. Also check the spam folder.
 
 **Changes don't show up after a rebuild**
 Close the app fully on the phone and reopen. If it persists, check that Cloudflare isn't serving a
