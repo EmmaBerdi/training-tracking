@@ -37,9 +37,10 @@ public class TokenCleanup {
 
     /**
      * A revoked refresh token is kept until it expires rather than deleted when revoked: presenting
-     * a rotated token again is how a stolen one shows itself (#14), and that needs the row.
+     * a rotated token again is how a stolen one shows itself, and the reuse detection #14 adds
+     * needs the row to recognise it.
      */
-    @Scheduled(cron = "${app.token-cleanup.cron}", zone = "Europe/Berlin")
+    @Scheduled(cron = "${app.token-cleanup.cron}", zone = "${app.token-cleanup.zone}")
     @Transactional
     public void purge() {
         Instant now = Instant.now();

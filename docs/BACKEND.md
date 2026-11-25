@@ -155,9 +155,10 @@ anonymous callers.
 Logging out everywhere revokes every refresh token of the account, the calling device's included;
 as after a password change, an access token already issued stays valid until it expires.
 
-`TokenCleanup` runs daily at 04:15 Europe/Berlin (`app.token-cleanup.cron`). It deletes refresh
-tokens past their expiry and reset codes older than a day. A revoked refresh token is kept until it
-expires, so a rotated token presented again can still be recognised; a reset code is kept well past
+`TokenCleanup` runs daily at 04:15 Europe/Zurich (`app.token-cleanup.cron` and `.zone`). It deletes
+refresh tokens past their expiry and reset codes older than a day. A revoked refresh token is kept
+until it expires, so the reuse detection planned in #14 can recognise a rotated token presented
+again; a reset code is kept well past
 the hour the per-account request limit counts. Invitations aren't touched: the admin list shows
 each account's newest one, expired or not.
 

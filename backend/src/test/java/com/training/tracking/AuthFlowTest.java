@@ -4,7 +4,6 @@ import com.training.tracking.domain.User;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.dto.auth.AuthResponse;
 import com.training.tracking.dto.auth.LoginRequest;
-import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,9 +110,9 @@ class AuthFlowTest {
                 "/api/account/logout-all", HttpMethod.POST, new HttpEntity<>(headers), Void.class);
         assertEquals(HttpStatus.NO_CONTENT, res.getStatusCode());
 
-        assertEquals(HttpStatus.UNAUTHORIZED, refresh(phone).getStatusCode());
-        assertEquals(HttpStatus.UNAUTHORIZED, refresh(laptop).getStatusCode());
-        assertEquals(HttpStatus.OK, refresh(bystander).getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, phone).getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, laptop).getStatusCode());
+        assertEquals(HttpStatus.OK, TestAccounts.refresh(restTemplate, bystander).getStatusCode());
 
         // The account itself is fine: logging in again starts a new session.
         TestAccounts.login(restTemplate, "everywhere@example.com", "correct-password");
@@ -131,10 +130,5 @@ class AuthFlowTest {
                 Map.of("email", "walk-in@example.com", "password", "correct-password"), String.class);
         assertEquals(HttpStatus.NOT_FOUND, res.getStatusCode());
         assertTrue(userRepository.findByNormalizedEmail("walk-in@example.com").isEmpty());
-    }
-
-    private ResponseEntity<String> refresh(AuthResponse session) {
-        return restTemplate.postForEntity("/api/auth/refresh",
-                new RefreshRequest(session.refreshToken()), String.class);
     }
 }

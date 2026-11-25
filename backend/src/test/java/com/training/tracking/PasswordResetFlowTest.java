@@ -5,7 +5,6 @@ import com.training.tracking.dto.auth.ChangePasswordRequest;
 import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetConfirmRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
-import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.repository.PasswordResetTokenRepository;
 import com.training.tracking.repository.UserRepository;
 import jakarta.mail.Message;
@@ -84,9 +83,7 @@ class PasswordResetFlowTest {
         assertEquals(HttpStatus.BAD_REQUEST, confirm(email, code, "third-password").getStatusCode());
 
         // Sessions from before the reset can no longer refresh.
-        ResponseEntity<String> refreshRes = restTemplate.postForEntity(
-                "/api/auth/refresh", new RefreshRequest(session.refreshToken()), String.class);
-        assertEquals(HttpStatus.UNAUTHORIZED, refreshRes.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, session).getStatusCode());
 
         assertEquals(HttpStatus.UNAUTHORIZED, login(email, "old-password").getStatusCode());
         assertEquals(HttpStatus.OK, login(email, "new-password").getStatusCode());
@@ -191,9 +188,7 @@ class PasswordResetFlowTest {
         assertEquals(HttpStatus.NO_CONTENT,
                 changePassword(session, "old-password", "new-password").getStatusCode());
 
-        ResponseEntity<String> refreshRes = restTemplate.postForEntity(
-                "/api/auth/refresh", new RefreshRequest(session.refreshToken()), String.class);
-        assertEquals(HttpStatus.UNAUTHORIZED, refreshRes.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, session).getStatusCode());
         assertEquals(HttpStatus.UNAUTHORIZED, login(email, "old-password").getStatusCode());
         assertEquals(HttpStatus.OK, login(email, "new-password").getStatusCode());
     }

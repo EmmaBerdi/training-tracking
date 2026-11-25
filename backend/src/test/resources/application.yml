@@ -36,6 +36,7 @@ app:
   # Off, so the job never runs in the middle of a test; TokenCleanupTest calls it directly.
   token-cleanup:
     cron: "-"
+    zone: Europe/Zurich
   images:
     max-count: 200
     max-total-size: 100MB
