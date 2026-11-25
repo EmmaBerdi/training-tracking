@@ -59,6 +59,10 @@ app:
   invitation:
     # The same for invitation links: local development only, a logged link claims the account.
     log-link: ${INVITATION_LOG_LINK:false}
+  email-change:
+    # The same for the code confirming a new address: local development only, a logged code moves
+    # the account to that address.
+    log-code: ${EMAIL_CHANGE_LOG_CODE:false}
   # Where the app is reached from a browser; invitation links point here.
   public-url: ${APP_PUBLIC_URL:http://localhost:5500}
   # Comma-separated. These accounts are made admins on startup (and created as invited accounts

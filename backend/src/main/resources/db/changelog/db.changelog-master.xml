@@ -26,5 +26,6 @@
     <include file="changes/011-interval-timer-step-name.sql" relativeToChangelogFile="true"/>
     <include file="changes/012-user-email-lower-unique.sql" relativeToChangelogFile="true"/>
     <include file="changes/013-admin-invitation.sql" relativeToChangelogFile="true"/>
+    <include file="changes/014-email-change-request.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

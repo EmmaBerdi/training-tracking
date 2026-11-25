@@ -39,6 +39,7 @@ createdb training_tracking   # or point DB_* env vars at an existing instance
 | `MAIL_CONTACT` | *(empty)* | Address for questions, named in every mail's footer; empty leaves the line out |
 | `PASSWORD_RESET_LOG_CODE` | `false` | Logs the reset code when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
 | `INVITATION_LOG_LINK` | `false` | Logs the invitation link when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
+| `EMAIL_CHANGE_LOG_CODE` | `false` | Logs the code confirming a new email address when `MAIL_HOST` is empty. Local development only — `docker-compose.yml` turns it on |
 | `APP_PUBLIC_URL` | `http://localhost:5500` | Where the app is opened in a browser; invitation links point here |
 | `ADMIN_EMAILS` | *(empty)* | Comma-separated addresses made admins on startup — see [Accounts and admins](#accounts-and-admins) |
 | `RATE_LIMIT_CLIENT_IP_HEADER` | *(empty)* | Header holding the real client address for the auth rate limit; empty uses the socket address. Set only behind a proxy that always overwrites it — the Pi deploy uses `CF-Connecting-IP` |
@@ -71,6 +72,7 @@ startup (`spring.liquibase` in `application.yml`):
 | `db/changelog/changes/006-session-value-reps.sql` | Optional reps per logged set: `session_value.reps` (1–999) |
 | `db/changelog/changes/007-intervals.sql` | `kcal` as an exercise type, progression steps (`exercise_step`, `exercise.current_step`), effort ratings (`session_rating`) |
 | `db/changelog/changes/008-step-target.sql` | Optional target value per progression step (`exercise_step.target`) |
+| `db/changelog/changes/014-email-change-request.sql` | Hashed one-time codes confirming a new email address — see [Email address](#email-address) |
 | `liquibase.properties` | Datasource for the `liquibase-maven-plugin` only; the app itself uses `application.yml` |
 
 `001-init-schema.sql` is the flattened end state of the eight incremental Flyway migrations that
@@ -146,6 +148,23 @@ again with the new password; an access token already issued stays valid until it
 minutes by default). `/api/account` sits outside `/api/auth/**` on purpose: the latter is open to
 anonymous callers.
 
+## Email address
+
+| Call (bearer token) | Answer |
+|---|---|
+| `POST /api/account/email/request {newEmail, currentPassword}` | `202`; `400` for a wrong current password, `409` for an address that belongs to any account (your own too), `429` after 3 requests in an hour |
+| `POST /api/account/email/confirm {code}` | `200 {email}`; `400` for any bad, used, expired or locked code, `409` if the address was taken in the meantime |
+
+A request stores a 6-digit code in `email_change_request` under the same rules as a reset code —
+BCrypt-hashed, valid 15 minutes, only the newest counts, locked after 5 wrong guesses — and mails it
+to the **new** address after the commit (`EmailChangeMailer`). The new address is normalised like a
+login, and checked again on confirm, since an admin may have invited it in between. Unlike the
+anonymous reset request, these answers say what went wrong: only the logged-in owner sees them.
+
+Confirming changes `user.email`, then mails a notice to the **old** address naming the new one, so a
+change made from a hijacked session doesn't go unnoticed. The session stays open: refresh tokens are
+kept, and the next refresh hands out an access token with the new address.
+
 ### Rate limits
 
 Because `/api/auth/**` is open to anyone, its endpoints are throttled per client IP, before any
@@ -172,7 +191,8 @@ under "Benutzer verwalten" in the user menu. The accounts in `ADMIN_EMAILS` beco
 startup; an address there without an account yet is created as an invited admin and mailed an
 invitation. Until it is accepted, a start sends a new one only when the last link expired or
 couldn't be mailed, so a restart never retires a link that is still in the inbox. Taking an
-address off the list doesn't take the flag away.
+address off the list doesn't take the flag away. An admin who changes their own address has to
+change it in `ADMIN_EMAILS` too, or the next start creates a new invited admin for the old one.
 
 | Call (admin bearer token) | Answer |
 |---|---|
