@@ -13,7 +13,7 @@ The pieces, all in `deploy/`:
 | `deploy/.env.example` | Template for the secrets and hostname; copy to `deploy/.env` |
 | `deploy/backup.sh` | `pg_dump` (nightly and before every deploy), checked by a test restore, keeps the last 14 |
 | `deploy/restore-check.sh` | Restores a dump into a throwaway Postgres and counts its rows |
-| `deploy/mac/` | Script and launchd job that copy the dumps to your Mac daily |
+| `deploy/mac/` | Script and launchd job that copy new dumps to your Mac every hour |
 | `deploy/auto-deploy.sh` | Checks out the newest release tag and rebuilds when there is a new one |
 | `deploy/training-deploy.service`, `.timer` | systemd units that run `auto-deploy.sh` every 2 minutes |
 
@@ -131,8 +131,8 @@ stored tokens, and it will keep pointing at whatever `window.API_BASE` said.
 
 ## Step 6 — Backups
 
-The Pi dumps the database every night and before every deploy; your Mac copies the dumps off the
-Pi once a day. A backup that only exists on the machine it backs up dies with its SD card.
+The Pi dumps the database every night and before every deploy; your Mac checks every hour for new
+dumps and copies them off the Pi. A backup that only exists on the machine it backs up dies with its SD card.
 
 ### On the Pi
 
@@ -202,15 +202,18 @@ run back home fetches every dump it missed — the Pi keeps 14 days of them. If 
    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.training-tracking.pull-backups.plist
    ```
 
-   It runs at once, then daily at 12:00 and at every login; a run missed while the Mac sleeps
-   happens on wake. Check the first one:
+   It runs at once, then every hour and at every login; a run missed while the Mac sleeps happens
+   on wake. A run with nothing new copies nothing, so the night's dump arrives with the first run
+   in the morning, and within an hour of coming home after a trip. Check the first one:
 
    ```bash
    tail ~/Library/Logs/training-backup.log      # "pulled from training-pi"
    ls -l ~/training-backups
    ```
 
-   Run it by hand: `launchctl kickstart gui/$(id -u)/local.training-tracking.pull-backups`.
+   Run it by hand: `launchctl kickstart gui/$(id -u)/local.training-tracking.pull-backups`. After
+   the plist changes in the repo, `launchctl bootout gui/$(id -u)/local.training-tracking.pull-backups`,
+   then the two commands above again.
 
 ### Restoring from a backup
 
