@@ -82,6 +82,10 @@ app:
     invitation:
       max-attempts: 10
       window: PT1H
+  # Deletes expired refresh tokens and old reset codes (TokenCleanup). Spring cron, Europe/Berlin
+  # time: daily at 04:15, after the 03:30 backup.
+  token-cleanup:
+    cron: "0 15 4 * * *"
   # Per user. Pictures not (yet) referenced by the plan count too; they are swept before an upload
   # is refused.
   images:

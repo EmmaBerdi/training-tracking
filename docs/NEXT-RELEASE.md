@@ -29,3 +29,5 @@ so set them in `deploy/.env` first.
   mail on the iPhone, set a password, and check you land in an empty app. Open the link again: it
   must say the invitation is no longer valid. Then delete the test account.
 - [ ] #51 — `POST /api/auth/register` answers `404`, and the login screen offers no registration.
+- [ ] #53 — The morning after the deploy, the backend log has a `Token cleanup removed …` line
+  from 04:15. The first run clears the whole backlog, so its counts are large; later runs are small.
