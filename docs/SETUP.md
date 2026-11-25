@@ -68,7 +68,7 @@ Ein manueller Cache-Versionsschritt wie früher entfällt — der Service Worker
 
 Die App speichert nichts mehr auf dem iPhone selbst — alles liegt in der Postgres-Datenbank hinter deinem Backend. Das Gerät wechseln ist damit kein Problem mehr, ein Ausfall oder versehentliches Löschen der Datenbank aber schon.
 
-Die App selbst hat keinen Export. Gesichert wird deshalb die Datenbank: auf dem Raspberry Pi übernimmt das `deploy/backup.sh` jede Nacht und vor jedem Deployment per `pg_dump` (siehe `docs/DEPLOY-PI.md`), anderswo richtest du ein regelmässiges `pg_dump` selbst ein — es sei denn, ein gehosteter Anbieter macht ohnehin Backups.
+Die App selbst hat keinen Export. Gesichert wird deshalb die Datenbank: auf dem Raspberry Pi übernimmt das `deploy/backup.sh` jede Nacht und vor jedem Deployment per `pg_dump`, spielt jeden Dump zur Probe zurück, und ein Mac holt die Dumps täglich vom Pi ab (siehe `docs/DEPLOY-PI.md`), anderswo richtest du ein regelmässiges `pg_dump` selbst ein — es sei denn, ein gehosteter Anbieter macht ohnehin Backups.
 
 Spiel das Zurückspielen eines Dumps einmal durch, solange nichts kaputt ist. Der Moment, in dem du es brauchst, ist der ungünstigste zum Ausprobieren.
 

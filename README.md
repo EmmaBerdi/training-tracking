@@ -70,6 +70,6 @@ cd backend && ./mvnw test                   # backend (H2, no database needed)
 
 ## Data and backups
 
-Data lives in the Postgres database the backend is configured against — nothing personal is stored in this repo. The app has no export of its own, so back up the database: on the Pi, [`deploy/backup.sh`](deploy/backup.sh) runs a nightly `pg_dump` (see [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md)); anywhere else, schedule a `pg_dump` yourself.
+Data lives in the Postgres database the backend is configured against — nothing personal is stored in this repo. The app has no export of its own, so back up the database: on the Pi, [`deploy/backup.sh`](deploy/backup.sh) runs a nightly `pg_dump`, test-restores it, and a Mac copies the dumps off the Pi daily (see [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md)); anywhere else, schedule a `pg_dump` yourself.
 
 Schema changes ship as Liquibase changesets that the backend applies on startup. Take a backup before deploying a new version against a database that holds real data.

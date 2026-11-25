@@ -36,3 +36,11 @@ so set them in `deploy/.env` first.
   stay logged in. Log in with the new address, then change it back.
 - [ ] #54 — Before changing your own admin account's address, put the new one in `ADMIN_EMAILS` in
   `deploy/.env`; otherwise the next start creates an invited admin for the old address.
+- [ ] #16 — The pre-deploy line in `journalctl -u training-deploy`, and the next morning's in
+  `~/backup.log`, read `restore check passed for … users=…` with real counts.
+- [ ] #16 — Set up the copies on the Mac ([Step 6](DEPLOY-PI.md#copies-on-the-mac)): key,
+  `authorized_keys` line, `~/.ssh/config`, launchd job. The first run's log says `pulled from
+  training-pi` and the dumps are in `~/training-backups` on the Mac. `ssh training-pi` must not
+  open a shell.
+- [ ] #16 — Once: copy a dump from the Mac back to the Pi and run `deploy/restore-check.sh` on it,
+  as in [Restoring from a backup](DEPLOY-PI.md#restoring-from-a-backup), steps 1–3.
