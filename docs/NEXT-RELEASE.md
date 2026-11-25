@@ -29,3 +29,8 @@ so set them in `deploy/.env` first.
   mail on the iPhone, set a password, and check you land in an empty app. Open the link again: it
   must say the invitation is no longer valid. Then delete the test account.
 - [ ] #51 — `POST /api/auth/register` answers `404`, and the login screen offers no registration.
+- [ ] #54 — Under "E-Mail-Adresse ändern", move a test account to another address of your own: the
+  code arrives at the new address, the notice "E-Mail-Adresse geändert" at the old one, and you
+  stay logged in. Log in with the new address, then change it back.
+- [ ] #54 — Before changing your own admin account's address, put the new one in `ADMIN_EMAILS` in
+  `deploy/.env`; otherwise the next start creates an invited admin for the old address.
