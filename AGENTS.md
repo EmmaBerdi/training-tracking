@@ -28,7 +28,9 @@ anything project-specific below. This includes, but is not limited to:
   auth checks.
 - **Consistency with existing conventions.** Match the style already in the file/module you're
   editing (naming, error handling, folder structure) rather than inventing a new pattern. In
-  particular: a style rule wanted by a second component moves to `frontend/src/styles/shared.module.scss`;
+  particular: a style rule wanted by a second component moves to `frontend/src/styles/shared.module.scss`,
+  which must stay plain CSS (no `@mixin`, `@include`, `$variables` or `@use`) because `composes`
+  reads it without running Sass;
   a closed set of string values gets a DB `CHECK` plus named constants, never bare literals; and
   the client's own ids (`day_key`, `exercise.client_id`) are what cross-table references store,
   because `PUT /api/state` recreates every plan row on each save.

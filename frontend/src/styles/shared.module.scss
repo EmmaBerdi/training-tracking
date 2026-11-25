@@ -1,6 +1,10 @@
 /*
  * The primitives every component composes from. A class belongs here once a second component wants
  * it; anything used in exactly one place stays in that component's own module.
+ *
+ * Keep this file plain CSS: no `@mixin`, `@include`, `$variables` or `@use`. Components reach it
+ * through `composes`, which reads it without running Sass, so any Sass syntax reaches the browser
+ * uncompiled and gets dropped. Native nesting is fine.
  */
 
 /* --- Buttons --- */
@@ -219,15 +223,6 @@
 
 /* --- Charts: the pieces every chart shares --- */
 
-/* The small spaced capitals of `.overline`, as a mixin for nested selectors `composes` can't reach. */
-@mixin overline-type {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--faint);
-  font-weight: 500;
-}
-
 /** The readout that follows the crosshair or the hovered bar; inside the plot, so nothing clips it. */
 .chartTooltip {
   position: absolute;
@@ -322,10 +317,6 @@
     border-bottom: 1px solid var(--line);
   }
 
-  th {
-    @include overline-type;
-  }
-
   td {
     font-family: var(--num);
     font-variant-numeric: tabular-nums;
@@ -346,9 +337,17 @@
 
 /* --- Statistics --- */
 
-/** The small spaced capitals over a section or a card. */
+/** The small spaced capitals over a section or a card, and over a chart table's columns. */
+.overline,
+.chartTable th {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 500;
+}
+
 .overline {
-  @include overline-type;
   margin: 0 0 10px;
 }
 
