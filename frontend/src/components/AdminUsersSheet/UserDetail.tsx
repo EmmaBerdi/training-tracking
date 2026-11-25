@@ -6,30 +6,34 @@ import {
   reactivateUser,
   resendInvitation,
   USER_STATUS,
+  type AdminResult,
   type AdminUser,
   type Invitation,
 } from '../../api/admin';
 import { formatInstant } from '../../utils/date';
-import { invitationOpen, STATUS_LABEL } from './accounts';
+import { invitationValidUntil, STATUS_LABEL } from './userStatus';
 import styles from './AdminUsersSheet.module.scss';
 
-interface AccountDetailProps {
+interface UserDetailProps {
   user: AdminUser;
   onChanged: (user: AdminUser) => void;
   onResent: (invitation: Invitation) => void;
   onDeleted: () => void;
+  /** The user's status changed elsewhere since the list was loaded, so the action no longer fits. */
+  onStale: () => void;
   onError: (message: string) => void;
   onBack: () => void;
 }
 
-export function AccountDetail({
+export function UserDetail({
   user,
   onChanged,
   onResent,
   onDeleted,
+  onStale,
   onError,
   onBack,
-}: AccountDetailProps) {
+}: UserDetailProps) {
   const [confirmEmail, setConfirmEmail] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,13 +41,18 @@ export function AccountDetail({
   // Only a hint for the button: the server compares the address again before deleting anything.
   const confirmed = confirmEmail.trim().toLowerCase() === user.email.toLowerCase();
   const name = user.displayName || user.email;
+  const validUntil = invitationValidUntil(user);
 
-  const run = async <T,>(action: () => Promise<T | null>, done: (result: T) => void) => {
+  const runAction = async <T,>(
+    action: () => Promise<AdminResult<T>>,
+    done: (result: T) => void,
+  ) => {
     setBusy(true);
     const result = await action();
     setBusy(false);
-    if (result) done(result);
-    else onError('Das hat nicht geklappt — Backend erreichbar?');
+    if (result === 'conflict') onStale();
+    else if (result === 'failed') onError('Das hat nicht geklappt — Backend erreichbar?');
+    else done(result);
   };
 
   const handleDelete = async (e: FormEvent) => {
@@ -75,11 +84,7 @@ export function AccountDetail({
         {user.status === USER_STATUS.invited ? (
           <div>
             <dt>Einladung</dt>
-            <dd>
-              {invitationOpen(user) && user.invitationExpiresAt
-                ? `bis ${formatInstant(user.invitationExpiresAt)}`
-                : 'abgelaufen'}
-            </dd>
+            <dd>{validUntil ? `bis ${formatInstant(validUntil)}` : 'abgelaufen'}</dd>
           </div>
         ) : (
           <div>
@@ -99,7 +104,7 @@ export function AccountDetail({
             type="button"
             className={styles.outline}
             disabled={busy}
-            onClick={() => run(() => resendInvitation(user.id), onResent)}
+            onClick={() => runAction(() => resendInvitation(user.id), onResent)}
           >
             Einladung neu senden
           </button>
@@ -112,7 +117,7 @@ export function AccountDetail({
             type="button"
             className={styles.outline}
             disabled={busy}
-            onClick={() => run(() => deactivateUser(user.id), onChanged)}
+            onClick={() => runAction(() => deactivateUser(user.id), onChanged)}
           >
             Deaktivieren
           </button>
@@ -128,7 +133,7 @@ export function AccountDetail({
             type="button"
             className={styles.outline}
             disabled={busy}
-            onClick={() => run(() => reactivateUser(user.id), onChanged)}
+            onClick={() => runAction(() => reactivateUser(user.id), onChanged)}
           >
             Wieder aktivieren
           </button>

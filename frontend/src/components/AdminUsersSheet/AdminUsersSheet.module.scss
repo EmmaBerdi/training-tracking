@@ -17,10 +17,6 @@
 
 .solid {
   composes: solid from '../../styles/shared.module.scss';
-
-  &:disabled {
-    opacity: 0.6;
-  }
 }
 
 .ghost {

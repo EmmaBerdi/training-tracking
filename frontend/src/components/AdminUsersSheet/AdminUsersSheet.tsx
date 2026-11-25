@@ -9,9 +9,9 @@ import {
   type UserStatus,
 } from '../../api/admin';
 import { formatInstant } from '../../utils/date';
-import { AccountDetail } from './AccountDetail';
-import { invitationOpen, STATUS_LABEL } from './accounts';
 import { InvitationSent } from './InvitationSent';
+import { UserDetail } from './UserDetail';
+import { invitationValidUntil, STATUS_LABEL } from './userStatus';
 import styles from './AdminUsersSheet.module.scss';
 
 interface AdminUsersSheetProps {
@@ -21,11 +21,11 @@ interface AdminUsersSheetProps {
   onClose: () => void;
 }
 
-/** The list, one account opened from it, or the invitation just made. */
+/** The list, one user opened from it, or the invitation just made. */
 type View =
-  { kind: 'list' } | { kind: 'account'; id: number } | { kind: 'invited'; invitation: Invitation };
+  { kind: 'list' } | { kind: 'user'; id: number } | { kind: 'invited'; invitation: Invitation };
 
-const DOT: Record<UserStatus, string> = {
+const STATUS_DOT: Record<UserStatus, string> = {
   [USER_STATUS.invited]: styles.dotInvited,
   [USER_STATUS.active]: styles.dotActive,
   [USER_STATUS.deactivated]: styles.dotDeactivated,
@@ -38,18 +38,20 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
   const [displayName, setDisplayName] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Bumped to load the list again after it turned out to be out of date.
+  const [loadCount, setLoadCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     listUsers().then((list) => {
       if (cancelled) return;
       if (list) setUsers(list);
-      else onError('Konten konnten nicht geladen werden.');
+      else onError('Benutzer konnten nicht geladen werden.');
     });
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, [onError, loadCount]);
 
   const replaceUser = (user: AdminUser) =>
     setUsers((list) => list?.map((u) => (u.id === user.id ? user : u)) ?? list);
@@ -60,7 +62,7 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
     setBusy(true);
     const result = await inviteUser(email.trim(), displayName.trim());
     setBusy(false);
-    if (result === 'exists') setInviteError('Zu dieser E-Mail gibt es schon ein Konto.');
+    if (result === 'conflict') setInviteError('Zu dieser E-Mail gibt es schon ein Konto.');
     else if (result === 'failed') setInviteError('Einladen fehlgeschlagen — Backend erreichbar?');
     else {
       setUsers((list) => (list ? [...list, result.user] : list));
@@ -74,10 +76,10 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
     return <InvitationSent invitation={view.invitation} onDone={() => setView({ kind: 'list' })} />;
   }
 
-  const opened = view.kind === 'account' ? users?.find((u) => u.id === view.id) : undefined;
+  const opened = view.kind === 'user' ? users?.find((u) => u.id === view.id) : undefined;
   if (opened) {
     return (
-      <AccountDetail
+      <UserDetail
         user={opened}
         onChanged={replaceUser}
         onResent={(invitation) => {
@@ -87,6 +89,10 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
         onDeleted={() => {
           setUsers((list) => list?.filter((u) => u.id !== opened.id) ?? list);
           setView({ kind: 'list' });
+        }}
+        onStale={() => {
+          onError('Der Benutzer wurde inzwischen geändert. Die Liste ist neu geladen.');
+          setLoadCount((n) => n + 1);
         }}
         onError={onError}
         onBack={() => setView({ kind: 'list' })}
@@ -134,7 +140,7 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
       {users && (
         <>
           <div className={styles.listHead}>
-            Konten <span className={styles.count}>{users.length}</span>
+            Benutzer <span className={styles.count}>{users.length}</span>
           </div>
           <ul className={styles.list}>
             {users.map((user) => {
@@ -146,11 +152,14 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
                     type="button"
                     className={styles.row}
                     disabled={own}
-                    onClick={() => setView({ kind: 'account', id: user.id })}
+                    onClick={() => setView({ kind: 'user', id: user.id })}
                   >
                     <span className={styles.rowText}>
                       <span className={styles.rowEmail}>
-                        <span className={`${styles.dot} ${DOT[user.status]}`} aria-hidden="true" />
+                        <span
+                          className={`${styles.dot} ${STATUS_DOT[user.status]}`}
+                          aria-hidden="true"
+                        />
                         <span>{user.email}</span>
                         {own && <span className={styles.badge}>Du</span>}
                         {user.admin && !own && <span className={styles.badge}>Admin</span>}
@@ -176,8 +185,9 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
 
 function rowMeta(user: AdminUser): string {
   if (user.status === USER_STATUS.invited) {
-    return invitationOpen(user) && user.invitationExpiresAt
-      ? `Eingeladen · gültig bis ${formatInstant(user.invitationExpiresAt)}`
+    const validUntil = invitationValidUntil(user);
+    return validUntil
+      ? `Eingeladen · gültig bis ${formatInstant(validUntil)}`
       : 'Eingeladen · Link abgelaufen';
   }
   const parts = [user.displayName, STATUS_LABEL[user.status]];

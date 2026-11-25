@@ -66,16 +66,31 @@ export function App() {
   const { status, user, logout } = useAuth();
   const [inviteToken, setInviteToken] = useState(() => readInviteToken(window.location.hash));
 
-  // Out of the address bar at once, so the one-time link isn't kept in history or a bookmark.
+  // Also on `hashchange`: a link opened in a tab that already runs the app doesn't reload the page.
+  // The token leaves the address bar at once, so the one-time link isn't kept in history or a
+  // bookmark.
   useEffect(() => {
-    if (readInviteToken(window.location.hash)) {
+    const takeInviteToken = () => {
+      const token = readInviteToken(window.location.hash);
+      if (!token) return;
+      setInviteToken(token);
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
+    };
+    takeInviteToken();
+    window.addEventListener('hashchange', takeInviteToken);
+    return () => window.removeEventListener('hashchange', takeInviteToken);
   }, []);
 
-  // Ahead of any session in this browser: accepting replaces it with the invited account.
+  // Ahead of any session in this browser: accepting replaces it with the invited account. Keyed so
+  // a login screen already showing starts over in invite mode instead of keeping its state.
   if (inviteToken) {
-    return <AuthScreen inviteToken={inviteToken} onInviteDone={() => setInviteToken(null)} />;
+    return (
+      <AuthScreen
+        key={inviteToken}
+        inviteToken={inviteToken}
+        onInviteDone={() => setInviteToken(null)}
+      />
+    );
   }
   if (status === 'loading') return null;
   if (status === 'anonymous') return <AuthScreen />;

@@ -1,4 +1,4 @@
-import { authorizedFetch, request } from './base';
+import { request, send } from './base';
 
 /** The account states the backend stores (`user.status`), mirrored from its CHECK constraint. */
 export const USER_STATUS = {
@@ -30,41 +30,37 @@ export interface Invitation {
   invitationUrl: string | null;
 }
 
+/**
+ * `conflict` is the backend's 409: the address already has an account, or the account's status no
+ * longer allows the action because it changed since the list was loaded.
+ */
+export type AdminResult<T> = T | 'conflict' | 'failed';
+
+/** Not built on `request()`, which folds every failure into `null`: a conflict has to be told apart. */
+async function post<T>(path: string, body?: unknown): Promise<AdminResult<T>> {
+  const res = await send(path, { method: 'POST', body });
+  if (res?.ok) return (await res.json()) as T;
+  return res?.status === 409 ? 'conflict' : 'failed';
+}
+
 export function listUsers(): Promise<AdminUser[] | null> {
   return request<AdminUser[]>('/admin/users');
 }
 
-export function resendInvitation(id: number): Promise<Invitation | null> {
-  return request<Invitation>(`/admin/users/${id}/invitation`, { method: 'POST' });
+export function inviteUser(email: string, displayName?: string): Promise<AdminResult<Invitation>> {
+  return post('/admin/users', { email, displayName: displayName || undefined });
 }
 
-export function deactivateUser(id: number): Promise<AdminUser | null> {
-  return request<AdminUser>(`/admin/users/${id}/deactivate`, { method: 'POST' });
+export function resendInvitation(id: number): Promise<AdminResult<Invitation>> {
+  return post(`/admin/users/${id}/invitation`);
 }
 
-export function reactivateUser(id: number): Promise<AdminUser | null> {
-  return request<AdminUser>(`/admin/users/${id}/reactivate`, { method: 'POST' });
+export function deactivateUser(id: number): Promise<AdminResult<AdminUser>> {
+  return post(`/admin/users/${id}/deactivate`);
 }
 
-export type InviteResult = Invitation | 'exists' | 'failed';
-
-/**
- * Not built on `request()`, which folds every failure into `null`: an address that already has an
- * account is the one the admin can fix, so it has to be told apart.
- */
-export async function inviteUser(email: string, displayName?: string): Promise<InviteResult> {
-  try {
-    const res = await authorizedFetch('/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, displayName: displayName || undefined }),
-    });
-    if (res.ok) return (await res.json()) as Invitation;
-    return res.status === 409 ? 'exists' : 'failed';
-  } catch (err) {
-    console.error(err);
-    return 'failed';
-  }
+export function reactivateUser(id: number): Promise<AdminResult<AdminUser>> {
+  return post(`/admin/users/${id}/reactivate`);
 }
 
 export type DeleteResult = 'ok' | 'mismatch' | 'failed';
@@ -74,16 +70,7 @@ export type DeleteResult = 'ok' | 'mismatch' | 'failed';
  * the body to stay out of access logs.
  */
 export async function deleteUser(id: number, confirmEmail: string): Promise<DeleteResult> {
-  try {
-    const res = await authorizedFetch(`/admin/users/${id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmEmail }),
-    });
-    if (res.ok) return 'ok';
-    return res.status === 400 ? 'mismatch' : 'failed';
-  } catch (err) {
-    console.error(err);
-    return 'failed';
-  }
+  const res = await send(`/admin/users/${id}`, { method: 'DELETE', body: { confirmEmail } });
+  if (res?.ok) return 'ok';
+  return res?.status === 400 ? 'mismatch' : 'failed';
 }

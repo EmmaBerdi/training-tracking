@@ -71,19 +71,33 @@ interface RequestOptions {
 }
 
 /**
+ * One request, undecoded, for the callers that have to tell one failure apart from the rest because
+ * the user can fix it. `null` when no answer arrived at all.
+ */
+export async function send(path: string, options: RequestOptions = {}): Promise<Response | null> {
+  const { method = 'GET', body } = options;
+  try {
+    return await authorizedFetch(path, {
+      method,
+      headers: body === undefined ? undefined : JSON_HEADERS,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}
+
+/**
  * One request, decoded. Returns `null` for anything that went wrong — network, auth, validation —
  * because every caller reacts the same way: leave the UI as it was and show a toast. The reason is
  * logged rather than surfaced, since none of it is actionable for the user.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T | null> {
-  const { method = 'GET', body } = options;
+  const res = await send(path, options);
+  if (!res) return null;
   try {
-    const res = await authorizedFetch(path, {
-      method,
-      headers: body === undefined ? undefined : JSON_HEADERS,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} on ${method} ${path}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} on ${options.method ?? 'GET'} ${path}`);
     if (res.status === 204) return NO_CONTENT as T;
     return (await res.json()) as T;
   } catch (err) {
