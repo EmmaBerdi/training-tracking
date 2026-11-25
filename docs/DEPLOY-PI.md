@@ -11,7 +11,9 @@ The pieces, all in `deploy/`:
 | `deploy/docker-compose.pi.yml` | The four services: Postgres, backend, nginx, tunnel |
 | `deploy/nginx.pi.conf` | Serves the built frontend, proxies `/api` to the backend |
 | `deploy/.env.example` | Template for the secrets and hostname; copy to `deploy/.env` |
-| `deploy/backup.sh` | `pg_dump` (nightly and before every deploy), keeps the last 14 |
+| `deploy/backup.sh` | `pg_dump` (nightly and before every deploy), checked by a test restore, keeps the last 14 |
+| `deploy/restore-check.sh` | Restores a dump into a throwaway Postgres and counts its rows |
+| `deploy/mac/` | Script and launchd job that copy the dumps to your Mac daily |
 | `deploy/auto-deploy.sh` | Checks out the newest release tag and rebuilds when there is a new one |
 | `deploy/training-deploy.service`, `.timer` | systemd units that run `auto-deploy.sh` every 2 minutes |
 
@@ -129,19 +131,119 @@ stored tokens, and it will keep pointing at whatever `window.API_BASE` said.
 
 ## Step 6 — Backups
 
+The Pi dumps the database every night and before every deploy; your Mac copies the dumps off the
+Pi once a day. A backup that only exists on the machine it backs up dies with its SD card.
+
+### On the Pi
+
 ```bash
 crontab -e
 30 3 * * * /home/berdi-websites/training-tracking/deploy/backup.sh >> /home/berdi-websites/backup.log 2>&1
 ```
 
-Dumps land in `~/training-backups`. Copy them off the Pi periodically — a backup that only exists
-on the machine it backs up is not a backup. Restoring:
+Dumps land in `~/training-backups`, the last 14 are kept. Before a dump is kept,
+`deploy/restore-check.sh` restores it into a throwaway Postgres container and counts users,
+exercises and images; `backup.log` shows the counts. A dump that doesn't restore is thrown away
+and the run fails, leaving the older dumps untouched. Before a deploy that also stops the deploy:
+`auto-deploy.sh` retries on its next run, and nothing goes live without a backup that restores.
 
-```bash
-gunzip -c ~/training-backups/training-2026-09-09-0330.sql.gz | \
-  docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env \
-  exec -T postgres psql -U training -d training_tracking
-```
+### Copies on the Mac
+
+The Mac fetches the dumps over SSH with a key that can only *read* `~/training-backups`: it can't
+open a shell on the Pi or change or delete anything there, so whoever gets into the Pi can't reach
+the copies either way. The copies sit in `~/training-backups` on the Mac, encrypted by FileVault,
+for 30 days.
+
+The job only reaches the Pi on the home network. Away from home it fails quietly, and the first
+run back home fetches every dump it missed — the Pi keeps 14 days of them. If no copy succeeds for
+3 days, a "Training backup" notification says so.
+
+1. On the Mac, a key just for this. No passphrase, since launchd has nobody to type it; step 2 is
+   what keeps it harmless:
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C training-backup -f ~/.ssh/training-backup
+   cat ~/.ssh/training-backup.pub
+   ```
+
+2. On the Pi, append one line to `~/.ssh/authorized_keys`, with the public key from step 1.
+   `restrict` takes away the shell and forwarding, `rrsync -ro` allows reading this one directory
+   only. `rrsync` comes with the `rsync` package (`sudo apt install rsync` if it's missing).
+
+   ```text
+   restrict,command="rrsync -ro /home/berdi-websites/training-backups" ssh-ed25519 AAAA… training-backup
+   ```
+
+3. On the Mac, in `~/.ssh/config`, with the Pi's name or address on your home network:
+
+   ```text
+   Host training-pi
+     HostName raspberrypi.local
+     User berdi-websites
+     IdentityFile ~/.ssh/training-backup
+     IdentitiesOnly yes
+   ```
+
+   Connect once by hand to accept the Pi's host key — the job runs in batch mode and won't ask.
+   The answer `rrsync error: SSH_ORIGINAL_COMMAND does not run rsync` is correct: it shows the
+   key gets no shell.
+
+   ```bash
+   ssh training-pi
+   ```
+
+4. Install the launchd job. It runs `deploy/mac/pull-backups.sh` from the repo checkout at
+   `~/IdeaProjects/Training_tracking`; edit the path in the plist first if yours is elsewhere, and
+   keep that checkout on `main`.
+
+   ```bash
+   sed "s|/Users/YOU|$HOME|g" deploy/mac/local.training-tracking.pull-backups.plist \
+     > ~/Library/LaunchAgents/local.training-tracking.pull-backups.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.training-tracking.pull-backups.plist
+   ```
+
+   It runs at once, then daily at 12:00 and at every login; a run missed while the Mac sleeps
+   happens on wake. Check the first one:
+
+   ```bash
+   tail ~/Library/Logs/training-backup.log      # "pulled from training-pi"
+   ls -l ~/training-backups
+   ```
+
+   Run it by hand: `launchctl kickstart gui/$(id -u)/local.training-tracking.pull-backups`.
+
+### Restoring from a backup
+
+1. Pick the dump on the Mac: the newest one in `~/training-backups` from before the problem.
+2. Copy it to the Pi with your normal login — not `training-pi`, whose key can only read:
+
+   ```bash
+   scp ~/training-backups/training-2026-09-09-0330.sql.gz berdi-websites@raspberrypi.local:
+   ```
+
+3. On the Pi, check it restores, without touching the live database:
+
+   ```bash
+   cd ~/training-tracking
+   deploy/restore-check.sh ~/training-2026-09-09-0330.sql.gz
+   ```
+
+4. Replace the live database. A plain dump can't be loaded over existing tables, so the database
+   is dropped and recreated first: **everything since the dump is lost**. If the database still
+   runs, `deploy/backup.sh` first keeps its current state as one more dump.
+
+   ```bash
+   COMPOSE="docker compose -f deploy/docker-compose.pi.yml --env-file deploy/.env"
+   $COMPOSE stop backend
+   $COMPOSE exec -T postgres dropdb -U training training_tracking
+   $COMPOSE exec -T postgres createdb -U training training_tracking
+   gunzip -c ~/training-2026-09-09-0330.sql.gz | \
+     $COMPOSE exec -T postgres psql -q -v ON_ERROR_STOP=1 --single-transaction -U training -d training_tracking
+   $COMPOSE start backend
+   ```
+
+   If the dump is from an older release, Liquibase applies the newer changesets as the backend
+   starts.
 
 ---
 
@@ -303,6 +405,16 @@ The reset endpoint answers the same whether or not the mail went out, so look in
 check from [Outgoing mail](#outgoing-mail). `Could not send mail` comes with the
 SMTP error: `AuthenticationFailedException` is a wrong `MAIL_USERNAME` or token, a sender error is
 a `MAIL_FROM` that doesn't match the token's address. Also check the spam folder.
+
+**`backup.log` shows `restore check: … does not restore`, or a deploy stops at the backup**
+The new dump was thrown away; the older ones are untouched. The lines above it say why — usually
+`Service "postgres" is not running`, then `docker compose ... ps` and `logs postgres`.
+
+**No new dumps arrive on the Mac**
+`tail ~/Library/Logs/training-backup.log` on the Mac. Away from home that's expected. `Host key
+verification failed` means `ssh training-pi` was never run by hand, or the Pi was reinstalled;
+`Permission denied (publickey)` a missing or mistyped line in the Pi's `authorized_keys`;
+`rrsync error` a wrong directory in that line.
 
 **Changes don't show up after a rebuild**
 Close the app fully on the phone and reopen. If it persists, check that Cloudflare isn't serving a

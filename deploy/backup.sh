@@ -1,6 +1,8 @@
 #!/bin/sh
 # Nightly pg_dump into BACKUP_DIR, keeping the last 14. The app has no export of its own, so this
-# is the backup: accounts, plans, logged workouts, the calendar and the exercise photos.
+# is the backup: accounts, plans, logged workouts, the calendar and the exercise photos. Each dump
+# is restored once by deploy/restore-check.sh before it is kept; the Mac copies them off the Pi with
+# deploy/mac/pull-backups.sh.
 #
 #   crontab -e
 #   30 3 * * * /home/berdi-websites/training-tracking/deploy/backup.sh >> /home/berdi-websites/backup.log 2>&1
@@ -16,9 +18,14 @@ mkdir -p "$BACKUP_DIR"
 # Down to the minute: deploy/auto-deploy.sh also backs up, and must not overwrite the nightly dump.
 STAMP=$(date +%Y-%m-%d-%H%M)
 OUT="$BACKUP_DIR/training-$STAMP.sql.gz"
+# Outside the training-*.sql.gz pattern, so neither pruning nor the Mac ever sees an unchecked dump.
+PARTIAL="$OUT.partial"
+trap 'rm -f -- "$PARTIAL"' EXIT
 
 docker compose -f "$REPO_DIR/deploy/docker-compose.pi.yml" --env-file "$REPO_DIR/deploy/.env" \
-  exec -T postgres pg_dump -U "${DB_USER:-training}" "${DB_NAME:-training_tracking}" | gzip > "$OUT"
+  exec -T postgres pg_dump -U "${DB_USER:-training}" "${DB_NAME:-training_tracking}" | gzip > "$PARTIAL"
+DB_USER="${DB_USER:-training}" "$REPO_DIR/deploy/restore-check.sh" "$PARTIAL"
+mv -- "$PARTIAL" "$OUT"
 
 # Only prune once the new dump exists, so a failed run never costs you the old ones.
 ls -1t "$BACKUP_DIR"/training-*.sql.gz | tail -n +$((KEEP + 1)) | xargs -r rm --
