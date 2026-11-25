@@ -70,43 +70,81 @@ interface RequestOptions {
   body?: unknown;
 }
 
+/** Why a request failed, sorted by what a caller could do about it. */
+export const API_FAILURE = {
+  /** No answer arrived: the device is offline or the server can't be reached. */
+  offline: 'offline',
+  /** Still 401 after a token refresh: the session is gone. */
+  auth: 'auth',
+  /** 400: the server rejected the input. */
+  invalid: 'invalid',
+  /** 409: the request clashes with what the server holds now. */
+  conflict: 'conflict',
+  /** 429: too many attempts; trying again later can work. */
+  rateLimited: 'rate-limited',
+  /** Any other status, or an answer that couldn't be read. */
+  server: 'server',
+} as const;
+
+export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE];
+
+export type ApiResult<T> = { ok: true; data: T } | { ok: false; kind: ApiFailure; status?: number };
+
+function failureKind(status: number): ApiFailure {
+  switch (status) {
+    case 400:
+      return API_FAILURE.invalid;
+    case 401:
+      return API_FAILURE.auth;
+    case 409:
+      return API_FAILURE.conflict;
+    case 429:
+      return API_FAILURE.rateLimited;
+    default:
+      return API_FAILURE.server;
+  }
+}
+
 /**
- * One request, undecoded, for the callers that have to tell one failure apart from the rest because
- * the user can fix it. `null` when no answer arrived at all.
+ * One request, decoded, with the reason when it failed. An answer without a body — a 204, or the
+ * 202 of an email change request — comes back as `NO_CONTENT`.
  */
-export async function send(path: string, options: RequestOptions = {}): Promise<Response | null> {
+export async function call<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
   const { method = 'GET', body } = options;
+  let res: Response;
   try {
-    return await authorizedFetch(path, {
+    res = await authorizedFetch(path, {
       method,
       headers: body === undefined ? undefined : JSON_HEADERS,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (err) {
     console.error(err);
-    return null;
+    return { ok: false, kind: API_FAILURE.offline };
+  }
+  if (!res.ok) {
+    console.error(`HTTP ${res.status} on ${method} ${path}`);
+    return { ok: false, kind: failureKind(res.status), status: res.status };
+  }
+  try {
+    const text = await res.text();
+    return { ok: true, data: (text ? JSON.parse(text) : NO_CONTENT) as T };
+  } catch (err) {
+    console.error(err);
+    return { ok: false, kind: API_FAILURE.server, status: res.status };
   }
 }
 
 /**
- * One request, decoded. Returns `null` for anything that went wrong — network, auth, validation —
- * because every caller reacts the same way: leave the UI as it was and show a toast. The reason is
- * logged rather than surfaced, since none of it is actionable for the user.
+ * `call()` for the callers that react to every failure the same way: leave the UI as it was and
+ * show a toast. `null` for any failure; the reason is only logged.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T | null> {
-  const res = await send(path, options);
-  if (!res) return null;
-  try {
-    if (!res.ok) throw new Error(`HTTP ${res.status} on ${options.method ?? 'GET'} ${path}`);
-    if (res.status === 204) return NO_CONTENT as T;
-    return (await res.json()) as T;
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
+  const result = await call<T>(path, options);
+  return result.ok ? result.data : null;
 }
 
 /** A request whose only interesting outcome is whether it succeeded. */
 export async function requestOk(path: string, options: RequestOptions = {}): Promise<boolean> {
-  return (await request<unknown>(path, options)) !== null;
+  return (await call<unknown>(path, options)).ok;
 }

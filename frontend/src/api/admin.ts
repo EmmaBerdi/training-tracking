@@ -1,5 +1,5 @@
 import type { UserStatus } from '../types';
-import { request, send } from './base';
+import { API_FAILURE, call, request } from './base';
 
 /** What an admin may see of an account: its metadata, never its plans, logs or images. */
 export interface AdminUser {
@@ -29,11 +29,10 @@ export interface Invitation {
  */
 export type AdminResult<T> = T | 'conflict' | 'failed';
 
-/** Not built on `request()`, which folds every failure into `null`: a conflict has to be told apart. */
 async function post<T>(path: string, body?: unknown): Promise<AdminResult<T>> {
-  const res = await send(path, { method: 'POST', body });
-  if (res?.ok) return (await res.json()) as T;
-  return res?.status === 409 ? 'conflict' : 'failed';
+  const result = await call<T>(path, { method: 'POST', body });
+  if (result.ok) return result.data;
+  return result.kind === API_FAILURE.conflict ? 'conflict' : 'failed';
 }
 
 export function listUsers(): Promise<AdminUser[] | null> {
@@ -63,7 +62,7 @@ export type DeleteResult = 'ok' | 'mismatch' | 'failed';
  * the body to stay out of access logs.
  */
 export async function deleteUser(id: number, confirmEmail: string): Promise<DeleteResult> {
-  const res = await send(`/admin/users/${id}`, { method: 'DELETE', body: { confirmEmail } });
-  if (res?.ok) return 'ok';
-  return res?.status === 400 ? 'mismatch' : 'failed';
+  const result = await call(`/admin/users/${id}`, { method: 'DELETE', body: { confirmEmail } });
+  if (result.ok) return 'ok';
+  return result.kind === API_FAILURE.invalid ? 'mismatch' : 'failed';
 }
