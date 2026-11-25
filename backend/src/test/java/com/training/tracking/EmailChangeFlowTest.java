@@ -186,6 +186,8 @@ class EmailChangeFlowTest {
         ResponseEntity<ChangeEmailResponse> confirmRes = confirm(session, second, ChangeEmailResponse.class);
         assertEquals(HttpStatus.OK, confirmRes.getStatusCode());
         assertEquals("newer-second@example.com", confirmRes.getBody().email());
+        // The notice to the old address goes out on another thread; unawaited, it lands in the next test.
+        lastMail(3);
     }
 
     @Test
