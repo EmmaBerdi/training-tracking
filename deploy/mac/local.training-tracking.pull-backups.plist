@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Runs deploy/mac/pull-backups.sh daily at 12:00, and at login. A run missed while the Mac sleeps
-  happens on wake. launchd expands neither ~ nor $HOME: install it with /Users/YOU replaced, as
+  Runs deploy/mac/pull-backups.sh every hour, and at login. A run missed while the Mac sleeps
+  happens on wake. Hourly rather than daily so a copy follows soon after coming home; a run with
+  nothing new copies nothing. launchd expands neither ~ nor $HOME: install it with /Users/YOU replaced, as
   docs/DEPLOY-PI.md shows.
 -->
 <plist version="1.0">
@@ -19,13 +20,8 @@
     <key>PI_HOST</key>
     <string>training-pi</string>
   </dict>
-  <key>StartCalendarInterval</key>
-  <dict>
-    <key>Hour</key>
-    <integer>12</integer>
-    <key>Minute</key>
-    <integer>0</integer>
-  </dict>
+  <key>StartInterval</key>
+  <integer>3600</integer>
   <key>RunAtLoad</key>
   <true/>
   <key>StandardOutPath</key>

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copies the Pi's nightly dumps (deploy/backup.sh) to this Mac and keeps them for KEEP_DAYS, so a
-# backup outlives the Pi's SD card. launchd runs it daily (local.training-tracking.pull-backups.plist);
+# backup outlives the Pi's SD card. launchd runs it hourly (local.training-tracking.pull-backups.plist);
 # away from home the Pi is unreachable and the next run at home catches up, as the Pi keeps 14 dumps.
 # Setup in docs/DEPLOY-PI.md.
 #
