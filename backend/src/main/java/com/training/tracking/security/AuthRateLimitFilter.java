@@ -16,8 +16,8 @@ import java.util.Optional;
 
 /**
  * Throttles the anonymous auth endpoints per client IP, before any password or code is hashed:
- * without it, anyone who finds the hostname could guess passwords and reset codes, or register
- * accounts, as fast as the Pi can run BCrypt. Refresh and logout are not limited, so an ordinary
+ * without it, anyone who finds the hostname could guess passwords, reset codes and invitation
+ * links as fast as the Pi can run BCrypt. Refresh and logout are not limited, so an ordinary
  * session is never locked out.
  */
 public class AuthRateLimitFilter extends OncePerRequestFilter {

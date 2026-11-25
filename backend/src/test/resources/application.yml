@@ -27,9 +27,6 @@ app:
     login:
       max-attempts: 1000
       window: PT15M
-    register:
-      max-attempts: 1000
-      window: PT1H
     password-reset:
       max-attempts: 1000
       window: PT1H

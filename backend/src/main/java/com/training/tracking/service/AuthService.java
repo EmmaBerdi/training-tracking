@@ -4,7 +4,6 @@ import com.training.tracking.domain.RefreshToken;
 import com.training.tracking.domain.User;
 import com.training.tracking.dto.auth.AuthResponse;
 import com.training.tracking.dto.auth.LoginRequest;
-import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.repository.RefreshTokenRepository;
 import com.training.tracking.repository.UserRepository;
 import com.training.tracking.security.JwtService;
@@ -32,20 +31,6 @@ public class AuthService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-    }
-
-    @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByNormalizedEmail(request.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "email already registered");
-        }
-        User user = new User();
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setDisplayName(request.displayName());
-        user.setCreatedAt(Instant.now());
-        userRepository.save(user);
-        return issueTokens(user);
     }
 
     @Transactional

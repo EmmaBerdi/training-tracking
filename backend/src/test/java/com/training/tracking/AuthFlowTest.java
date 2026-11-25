@@ -4,7 +4,6 @@ import com.training.tracking.domain.User;
 import com.training.tracking.dto.StateDto;
 import com.training.tracking.dto.auth.AuthResponse;
 import com.training.tracking.dto.auth.LoginRequest;
-import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,19 +40,9 @@ class AuthFlowTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void registerLoginAndAccessOwnState() {
+    void loginAndAccessOwnState() {
         String email = "user1@example.com";
-
-        ResponseEntity<AuthResponse> registerRes = restTemplate.postForEntity(
-                "/api/auth/register", new RegisterRequest(email, "correct-password", "User One"), AuthResponse.class);
-        assertEquals(HttpStatus.OK, registerRes.getStatusCode());
-        String accessToken = registerRes.getBody().accessToken();
-        assertTrue(!accessToken.isBlank());
-
-        // Duplicate registration is rejected with 409, not swallowed into a generic 401.
-        ResponseEntity<String> duplicateRes = restTemplate.postForEntity(
-                "/api/auth/register", new RegisterRequest(email, "another-password", null), String.class);
-        assertEquals(HttpStatus.CONFLICT, duplicateRes.getStatusCode());
+        TestAccounts.create(userRepository, passwordEncoder, email, "correct-password");
 
         // Wrong password is rejected with a generic message.
         ResponseEntity<String> badLoginRes = restTemplate.postForEntity(
@@ -64,6 +53,8 @@ class AuthFlowTest {
         ResponseEntity<AuthResponse> loginRes = restTemplate.postForEntity(
                 "/api/auth/login", new LoginRequest(email, "correct-password"), AuthResponse.class);
         assertEquals(HttpStatus.OK, loginRes.getStatusCode());
+        String accessToken = loginRes.getBody().accessToken();
+        assertTrue(!accessToken.isBlank());
 
         // /api/state requires a token.
         ResponseEntity<String> noAuthRes = restTemplate.getForEntity("/api/state", String.class);
@@ -81,21 +72,14 @@ class AuthFlowTest {
         assertTrue(stateRes.getBody().logs().isEmpty());
     }
 
-    // Raw maps, not the request records: their constructors normalise the address on this side
+    // A raw map, not the request record: its constructor normalises the address on this side
     // already, and the point is what the server does with it as a phone sends it.
     @Test
     void emailCasingAndSurroundingWhitespaceDoNotMatter() {
-        ResponseEntity<AuthResponse> registerRes = restTemplate.postForEntity("/api/auth/register",
-                Map.of("email", " Casing@Example.com ", "password", "correct-password"), AuthResponse.class);
-        assertEquals(HttpStatus.OK, registerRes.getStatusCode());
-        assertEquals("casing@example.com", registerRes.getBody().email());
-
-        ResponseEntity<String> duplicateRes = restTemplate.postForEntity("/api/auth/register",
-                Map.of("email", "CASING@example.com", "password", "another-password"), String.class);
-        assertEquals(HttpStatus.CONFLICT, duplicateRes.getStatusCode());
+        TestAccounts.create(userRepository, passwordEncoder, "casing@example.com", "correct-password");
 
         ResponseEntity<String> loginRes = restTemplate.postForEntity("/api/auth/login",
-                Map.of("email", "  casing@EXAMPLE.com", "password", "correct-password"), String.class);
+                Map.of("email", "  Casing@EXAMPLE.com ", "password", "correct-password"), String.class);
         assertEquals(HttpStatus.OK, loginRes.getStatusCode());
     }
 
@@ -110,9 +94,13 @@ class AuthFlowTest {
         ResponseEntity<String> loginRes = restTemplate.postForEntity("/api/auth/login",
                 Map.of("email", "legacy@example.com", "password", "correct-password"), String.class);
         assertEquals(HttpStatus.OK, loginRes.getStatusCode());
+    }
 
-        ResponseEntity<String> duplicateRes = restTemplate.postForEntity("/api/auth/register",
-                Map.of("email", "legacy@example.com", "password", "another-password"), String.class);
-        assertEquals(HttpStatus.CONFLICT, duplicateRes.getStatusCode());
+    @Test
+    void publicRegistrationIsGone() {
+        ResponseEntity<String> res = restTemplate.postForEntity("/api/auth/register",
+                Map.of("email", "walk-in@example.com", "password", "correct-password"), String.class);
+        assertEquals(HttpStatus.NOT_FOUND, res.getStatusCode());
+        assertTrue(userRepository.findByNormalizedEmail("walk-in@example.com").isEmpty());
     }
 }
