@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Active accounts for tests, stored directly: the app itself only creates them by invitation. */
 final class TestAccounts {
@@ -31,7 +31,7 @@ final class TestAccounts {
     static AuthResponse login(TestRestTemplate restTemplate, String email, String password) {
         ResponseEntity<AuthResponse> res = restTemplate.postForEntity("/api/auth/login",
                 new LoginRequest(email, password), AuthResponse.class);
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertEquals(HttpStatus.OK, res.getStatusCode());
         return res.getBody();
     }
 }

@@ -1,4 +1,4 @@
-import type { BlockKind, Effort, ExerciseType, Mode, Side, View } from '../types';
+import type { BlockKind, Effort, ExerciseType, Mode, Side, UserStatus, View } from '../types';
 import type { PhaseKind } from '../state/timerOps';
 
 /**
@@ -106,5 +106,12 @@ export const PHASE_LABEL: Record<PhaseKind, string> = {
 
 /** Photos one exercise can carry; mirrors `ExerciseDto.MAX_IMAGES` on the backend. */
 export const MAX_IMAGES = 10;
+
+/** Named account states, so no code compares against a bare `'invited'`. */
+export const USER_STATUS = {
+  invited: 'invited',
+  active: 'active',
+  deactivated: 'deactivated',
+} as const satisfies Record<UserStatus, UserStatus>;
 
 export const BLOCK_KINDS = Object.keys(BLOCK_KIND_LABEL) as BlockKind[];

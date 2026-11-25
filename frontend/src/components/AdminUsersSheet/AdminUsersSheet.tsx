@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
-import {
-  inviteUser,
-  listUsers,
-  USER_STATUS,
-  type AdminUser,
-  type Invitation,
-  type UserStatus,
-} from '../../api/admin';
-import { formatInstant } from '../../utils/date';
+import { USER_STATUS } from '../../data/constants';
+import type { UserStatus } from '../../types';
 import { InvitationSent } from './InvitationSent';
 import { UserDetail } from './UserDetail';
-import { invitationValidUntil, STATUS_LABEL } from './userStatus';
+import { useAdminUsers } from './useAdminUsers';
+import { userSummary } from './userStatus';
 import styles from './AdminUsersSheet.module.scss';
 
 interface AdminUsersSheetProps {
@@ -21,10 +13,6 @@ interface AdminUsersSheetProps {
   onClose: () => void;
 }
 
-/** The list, one user opened from it, or the invitation just made. */
-type View =
-  { kind: 'list' } | { kind: 'user'; id: number } | { kind: 'invited'; invitation: Invitation };
-
 const STATUS_DOT: Record<UserStatus, string> = {
   [USER_STATUS.invited]: styles.dotInvited,
   [USER_STATUS.active]: styles.dotActive,
@@ -32,70 +20,22 @@ const STATUS_DOT: Record<UserStatus, string> = {
 };
 
 export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSheetProps) {
-  const [users, setUsers] = useState<AdminUser[] | null>(null);
-  const [view, setView] = useState<View>({ kind: 'list' });
-  const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  // Bumped to load the list again after it turned out to be out of date.
-  const [loadCount, setLoadCount] = useState(0);
+  const sheet = useAdminUsers(onError);
 
-  useEffect(() => {
-    let cancelled = false;
-    listUsers().then((list) => {
-      if (cancelled) return;
-      if (list) setUsers(list);
-      else onError('Benutzer konnten nicht geladen werden.');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [onError, loadCount]);
-
-  const replaceUser = (user: AdminUser) =>
-    setUsers((list) => list?.map((u) => (u.id === user.id ? user : u)) ?? list);
-
-  const handleInvite = async (e: FormEvent) => {
-    e.preventDefault();
-    setInviteError(null);
-    setBusy(true);
-    const result = await inviteUser(email.trim(), displayName.trim());
-    setBusy(false);
-    if (result === 'conflict') setInviteError('Zu dieser E-Mail gibt es schon ein Konto.');
-    else if (result === 'failed') setInviteError('Einladen fehlgeschlagen — Backend erreichbar?');
-    else {
-      setUsers((list) => (list ? [...list, result.user] : list));
-      setEmail('');
-      setDisplayName('');
-      setView({ kind: 'invited', invitation: result });
-    }
-  };
-
-  if (view.kind === 'invited') {
-    return <InvitationSent invitation={view.invitation} onDone={() => setView({ kind: 'list' })} />;
+  if (sheet.invitation) {
+    return <InvitationSent invitation={sheet.invitation} onDone={sheet.showList} />;
   }
 
-  const opened = view.kind === 'user' ? users?.find((u) => u.id === view.id) : undefined;
-  if (opened) {
+  if (sheet.opened) {
     return (
       <UserDetail
-        user={opened}
-        onChanged={replaceUser}
-        onResent={(invitation) => {
-          replaceUser(invitation.user);
-          setView({ kind: 'invited', invitation });
-        }}
-        onDeleted={() => {
-          setUsers((list) => list?.filter((u) => u.id !== opened.id) ?? list);
-          setView({ kind: 'list' });
-        }}
-        onStale={() => {
-          onError('Der Benutzer wurde inzwischen geändert. Die Liste ist neu geladen.');
-          setLoadCount((n) => n + 1);
-        }}
+        user={sheet.opened}
+        onChanged={sheet.handleChanged}
+        onResent={sheet.handleResent}
+        onDeleted={sheet.handleDeleted}
+        onStale={sheet.handleStale}
         onError={onError}
-        onBack={() => setView({ kind: 'list' })}
+        onBack={sheet.showList}
       />
     );
   }
@@ -107,7 +47,7 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
         Nur Kontodaten. Trainingspläne, Einträge und Bilder bleiben privat.
       </div>
 
-      <form className={styles.card} onSubmit={handleInvite}>
+      <form className={styles.card} onSubmit={sheet.handleInvite}>
         <div className={styles.cardTitle}>Neue Person einladen</div>
         <div className={styles.field}>
           <label htmlFor="invite-email">E-Mail</label>
@@ -116,8 +56,8 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
             type="email"
             autoComplete="off"
             autoCapitalize="none"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={sheet.email}
+            onChange={(e) => sheet.setEmail(e.target.value)}
             required
           />
         </div>
@@ -127,23 +67,23 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
             id="invite-name"
             type="text"
             autoComplete="off"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            value={sheet.displayName}
+            onChange={(e) => sheet.setDisplayName(e.target.value)}
           />
         </div>
-        {inviteError && <div className={styles.error}>{inviteError}</div>}
-        <button type="submit" className={styles.solid} disabled={busy}>
+        {sheet.inviteError && <div className={styles.error}>{sheet.inviteError}</div>}
+        <button type="submit" className={styles.solid} disabled={sheet.busy}>
           Einladung senden
         </button>
       </form>
 
-      {users && (
+      {sheet.users && (
         <>
           <div className={styles.listHead}>
-            Benutzer <span className={styles.count}>{users.length}</span>
+            Benutzer <span className={styles.count}>{sheet.users.length}</span>
           </div>
           <ul className={styles.list}>
-            {users.map((user) => {
+            {sheet.users.map((user) => {
               const own = user.email === currentEmail;
               const invited = user.status === USER_STATUS.invited;
               return (
@@ -152,7 +92,7 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
                     type="button"
                     className={styles.row}
                     disabled={own}
-                    onClick={() => setView({ kind: 'user', id: user.id })}
+                    onClick={() => sheet.openUser(user.id)}
                   >
                     <span className={styles.rowText}>
                       <span className={styles.rowEmail}>
@@ -165,7 +105,7 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
                         {user.admin && !own && <span className={styles.badge}>Admin</span>}
                       </span>
                       <span className={`${styles.rowMeta} ${invited ? styles.invited : ''}`}>
-                        {rowMeta(user)}
+                        {userSummary(user)}
                       </span>
                     </span>
                   </button>
@@ -181,16 +121,4 @@ export function AdminUsersSheet({ currentEmail, onError, onClose }: AdminUsersSh
       </button>
     </div>
   );
-}
-
-function rowMeta(user: AdminUser): string {
-  if (user.status === USER_STATUS.invited) {
-    const validUntil = invitationValidUntil(user);
-    return validUntil
-      ? `Eingeladen · gültig bis ${formatInstant(validUntil)}`
-      : 'Eingeladen · Link abgelaufen';
-  }
-  const parts = [user.displayName, STATUS_LABEL[user.status]];
-  if (user.lastLoginAt) parts.push(`zuletzt ${formatInstant(user.lastLoginAt)}`);
-  return parts.filter(Boolean).join(' · ');
 }

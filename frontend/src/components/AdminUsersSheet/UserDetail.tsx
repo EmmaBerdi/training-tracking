@@ -5,11 +5,11 @@ import {
   deleteUser,
   reactivateUser,
   resendInvitation,
-  USER_STATUS,
   type AdminResult,
   type AdminUser,
   type Invitation,
 } from '../../api/admin';
+import { USER_STATUS } from '../../data/constants';
 import { formatInstant } from '../../utils/date';
 import { invitationValidUntil, STATUS_LABEL } from './userStatus';
 import styles from './AdminUsersSheet.module.scss';

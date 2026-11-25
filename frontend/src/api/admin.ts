@@ -1,12 +1,5 @@
+import type { UserStatus } from '../types';
 import { request, send } from './base';
-
-/** The account states the backend stores (`user.status`), mirrored from its CHECK constraint. */
-export const USER_STATUS = {
-  invited: 'invited',
-  active: 'active',
-  deactivated: 'deactivated',
-} as const;
-export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 
 /** What an admin may see of an account: its metadata, never its plans, logs or images. */
 export interface AdminUser {
