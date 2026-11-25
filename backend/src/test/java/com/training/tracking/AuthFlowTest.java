@@ -97,6 +97,34 @@ class AuthFlowTest {
     }
 
     @Test
+    void logoutAllEndsEverySessionOfTheCallerOnly() {
+        TestAccounts.create(userRepository, passwordEncoder, "everywhere@example.com", "correct-password");
+        TestAccounts.create(userRepository, passwordEncoder, "bystander@example.com", "correct-password");
+        AuthResponse phone = TestAccounts.login(restTemplate, "everywhere@example.com", "correct-password");
+        AuthResponse laptop = TestAccounts.login(restTemplate, "everywhere@example.com", "correct-password");
+        AuthResponse bystander = TestAccounts.login(restTemplate, "bystander@example.com", "correct-password");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(phone.accessToken());
+        ResponseEntity<Void> res = restTemplate.exchange(
+                "/api/account/logout-all", HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        assertEquals(HttpStatus.NO_CONTENT, res.getStatusCode());
+
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, phone).getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, TestAccounts.refresh(restTemplate, laptop).getStatusCode());
+        assertEquals(HttpStatus.OK, TestAccounts.refresh(restTemplate, bystander).getStatusCode());
+
+        // The account itself is fine: logging in again starts a new session.
+        TestAccounts.login(restTemplate, "everywhere@example.com", "correct-password");
+    }
+
+    @Test
+    void logoutAllNeedsAToken() {
+        ResponseEntity<String> res = restTemplate.postForEntity("/api/account/logout-all", null, String.class);
+        assertEquals(HttpStatus.UNAUTHORIZED, res.getStatusCode());
+    }
+
+    @Test
     void publicRegistrationIsGone() {
         ResponseEntity<String> res = restTemplate.postForEntity("/api/auth/register",
                 Map.of("email", "walk-in@example.com", "password", "correct-password"), String.class);

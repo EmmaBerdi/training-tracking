@@ -93,7 +93,7 @@ table is named after the thing a row holds. `"user"` is a reserved word in Postg
 double-quoted; `day` is reserved in H2, so both entities carry a backtick-quoted `@Table` name that
 Hibernate rewrites into whichever quote character the dialect wants.
 
-- `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable.
+- `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable, and deleted by the nightly cleanup once expired (see [Sessions](#sessions)).
 - `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day, and every day (a plan) to one `session_type`.
 - `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items, per-set logged values and per-exercise effort ratings (`session_rating`) hanging off it.
 - `session_type`, `recurring_rule`, `recurring_rule_plan`, `recurring_rule_exception`, `planned_session` — the calendar: activity kinds, repeating series and the sessions they generate.
@@ -148,22 +148,21 @@ again with the new password; an access token already issued stays valid until it
 minutes by default). `/api/account` sits outside `/api/auth/**` on purpose: the latter is open to
 anonymous callers.
 
-## Email address
+### Sessions
 
-| Call (bearer token) | Answer |
+| Call | Answer |
 |---|---|
-| `POST /api/account/email/request {newEmail, currentPassword}` | `202`; `400` for a wrong current password, `409` for an address that belongs to any account (your own too), `429` after 3 requests in an hour |
-| `POST /api/account/email/confirm {code}` | `200 {email}`; `400` for any bad, used, expired or locked code, `409` if the address was taken in the meantime |
+| `POST /api/account/logout-all` (bearer token) | `204` |
 
-A request stores a 6-digit code in `email_change_request` under the same rules as a reset code —
-BCrypt-hashed, valid 15 minutes, only the newest counts, locked after 5 wrong guesses — and mails it
-to the **new** address after the commit (`EmailChangeMailer`). The new address is normalised like a
-login, and checked again on confirm, since an admin may have invited it in between. Unlike the
-anonymous reset request, these answers say what went wrong: only the logged-in owner sees them.
+Logging out everywhere revokes every refresh token of the account, the calling device's included;
+as after a password change, an access token already issued stays valid until it expires.
 
-Confirming changes `user.email`, then mails a notice to the **old** address naming the new one, so a
-change made from a hijacked session doesn't go unnoticed. The session stays open: refresh tokens are
-kept, and the next refresh hands out an access token with the new address.
+`TokenCleanup` runs daily at 04:15 Europe/Zurich (`app.token-cleanup.cron` and `.zone`). It deletes
+refresh tokens past their expiry and reset codes older than a day. A revoked refresh token is kept
+until it expires, so the reuse detection planned in #14 can recognise a rotated token presented
+again; a reset code is kept well past
+the hour the per-account request limit counts. Invitations aren't touched: the admin list shows
+each account's newest one, expired or not.
 
 ### Rate limits
 
@@ -180,6 +179,23 @@ Every attempt counts, successful or not. Refresh and logout aren't limited, so a
 is never locked out. The counts live in memory, so a restart resets them. The limits are under
 `app.rate-limit` in `application.yml`; see `RATE_LIMIT_CLIENT_IP_HEADER` above for running behind a
 proxy.
+
+## Email address
+
+| Call (bearer token) | Answer |
+|---|---|
+| `POST /api/account/email/request {newEmail, currentPassword}` | `202`; `400` for a wrong current password, `409` for an address that belongs to any account (your own too), `429` after 3 requests in an hour |
+| `POST /api/account/email/confirm {code}` | `200 {email}`; `400` for any bad, used, expired or locked code, `409` if the address was taken in the meantime |
+
+A request stores a 6-digit code in `email_change_request` under the same rules as a reset code —
+BCrypt-hashed, valid 15 minutes, only the newest counts, locked after 5 wrong guesses — and mails it
+to the **new** address after the commit (`EmailChangeMailer`). The new address is normalised like a
+login, and checked again on confirm, since an admin may have invited it in between. Unlike the
+anonymous reset request, these answers say what went wrong: only the logged-in owner sees them.
+
+Confirming changes `user.email`, then mails a notice to the **old** address naming the new one, so a
+change made from a hijacked session doesn't go unnoticed. The session stays open: refresh tokens are
+kept, and the next refresh hands out an access token with the new address.
 
 ## Accounts and admins
 
