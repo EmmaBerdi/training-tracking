@@ -91,7 +91,7 @@ table is named after the thing a row holds. `"user"` is a reserved word in Postg
 double-quoted; `day` is reserved in H2, so both entities carry a backtick-quoted `@Table` name that
 Hibernate rewrites into whichever quote character the dialect wants.
 
-- `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable.
+- `"user"`, `refresh_token` — accounts; refresh tokens are stored hashed so they stay revocable, and deleted by the nightly cleanup once expired (see [Sessions](#sessions)).
 - `day`, `block`, `exercise`, `warmup_item` — the training plan; every block belongs to exactly one day, and every day (a plan) to one `session_type`.
 - `session`, `session_warmup`, `session_value` — logged workouts: one `session` row per date+day, with checked-off warmup items, per-set logged values and per-exercise effort ratings (`session_rating`) hanging off it.
 - `session_type`, `recurring_rule`, `recurring_rule_plan`, `recurring_rule_exception`, `planned_session` — the calendar: activity kinds, repeating series and the sessions they generate.
@@ -145,6 +145,22 @@ Both a reset and a change revoke every refresh token of the account, so each dev
 again with the new password; an access token already issued stays valid until it expires (15
 minutes by default). `/api/account` sits outside `/api/auth/**` on purpose: the latter is open to
 anonymous callers.
+
+### Sessions
+
+| Call | Answer |
+|---|---|
+| `POST /api/account/logout-all` (bearer token) | `204` |
+
+Logging out everywhere revokes every refresh token of the account, the calling device's included;
+as after a password change, an access token already issued stays valid until it expires.
+
+`TokenCleanup` runs daily at 04:15 Europe/Zurich (`app.token-cleanup.cron` and `.zone`). It deletes
+refresh tokens past their expiry and reset codes older than a day. A revoked refresh token is kept
+until it expires, so the reuse detection planned in #14 can recognise a rotated token presented
+again; a reset code is kept well past
+the hour the per-account request limit counts. Invitations aren't touched: the admin list shows
+each account's newest one, expired or not.
 
 ### Rate limits
 

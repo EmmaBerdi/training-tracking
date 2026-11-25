@@ -72,6 +72,15 @@ public class AuthService {
         });
     }
 
+    /**
+     * Ends every session of the account, the calling device's included, at its next refresh; an
+     * access token already handed out stays valid until it expires (app.jwt.access-token-ttl).
+     */
+    @Transactional
+    public void logoutAll(Long userId) {
+        refreshTokenRepository.revokeAllForUser(userId);
+    }
+
     /** Starts a session for an account that has just proven itself (login, refresh, accepted invitation). */
     AuthResponse issueTokens(User user) {
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());

@@ -3,6 +3,7 @@ package com.training.tracking;
 import com.training.tracking.domain.User;
 import com.training.tracking.dto.auth.AuthResponse;
 import com.training.tracking.dto.auth.LoginRequest;
+import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.repository.UserRepository;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
@@ -33,5 +34,10 @@ final class TestAccounts {
                 new LoginRequest(email, password), AuthResponse.class);
         assertEquals(HttpStatus.OK, res.getStatusCode());
         return res.getBody();
+    }
+
+    static ResponseEntity<String> refresh(TestRestTemplate restTemplate, AuthResponse session) {
+        return restTemplate.postForEntity("/api/auth/refresh",
+                new RefreshRequest(session.refreshToken()), String.class);
     }
 }

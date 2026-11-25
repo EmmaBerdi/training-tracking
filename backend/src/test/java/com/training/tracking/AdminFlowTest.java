@@ -22,7 +22,6 @@ import com.training.tracking.dto.auth.InvitationDto;
 import com.training.tracking.dto.auth.InvitationTokenRequest;
 import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
-import com.training.tracking.dto.auth.RefreshRequest;
 import com.training.tracking.repository.IntervalTimerRepository;
 import com.training.tracking.repository.InvitationRepository;
 import com.training.tracking.repository.PlannedSessionRepository;
@@ -235,8 +234,7 @@ class AdminFlowTest {
         ResponseEntity<AdminUserDto> deactivated =
                 post("/api/admin/users/" + member.getId() + "/deactivate", null, admin, AdminUserDto.class);
         assertThat(deactivated.getBody().status()).isEqualTo(User.STATUS_DEACTIVATED);
-        assertThat(restTemplate.postForEntity("/api/auth/refresh",
-                new RefreshRequest(memberSession.refreshToken()), String.class).getStatusCode())
+        assertThat(TestAccounts.refresh(restTemplate, memberSession).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(login(member.getEmail(), "correct-password").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
