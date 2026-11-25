@@ -1,36 +1,73 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from '../../auth/useAuth';
-import { AuthError, confirmPasswordReset, requestPasswordReset } from '../../auth/authClient';
+import {
+  AuthError,
+  confirmPasswordReset,
+  lookupInvitation,
+  requestPasswordReset,
+  type InvitationInfo,
+} from '../../auth/authClient';
 import styles from './AuthScreen.module.scss';
 
-/** `forgot` asks for the address to mail a code to; `reset` takes that code and the new password. */
-type Mode = 'login' | 'register' | 'forgot' | 'reset';
+/**
+ * `forgot` asks for the address to mail a code to; `reset` takes that code and the new password.
+ * `invite` sets the first password of an account an admin created, from its invitation link.
+ */
+type Mode = 'login' | 'invite' | 'forgot' | 'reset';
 
 const TITLE: Record<Mode, string> = {
   login: 'Anmelden',
-  register: 'Konto erstellen',
+  invite: 'Willkommen',
   forgot: 'Passwort vergessen',
   reset: 'Neues Passwort',
 };
 
 const SUBMIT: Record<Mode, string> = {
   login: 'Anmelden',
-  register: 'Konto erstellen',
+  invite: 'Passwort setzen und anmelden',
   forgot: 'Code senden',
   reset: 'Passwort speichern',
 };
 
-export function AuthScreen() {
-  const { login, register, notice: logoutNotice } = useAuth();
-  const [mode, setMode] = useState<Mode>('login');
+interface AuthScreenProps {
+  /** From an invitation link: the screen opens in `invite` mode for it. */
+  inviteToken?: string;
+  /** Leaves the invitation, once accepted or given up on. */
+  onInviteDone?: () => void;
+}
+
+export function AuthScreen({ inviteToken, onInviteDone }: AuthScreenProps) {
+  const { status, login, acceptInvitation, notice: logoutNotice } = useAuth();
+  const [mode, setMode] = useState<Mode>(inviteToken ? 'invite' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordRepeat, setPasswordRepeat] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [code, setCode] = useState('');
+  const [invitation, setInvitation] = useState<InvitationInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(logoutNotice);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    let cancelled = false;
+    lookupInvitation(inviteToken)
+      .then((info) => {
+        if (cancelled) return;
+        setInvitation(info);
+        setEmail(info.email);
+        setDisplayName(info.displayName ?? '');
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof AuthError ? err.message : 'Etwas ist schiefgelaufen.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteToken]);
 
   const switchTo = (next: Mode) => {
     setMode(next);
@@ -41,11 +78,17 @@ export function AuthScreen() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (mode === 'invite' && password !== passwordRepeat) {
+      setError('Die Passwörter stimmen nicht überein.');
+      return;
+    }
     setBusy(true);
     try {
       if (mode === 'login') await login(email, password);
-      else if (mode === 'register') await register(email, password, displayName.trim());
-      else if (mode === 'forgot') {
+      else if (mode === 'invite' && inviteToken) {
+        await acceptInvitation(inviteToken, password, displayName.trim());
+        onInviteDone?.();
+      } else if (mode === 'forgot') {
         await requestPasswordReset(email);
         switchTo('reset');
       } else {
@@ -62,10 +105,18 @@ export function AuthScreen() {
     }
   };
 
+  // Until the lookup answers there is no account to show; if it fails, only the way out is left.
+  const inviteUnusable = mode === 'invite' && !invitation;
+
   return (
     <div className={styles.wrap}>
       <div className={styles.eyebrow}>Training</div>
       <h1 className={styles.title}>{TITLE[mode]}</h1>
+      {mode === 'invite' && invitation && (
+        <p className={styles.sub}>
+          Du wurdest zu Training eingeladen. Setz ein Passwort, dann geht&apos;s los.
+        </p>
+      )}
       {mode === 'forgot' && (
         <p className={styles.sub}>
           Wir schicken dir einen Code, mit dem du ein neues Passwort setzt.
@@ -82,60 +133,81 @@ export function AuthScreen() {
       )}
       {notice && <p className={styles.sub}>{notice}</p>}
 
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <input
-          className={styles.input}
-          type="email"
-          placeholder="E-Mail"
-          autoComplete="email"
-          autoCapitalize="none"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        {mode === 'register' && (
+      {inviteUnusable ? (
+        error ? (
+          <div className={styles.error}>{error}</div>
+        ) : (
+          <p className={styles.sub}>Einladung wird geladen …</p>
+        )
+      ) : (
+        <form className={styles.form} onSubmit={handleSubmit}>
           <input
             className={styles.input}
-            type="text"
-            placeholder="Anzeigename (optional)"
-            autoComplete="nickname"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-          />
-        )}
-        {mode === 'reset' && (
-          <input
-            className={styles.input}
-            type="text"
-            inputMode="numeric"
-            placeholder="Code"
-            autoComplete="one-time-code"
-            pattern="\d{6}"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.trim())}
+            type="email"
+            placeholder="E-Mail"
+            autoComplete={mode === 'invite' ? 'username' : 'email'}
+            autoCapitalize="none"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            readOnly={mode === 'invite'}
             required
           />
-        )}
-        {mode !== 'forgot' && (
-          <input
-            className={styles.input}
-            type="password"
-            placeholder={mode === 'reset' ? 'Neues Passwort' : 'Passwort'}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={mode === 'login' ? undefined : 8}
-            required
-          />
-        )}
+          {mode === 'invite' && (
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="Anzeigename (optional)"
+              autoComplete="nickname"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          )}
+          {mode === 'reset' && (
+            <input
+              className={styles.input}
+              type="text"
+              inputMode="numeric"
+              placeholder="Code"
+              autoComplete="one-time-code"
+              pattern="\d{6}"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.trim())}
+              required
+            />
+          )}
+          {mode !== 'forgot' && (
+            <input
+              className={styles.input}
+              type="password"
+              placeholder={mode === 'login' ? 'Passwort' : 'Neues Passwort (mind. 8 Zeichen)'}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={mode === 'login' ? undefined : 8}
+              required
+            />
+          )}
+          {mode === 'invite' && (
+            <input
+              className={styles.input}
+              type="password"
+              placeholder="Passwort wiederholen"
+              autoComplete="new-password"
+              value={passwordRepeat}
+              onChange={(e) => setPasswordRepeat(e.target.value)}
+              minLength={8}
+              required
+            />
+          )}
 
-        {error && <div className={styles.error}>{error}</div>}
+          {error && <div className={styles.error}>{error}</div>}
 
-        <button type="submit" className={styles.solid} disabled={busy}>
-          {SUBMIT[mode]}
-        </button>
-      </form>
+          <button type="submit" className={styles.solid} disabled={busy}>
+            {SUBMIT[mode]}
+          </button>
+        </form>
+      )}
 
       {mode === 'login' && (
         <button type="button" className={styles.link} onClick={() => switchTo('forgot')}>
@@ -148,17 +220,17 @@ export function AuthScreen() {
         </button>
       )}
 
-      <button
-        type="button"
-        className={styles.toggle}
-        onClick={() => switchTo(mode === 'login' ? 'register' : 'login')}
-      >
-        {mode === 'login'
-          ? 'Noch kein Konto? Registrieren'
-          : mode === 'register'
-            ? 'Schon registriert? Anmelden'
-            : 'Zurück zur Anmeldung'}
-      </button>
+      {mode === 'invite' ? (
+        <button type="button" className={styles.toggle} onClick={onInviteDone}>
+          {status === 'authenticated' ? 'Zurück zur App' : 'Zur Anmeldung'}
+        </button>
+      ) : (
+        mode !== 'login' && (
+          <button type="button" className={styles.toggle} onClick={() => switchTo('login')}>
+            Zurück zur Anmeldung
+          </button>
+        )
+      )}
     </div>
   );
 }
