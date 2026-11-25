@@ -16,6 +16,7 @@ export type SheetState =
    */
   | { type: 'editSeries'; rule: RecurringRule; from: string }
   | { type: 'changePassword' }
+  | { type: 'changeEmail' }
   | { type: 'adminUsers' }
   /** With `link`, opened from an exercise's picker: a new timer goes straight onto that exercise. */
   | { type: 'timers'; link?: { ref: BlockRef; exId: string } }
