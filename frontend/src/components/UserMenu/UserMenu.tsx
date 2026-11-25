@@ -7,6 +7,8 @@ interface UserMenuProps {
   onReopenIntro: () => void;
   onOpenWhatsNew: () => void;
   onChangePassword: () => void;
+  /** Only given to admins; without it the entry doesn't show. */
+  onManageUsers?: () => void;
   onLogout: () => void;
 }
 
@@ -15,6 +17,7 @@ export function UserMenu({
   onReopenIntro,
   onOpenWhatsNew,
   onChangePassword,
+  onManageUsers,
   onLogout,
 }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -85,6 +88,16 @@ export function UserMenu({
           >
             Passwort ändern
           </button>
+          {onManageUsers && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              onClick={run(onManageUsers)}
+            >
+              Benutzer verwalten
+            </button>
+          )}
           <button type="button" role="menuitem" className={styles.item} onClick={run(onLogout)}>
             Abmelden
           </button>

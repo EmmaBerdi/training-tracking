@@ -79,7 +79,7 @@ Then add a public hostname on the tunnel:
 `frontend:80` is the service name on the compose network — cloudflared runs beside it in the same
 stack, so that resolves. Cloudflare creates the DNS record itself.
 
-The backend already throttles login, registration and password reset per client IP (see
+The backend already throttles login, invitations and password reset per client IP (see
 [`BACKEND.md`](BACKEND.md#rate-limits)); it reads that IP from the `CF-Connecting-IP` header
 Cloudflare sets. Optionally, a rate-limiting rule in the Cloudflare dashboard (**Security → WAF →
 Rate limiting rules**, matching URI path starting with `/api/auth/`) stops a flood at the edge,

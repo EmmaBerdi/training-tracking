@@ -11,6 +11,7 @@ import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetai
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
 import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
 import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
+import { AdminUsersSheet } from './components/AdminUsersSheet/AdminUsersSheet';
 import { WhatsNewSheet } from './components/WhatsNewSheet/WhatsNewSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
 import { Onboarding } from './components/Onboarding/Onboarding';
@@ -40,6 +41,7 @@ import {
   today,
 } from './utils/date';
 import { isOnboarded, markOnboarded } from './utils/onboarding';
+import { readInviteToken } from './utils/inviteLink';
 import {
   currentVersion,
   lastSeenVersion,
@@ -62,18 +64,49 @@ import { NAV } from './data/constants';
 
 export function App() {
   const { status, user, logout } = useAuth();
+  const [inviteToken, setInviteToken] = useState(() => readInviteToken(window.location.hash));
 
+  // Also on `hashchange`: a link opened in a tab that already runs the app doesn't reload the page.
+  // The token leaves the address bar at once, so the one-time link isn't kept in history or a
+  // bookmark.
+  useEffect(() => {
+    const takeInviteToken = () => {
+      const token = readInviteToken(window.location.hash);
+      if (!token) return;
+      setInviteToken(token);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    };
+    takeInviteToken();
+    window.addEventListener('hashchange', takeInviteToken);
+    return () => window.removeEventListener('hashchange', takeInviteToken);
+  }, []);
+
+  // Ahead of any session in this browser: accepting replaces it with the invited account. Keyed so
+  // a login screen already showing starts over in invite mode instead of keeping its state.
+  if (inviteToken) {
+    return (
+      <AuthScreen
+        key={inviteToken}
+        inviteToken={inviteToken}
+        onInviteDone={() => setInviteToken(null)}
+      />
+    );
+  }
   if (status === 'loading') return null;
   if (status === 'anonymous') return <AuthScreen />;
 
-  return <TrainingApp userEmail={user?.email ?? ''} onLogout={logout} />;
+  return (
+    <TrainingApp userEmail={user?.email ?? ''} admin={user?.admin ?? false} onLogout={logout} />
+  );
 }
 
 function TrainingApp({
   userEmail,
+  admin,
   onLogout,
 }: {
   userEmail: string;
+  admin: boolean;
   onLogout: (notice?: string) => void;
 }) {
   const toast = useToast();
@@ -349,6 +382,7 @@ function TrainingApp({
         onReopenIntro={() => setIntroStage('welcome')}
         onOpenWhatsNew={openWhatsNew}
         onChangePassword={() => setSheet({ type: 'changePassword' })}
+        onManageUsers={admin ? () => setSheet({ type: 'adminUsers' }) : undefined}
         onLogout={() => onLogout()}
       />
 
@@ -614,6 +648,10 @@ function TrainingApp({
               }
               onClose={closeSheet}
             />
+          )}
+
+          {sheet.type === 'adminUsers' && (
+            <AdminUsersSheet currentEmail={userEmail} onError={toast.show} onClose={closeSheet} />
           )}
 
           {sheet.type === 'whatsNew' && (

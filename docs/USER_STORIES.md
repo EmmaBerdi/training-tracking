@@ -20,12 +20,13 @@ used to fail: he got Emma's pistol-squat program handed to him on signup.
 
 ## E1 — Account and first run
 
-### US-1.1 Register and land in my own empty app ✅
+### US-1.1 Get invited and land in my own empty app ✅
 
-> Jonas installs the PWA, taps "Registrieren", enters mail and password, and is in.
+> An admin invites Jonas by mail. He opens the link, sets a password, and is in.
 
-Registration, login, refresh tokens and per-user data isolation work today
-(`AuthScreen`, `AuthService`, JWT filter).
+Invitations, login, refresh tokens and per-user data isolation work today
+(`AuthScreen`, `InvitationService`, `AuthService`, JWT filter). Public registration was removed
+with the admin area (#38).
 
 Was broken: `useTrainingState.ts` seeded `defaultPlan()` — "Unterkörper + Pistol", the shared hip
 block — into every brand-new account, with `dayId` hardcoded to `'mo'`, and `resetPlan()` restored

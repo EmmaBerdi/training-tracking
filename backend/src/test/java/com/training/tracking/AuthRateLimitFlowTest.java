@@ -4,7 +4,7 @@ import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetConfirmRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
 import com.training.tracking.dto.auth.RefreshRequest;
-import com.training.tracking.dto.auth.RegisterRequest;
+import com.training.tracking.repository.UserRepository;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
 
@@ -30,13 +31,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "app.rate-limit.client-ip-header=CF-Connecting-IP",
         "app.rate-limit.login.max-attempts=3",
-        "app.rate-limit.register.max-attempts=2",
         "app.rate-limit.password-reset.max-attempts=2",
 })
 class AuthRateLimitFlowTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /** HttpClient's default retry strategy honours Retry-After on a 429 and would sleep for an hour. */
     @BeforeEach
@@ -48,8 +54,7 @@ class AuthRateLimitFlowTest {
     @Test
     void loginIsThrottledPerClientEvenForTheRightPassword() {
         String email = uniqueEmail();
-        assertEquals(HttpStatus.OK,
-                post("/api/auth/register", new RegisterRequest(email, "correct-password", null), "10.0.0.1"));
+        TestAccounts.create(userRepository, passwordEncoder, email, "correct-password");
 
         for (int i = 0; i < 3; i++) {
             assertEquals(HttpStatus.UNAUTHORIZED,
@@ -64,16 +69,6 @@ class AuthRateLimitFlowTest {
         // Another client is not affected.
         assertEquals(HttpStatus.OK,
                 post("/api/auth/login", new LoginRequest(email, "correct-password"), "10.0.0.3"));
-    }
-
-    @Test
-    void registrationIsThrottledPerClient() {
-        for (int i = 0; i < 2; i++) {
-            assertEquals(HttpStatus.OK,
-                    post("/api/auth/register", new RegisterRequest(uniqueEmail(), "a-password", null), "10.0.1.1"));
-        }
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS,
-                post("/api/auth/register", new RegisterRequest(uniqueEmail(), "a-password", null), "10.0.1.1"));
     }
 
     @Test

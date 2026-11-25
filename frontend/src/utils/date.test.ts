@@ -4,6 +4,7 @@ import {
   addMonths,
   shiftDays,
   weekStart,
+  formatInstant,
   formatTabDate,
   isoDate,
   isoWeek,
@@ -113,5 +114,12 @@ describe('isoWeek', () => {
 
   it('is not thrown off by the clock change', () => {
     expect(isoWeek('2026-03-30')).toBe(14); // the Monday after summer time starts
+  });
+});
+
+describe('formatInstant', () => {
+  it('shows a server timestamp as a German date', () => {
+    // Midday UTC, so the day is the same in any time zone the test runs in.
+    expect(formatInstant('2026-11-18T12:00:00Z')).toBe('18.11.2026');
   });
 });

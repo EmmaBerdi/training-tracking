@@ -74,9 +74,6 @@ app:
     login:
       max-attempts: 10
       window: PT15M
-    register:
-      max-attempts: 5
-      window: PT1H
     # Shared by requesting a code and confirming it.
     password-reset:
       max-attempts: 10

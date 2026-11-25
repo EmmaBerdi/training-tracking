@@ -1,4 +1,4 @@
-import { authorizedFetch } from './base';
+import { send } from './base';
 
 export type ChangePasswordResult = 'ok' | 'wrong-password' | 'failed';
 
@@ -10,16 +10,10 @@ export async function changePassword(
   currentPassword: string,
   newPassword: string,
 ): Promise<ChangePasswordResult> {
-  try {
-    const res = await authorizedFetch('/account/password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    if (res.ok) return 'ok';
-    return res.status === 400 ? 'wrong-password' : 'failed';
-  } catch (err) {
-    console.error(err);
-    return 'failed';
-  }
+  const res = await send('/account/password', {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+  });
+  if (res?.ok) return 'ok';
+  return res?.status === 400 ? 'wrong-password' : 'failed';
 }

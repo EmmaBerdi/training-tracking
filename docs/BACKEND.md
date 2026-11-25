@@ -154,7 +154,6 @@ password or code is hashed. Over the limit the answer is `429` with a `Retry-Aft
 | Endpoints | Attempts per client |
 |---|---|
 | `POST /api/auth/login` | 10 per 15 minutes |
-| `POST /api/auth/register` | 5 per hour |
 | `POST /api/auth/password-reset/request` and `/confirm` | 10 per hour, together |
 | `POST /api/auth/invitation/lookup` and `/accept` | 10 per hour, together |
 
@@ -168,7 +167,8 @@ proxy.
 An account is `invited`, `active` or `deactivated` (`user.status`). Only an `active` one can log in,
 refresh or ask for a reset code; the others get the same `401` as a wrong password.
 
-Admins (`user.is_admin`) create accounts by email. The accounts in `ADMIN_EMAILS` become admins on
+There is no public registration: admins (`user.is_admin`) create accounts by email, in the app
+under "Benutzer verwalten" in the user menu. The accounts in `ADMIN_EMAILS` become admins on
 startup; an address there without an account yet is created as an invited admin and mailed an
 invitation. Until it is accepted, a start sends a new one only when the last link expired or
 couldn't be mailed, so a restart never retires a link that is still in the inbox. Taking an

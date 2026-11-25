@@ -103,6 +103,11 @@ export function formatDate(iso: string): string {
   return DATE_FORMAT.format(parseIso(iso));
 }
 
+/** A server timestamp such as `createdAt`, on its local calendar day, z.B. "22.11.2026". */
+export function formatInstant(instant: string): string {
+  return DATE_FORMAT.format(new Date(instant));
+}
+
 /** z.B. "Mo" */
 export function formatWeekday(iso: string): string {
   return WEEKDAY_SHORT[mondayIndex(parseIso(iso))];

@@ -8,7 +8,6 @@ import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetConfirmRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
 import com.training.tracking.dto.auth.RefreshRequest;
-import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.service.AuthService;
 import com.training.tracking.service.InvitationService;
 import com.training.tracking.service.PasswordService;
@@ -33,11 +32,6 @@ public class AuthController {
         this.authService = authService;
         this.passwordService = passwordService;
         this.invitationService = invitationService;
-    }
-
-    @PostMapping("/register")
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
     }
 
     @PostMapping("/login")

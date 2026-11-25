@@ -20,6 +20,7 @@ interface HeaderProps {
   onReopenIntro: () => void;
   onOpenWhatsNew: () => void;
   onChangePassword: () => void;
+  onManageUsers?: () => void;
   onLogout: () => void;
 }
 
@@ -37,6 +38,7 @@ export function Header({
   onReopenIntro,
   onOpenWhatsNew,
   onChangePassword,
+  onManageUsers,
   onLogout,
 }: HeaderProps) {
   return (
@@ -50,6 +52,7 @@ export function Header({
             onReopenIntro={onReopenIntro}
             onOpenWhatsNew={onOpenWhatsNew}
             onChangePassword={onChangePassword}
+            onManageUsers={onManageUsers}
             onLogout={onLogout}
           />
         </div>

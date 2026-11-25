@@ -3,6 +3,10 @@ import * as authClient from './authClient';
 import { AuthContext, type AuthStatus, type AuthUser } from './authContext';
 import { getRefreshToken, setTokens, clearTokens, registerOnExpired } from './tokenStore';
 
+function toUser(result: authClient.AuthResult): AuthUser {
+  return { email: result.email, displayName: result.displayName, admin: result.admin };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(() =>
     getRefreshToken() ? 'loading' : 'anonymous',
@@ -24,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .refresh(storedRefreshToken)
       .then((result) => {
         setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-        setUser({ email: result.email, displayName: result.displayName });
+        setUser(toUser(result));
         setStatus('authenticated');
       })
       .catch(() => {
@@ -35,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const start = useCallback((result: authClient.AuthResult) => {
     setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    setUser({ email: result.email, displayName: result.displayName });
+    setUser(toUser(result));
     setNotice(null);
     setStatus('authenticated');
   }, []);
@@ -45,9 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [start],
   );
 
-  const register = useCallback(
-    async (email: string, password: string, displayName?: string) =>
-      start(await authClient.register(email, password, displayName)),
+  const acceptInvitation = useCallback(
+    async (token: string, password: string, displayName?: string) => {
+      const result = await authClient.acceptInvitation(token, password, displayName);
+      // Only once the new account is in, so a failed attempt leaves the old session untouched.
+      const previous = getRefreshToken();
+      start(result);
+      if (previous) void authClient.logout(previous);
+    },
     [start],
   );
 
@@ -63,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ status, user, notice, login, register, logout }}>
+    <AuthContext.Provider value={{ status, user, notice, login, acceptInvitation, logout }}>
       {children}
     </AuthContext.Provider>
   );

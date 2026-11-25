@@ -6,8 +6,8 @@ import com.training.tracking.dto.auth.LoginRequest;
 import com.training.tracking.dto.auth.PasswordResetConfirmRequest;
 import com.training.tracking.dto.auth.PasswordResetRequest;
 import com.training.tracking.dto.auth.RefreshRequest;
-import com.training.tracking.dto.auth.RegisterRequest;
 import com.training.tracking.repository.PasswordResetTokenRepository;
+import com.training.tracking.repository.UserRepository;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
@@ -26,6 +26,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -54,6 +55,12 @@ class PasswordResetFlowTest {
     @Autowired
     private PasswordResetTokenRepository resetTokenRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @MockBean
     private JavaMailSender mailSender;
 
@@ -65,7 +72,7 @@ class PasswordResetFlowTest {
     @Test
     void resetEndsAllSessionsAndOnlyTheNewPasswordWorks() {
         String email = "reset-full@example.com";
-        AuthResponse session = register(email, "old-password");
+        AuthResponse session = createAccount(email, "old-password");
 
         assertEquals(HttpStatus.ACCEPTED, requestReset(email).getStatusCode());
         String code = lastMailedCode(1);
@@ -88,7 +95,7 @@ class PasswordResetFlowTest {
     // Raw maps, not the request records, so the server is the one normalising the address.
     @Test
     void resetWorksWhateverTheCasingOfTheAddress() throws MessagingException {
-        register("reset-casing@example.com", "old-password");
+        createAccount("reset-casing@example.com", "old-password");
 
         ResponseEntity<String> requestRes = restTemplate.postForEntity("/api/auth/password-reset/request",
                 Map.of("email", " Reset-Casing@Example.com"), String.class);
@@ -118,7 +125,7 @@ class PasswordResetFlowTest {
     @Test
     void codeLocksAfterTooManyWrongGuesses() {
         String email = "reset-guess@example.com";
-        register(email, "old-password");
+        createAccount(email, "old-password");
         requestReset(email);
         String code = lastMailedCode(1);
 
@@ -132,7 +139,7 @@ class PasswordResetFlowTest {
     @Test
     void expiredCodeIsRejected() {
         String email = "reset-expired@example.com";
-        register(email, "old-password");
+        createAccount(email, "old-password");
         requestReset(email);
         String code = lastMailedCode(1);
 
@@ -147,7 +154,7 @@ class PasswordResetFlowTest {
     @Test
     void newerCodeRetiresTheEarlierOne() {
         String email = "reset-newer@example.com";
-        register(email, "old-password");
+        createAccount(email, "old-password");
         requestReset(email);
         String first = lastMailedCode(1);
         requestReset(email);
@@ -162,7 +169,7 @@ class PasswordResetFlowTest {
     @Test
     void requestsAreLimitedPerHour() {
         String email = "reset-limit@example.com";
-        register(email, "old-password");
+        createAccount(email, "old-password");
 
         for (int i = 0; i < 4; i++) {
             assertEquals(HttpStatus.ACCEPTED, requestReset(email).getStatusCode());
@@ -173,7 +180,7 @@ class PasswordResetFlowTest {
     @Test
     void changePasswordNeedsTokenAndCurrentPassword() {
         String email = "change@example.com";
-        AuthResponse session = register(email, "old-password");
+        AuthResponse session = createAccount(email, "old-password");
 
         ResponseEntity<String> noAuthRes = restTemplate.postForEntity(
                 "/api/account/password", new ChangePasswordRequest("old-password", "new-password"), String.class);
@@ -191,11 +198,9 @@ class PasswordResetFlowTest {
         assertEquals(HttpStatus.OK, login(email, "new-password").getStatusCode());
     }
 
-    private AuthResponse register(String email, String password) {
-        ResponseEntity<AuthResponse> res = restTemplate.postForEntity(
-                "/api/auth/register", new RegisterRequest(email, password, null), AuthResponse.class);
-        assertEquals(HttpStatus.OK, res.getStatusCode());
-        return res.getBody();
+    private AuthResponse createAccount(String email, String password) {
+        TestAccounts.create(userRepository, passwordEncoder, email, password);
+        return TestAccounts.login(restTemplate, email, password);
     }
 
     private ResponseEntity<String> login(String email, String password) {

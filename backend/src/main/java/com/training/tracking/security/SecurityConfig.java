@@ -40,12 +40,6 @@ public class SecurityConfig {
     @Value("${app.rate-limit.login.window}")
     private Duration loginWindow;
 
-    @Value("${app.rate-limit.register.max-attempts}")
-    private int registerMaxAttempts;
-
-    @Value("${app.rate-limit.register.window}")
-    private Duration registerWindow;
-
     @Value("${app.rate-limit.password-reset.max-attempts}")
     private int passwordResetMaxAttempts;
 
@@ -103,7 +97,6 @@ public class SecurityConfig {
         Limit invitation = new Limit("invitation", invitationMaxAttempts, invitationWindow);
         Map<String, Limit> limitsByPath = Map.of(
                 "/api/auth/login", new Limit("login", loginMaxAttempts, loginWindow),
-                "/api/auth/register", new Limit("register", registerMaxAttempts, registerWindow),
                 "/api/auth/password-reset/request", passwordReset,
                 "/api/auth/password-reset/confirm", passwordReset,
                 "/api/auth/invitation/lookup", invitation,

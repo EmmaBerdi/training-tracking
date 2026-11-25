@@ -13,7 +13,7 @@ import com.training.tracking.dto.StateDto;
 import com.training.tracking.dto.UpdatePlannedSessionRequest;
 import com.training.tracking.dto.UpdateRecurringRuleRequest;
 import com.training.tracking.dto.auth.AuthResponse;
-import com.training.tracking.dto.auth.RegisterRequest;
+import com.training.tracking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -51,16 +52,22 @@ class SeriesPlanModeTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private HttpHeaders headers;
     private Long gymTypeId;
 
     @BeforeEach
     void signUpWithThreePlans() {
-        ResponseEntity<AuthResponse> registered = restTemplate.postForEntity("/api/auth/register",
-                new RegisterRequest("series-" + System.nanoTime() + "@example.com", "correct-password", null),
-                AuthResponse.class);
+        String email = "series-" + System.nanoTime() + "@example.com";
+        TestAccounts.create(userRepository, passwordEncoder, email, "correct-password");
+        AuthResponse session = TestAccounts.login(restTemplate, email, "correct-password");
         headers = new HttpHeaders();
-        headers.setBearerAuth(registered.getBody().accessToken());
+        headers.setBearerAuth(session.accessToken());
 
         gymTypeId = post("/api/session-types", new CreateSessionTypeRequest("Gym", null, null),
                 SessionTypeDto.class).getBody().id();

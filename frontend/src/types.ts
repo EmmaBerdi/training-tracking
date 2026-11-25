@@ -131,6 +131,9 @@ export type View = 'training' | 'calendar' | 'stats';
 
 export type PlannedSessionStatus = 'planned' | 'done' | 'skipped';
 
+/** The account states the backend stores (`user.status`), mirrored from its CHECK constraint. */
+export type UserStatus = 'invited' | 'active' | 'deactivated';
+
 export interface SessionType {
   id: number;
   label: string;
