@@ -8,6 +8,7 @@ import {
   requestPasswordReset,
   type InvitationInfo,
 } from '../../auth/authClient';
+import { CodeInput } from '../CodeInput/CodeInput';
 import styles from './AuthScreen.module.scss';
 
 /**
@@ -163,17 +164,11 @@ export function AuthScreen({ inviteToken, onInviteDone }: AuthScreenProps) {
             />
           )}
           {mode === 'reset' && (
-            <input
+            <CodeInput
               className={styles.input}
-              type="text"
-              inputMode="numeric"
               placeholder="Code"
-              autoComplete="one-time-code"
-              pattern="\d{6}"
-              maxLength={6}
               value={code}
-              onChange={(e) => setCode(e.target.value.trim())}
-              required
+              onChange={setCode}
             />
           )}
           {mode !== 'forgot' && (

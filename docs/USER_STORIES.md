@@ -84,6 +84,15 @@ there until `MAIL_*` is set (see `docs/DEPLOY-PI.md`).
 "Passwort ändern" in the user menu asks for the current and the new password, then logs out every
 device, this one included.
 
+### US-1.6 Change my email address ✅
+
+> Jonas switches mail providers and wants to log in with his new address from now on.
+
+"E-Mail-Adresse ändern" in the user menu asks for the new address and the current password, then
+for the 6-digit code mailed to the new address (`EmailChangeService`, `email_change_request`). He
+stays logged in, the menu shows the new address, and the old address gets a notice that it was
+replaced. Without the code nothing changes; an address another account uses is refused.
+
 ---
 
 ## E2 — Planning: the calendar

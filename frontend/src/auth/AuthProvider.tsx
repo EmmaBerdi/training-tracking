@@ -71,8 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signOut],
   );
 
+  const updateEmail = useCallback((email: string) => {
+    setUser((current) => (current ? { ...current, email } : current));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ status, user, notice, login, acceptInvitation, logout }}>
+    <AuthContext.Provider
+      value={{ status, user, notice, login, acceptInvitation, logout, updateEmail }}
+    >
       {children}
     </AuthContext.Provider>
   );

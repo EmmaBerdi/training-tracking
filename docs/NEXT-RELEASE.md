@@ -31,3 +31,8 @@ so set them in `deploy/.env` first.
 - [ ] #51 — `POST /api/auth/register` answers `404`, and the login screen offers no registration.
 - [ ] #53 — The morning after the deploy, the backend log has a `Token cleanup removed …` line
   from 04:15. The first run clears the whole backlog, so its counts are large; later runs are small.
+- [ ] #54 — Under "E-Mail-Adresse ändern", move a test account to another address of your own: the
+  code arrives at the new address, the notice "E-Mail-Adresse geändert" at the old one, and you
+  stay logged in. Log in with the new address, then change it back.
+- [ ] #54 — Before changing your own admin account's address, put the new one in `ADMIN_EMAILS` in
+  `deploy/.env`; otherwise the next start creates an invited admin for the old address.

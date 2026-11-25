@@ -18,6 +18,8 @@ export interface AuthContextValue {
   /** Replaces any session already open in this browser with the invited account's. */
   acceptInvitation: (token: string, password: string, displayName?: string) => Promise<void>;
   logout: (notice?: string) => void;
+  /** After a confirmed change of address: the session stays, only the shown address moves on. */
+  updateEmail: (email: string) => void;
 }
 
 /** Split from AuthProvider so the provider module exports only its component (fast refresh). */

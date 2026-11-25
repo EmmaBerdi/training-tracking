@@ -11,6 +11,7 @@ import { SessionDetailSheet } from './components/SessionDetailSheet/SessionDetai
 import { PlanSheet } from './components/PlanSheet/PlanSheet';
 import { ImportPlanSheet } from './components/ImportPlanSheet/ImportPlanSheet';
 import { ChangePasswordSheet } from './components/ChangePasswordSheet/ChangePasswordSheet';
+import { ChangeEmailSheet } from './components/ChangeEmailSheet/ChangeEmailSheet';
 import { AdminUsersSheet } from './components/AdminUsersSheet/AdminUsersSheet';
 import { WhatsNewSheet } from './components/WhatsNewSheet/WhatsNewSheet';
 import { EmptyTraining } from './components/EmptyTraining/EmptyTraining';
@@ -63,7 +64,7 @@ import { startsWorkout } from './state/logOps';
 import { NAV } from './data/constants';
 
 export function App() {
-  const { status, user, logout } = useAuth();
+  const { status, user, logout, updateEmail } = useAuth();
   const [inviteToken, setInviteToken] = useState(() => readInviteToken(window.location.hash));
 
   // Also on `hashchange`: a link opened in a tab that already runs the app doesn't reload the page.
@@ -96,7 +97,12 @@ export function App() {
   if (status === 'anonymous') return <AuthScreen />;
 
   return (
-    <TrainingApp userEmail={user?.email ?? ''} admin={user?.admin ?? false} onLogout={logout} />
+    <TrainingApp
+      userEmail={user?.email ?? ''}
+      admin={user?.admin ?? false}
+      onLogout={logout}
+      onEmailChanged={updateEmail}
+    />
   );
 }
 
@@ -104,10 +110,12 @@ function TrainingApp({
   userEmail,
   admin,
   onLogout,
+  onEmailChanged,
 }: {
   userEmail: string;
   admin: boolean;
   onLogout: (notice?: string) => void;
+  onEmailChanged: (email: string) => void;
 }) {
   const toast = useToast();
   const sessions = usePlannedSessions(toast.show);
@@ -310,6 +318,16 @@ function TrainingApp({
 
   const closeSheet = () => setSheet(null);
 
+  // This browser's intro and news flags are kept per address; carried over, so neither comes back.
+  const handleEmailChanged = (email: string) => {
+    if (isOnboarded(userEmail)) markOnboarded(email);
+    const seen = lastSeenVersion(userEmail);
+    if (seen) markSeen(email, seen);
+    onEmailChanged(email);
+    closeSheet();
+    toast.show(`E-Mail-Adresse geändert — ab jetzt meldest du dich mit ${email} an.`);
+  };
+
   // Sets are only on screen when the training the log opens on has a plan with exercises.
   const hasSets = !!t.plan.days
     .find((d) => d.id === activeSession?.dayId)
@@ -382,6 +400,7 @@ function TrainingApp({
         onReopenIntro={() => setIntroStage('welcome')}
         onOpenWhatsNew={openWhatsNew}
         onChangePassword={() => setSheet({ type: 'changePassword' })}
+        onChangeEmail={() => setSheet({ type: 'changeEmail' })}
         onManageUsers={admin ? () => setSheet({ type: 'adminUsers' }) : undefined}
         onLogout={() => onLogout()}
       />
@@ -646,6 +665,14 @@ function TrainingApp({
               onChanged={() =>
                 onLogout('Passwort geändert — bitte mit dem neuen Passwort anmelden.')
               }
+              onClose={closeSheet}
+            />
+          )}
+
+          {sheet.type === 'changeEmail' && (
+            <ChangeEmailSheet
+              currentEmail={userEmail}
+              onChanged={handleEmailChanged}
               onClose={closeSheet}
             />
           )}
