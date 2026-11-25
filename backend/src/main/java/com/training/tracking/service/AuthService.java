@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -22,6 +23,8 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    /** Encoded by the real encoder so it carries the same bcrypt cost as stored hashes. */
+    private final String dummyHash;
 
     public AuthService(UserRepository userRepository,
                         RefreshTokenRepository refreshTokenRepository,
@@ -31,18 +34,19 @@ public class AuthService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByNormalizedEmail(request.email())
-                .orElseThrow(AuthService::invalidCredentials);
-        // The same answer as a wrong password, so the response doesn't reveal the account's state.
-        // The password is checked first so a deactivated account takes as long as an active one; an
-        // invited one has no hash to check, and answers as fast as an unknown address.
-        boolean passwordMatches = user.getPasswordHash() != null
-                && passwordEncoder.matches(request.password(), user.getPasswordHash());
-        if (!passwordMatches || !user.isActive()) {
+        // The same answer, after the same single bcrypt check, for an unknown address, an invited
+        // account (no hash yet), a deactivated one and a wrong password, so neither the response
+        // nor its timing reveals whether or in which state the account exists.
+        User user = userRepository.findByNormalizedEmail(request.email()).orElse(null);
+        boolean hasPassword = user != null && user.getPasswordHash() != null;
+        boolean passwordMatches = passwordEncoder.matches(request.password(),
+                hasPassword ? user.getPasswordHash() : dummyHash);
+        if (!hasPassword || !passwordMatches || !user.isActive()) {
             throw invalidCredentials();
         }
         user.setLastLoginAt(Instant.now());
